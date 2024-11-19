@@ -1,0 +1,597 @@
+#include <assert.h>
+#include <limits.h>
+#include <stdlib.h>
+#include <string.h>
+#include "ipi.h"
+#include "utils.h"
+#include "tpi.h"
+
+static inline int msf_header_v2_read(struct msf_header_v2 *v2, FILE *stream)
+{
+    fseek(stream, 0, SEEK_END);
+    long size = ftell(stream);
+    
+    if ((unsigned long)size < sizeof(struct msf_header_v2))
+        return 0;
+
+    fseek(stream, 0, SEEK_SET);
+    fread(v2->signature, sizeof(v2->signature), 1, stream);
+
+    if (memcmp(v2->signature, msf_header_v2_signature, sizeof(msf_header_v2_signature)) != 0)
+        return 0;
+    
+    fread(&v2->page_size, sizeof(*v2) - sizeof(v2->signature), 1, stream);
+
+    return 1;
+}
+
+static inline int msf_header_v7_read(struct msf_header_v7 *v7, FILE *stream)
+{   
+    fseek(stream, 0, SEEK_END);
+    long size = ftell(stream);
+    
+    if ((unsigned long)size < sizeof(struct msf_header_v7))
+        return 0;
+
+    fseek(stream, 0, SEEK_SET);
+    fread(v7->signature, sizeof(v7->signature), 1, stream);
+
+    if (memcmp(v7->signature, msf_header_v7_signature, sizeof(msf_header_v7_signature)) != 0)
+        return 0;
+    
+    fread(&v7->page_size, sizeof(*v7) - sizeof(v7->signature), 1, stream);
+
+    return 1;
+}
+
+int msf_header_read(struct msf_header *header, FILE *stream)
+{
+    header->type = MSF_HEADER_UNKNOWN;
+    
+    if (msf_header_v7_read(&header->v7, stream))
+    {
+        header->type = MSF_HEADER_V7;
+        return 1;
+    }
+    
+    if (msf_header_v2_read(&header->v2, stream))
+    {
+        header->type = MSF_HEADER_V2;
+        return 1;
+    }
+    
+    return 0;
+}
+
+void msf_header_print(struct msf_header *header, uint32_t depth, FILE *stream)
+{
+    assert(header);
+    assert(stream);
+
+    fprintf(stream, "msf_header {\n");
+
+    switch (header->type)
+    {
+    case MSF_HEADER_V2:
+        fprintf_depth(stream, depth + 1, "page_size: %u,\n", header->v2.page_size);
+        fprintf_depth(stream, depth + 1, "start_page: %u,\n", header->v2.start_page);
+        fprintf_depth(stream, depth + 1, "file_page_count: %u,\n", header->v2.file_page_count);
+        fprintf_depth(stream, depth + 1, "root_stream_size: %u,\n", header->v2.root_stream_size);
+        fprintf_depth(stream, depth + 1, "reserved: %u,\n", header->v2.reserved);
+        break;
+    
+    case MSF_HEADER_V7:
+        fprintf_depth(stream, depth + 1, "page_size: %u,\n", header->v7.page_size);
+        fprintf_depth(stream, depth + 1, "allocation_table_pointer: %u,\n", header->v7.allocation_table_pointer);
+        fprintf_depth(stream, depth + 1, "file_page_count: %u,\n", header->v7.file_page_count);
+        fprintf_depth(stream, depth + 1, "root_stream_size: %u,\n", header->v7.root_stream_size);
+        fprintf_depth(stream, depth + 1, "reserved: %u,\n", header->v7.reserved);
+        fprintf_depth(stream, depth + 1, "root_stream_page_list_page_index: %u,\n", header->v7.root_stream_page_list_page_index);
+        break;
+    
+    default:
+        fprintf(stderr, "%s:%i: ERROR: unhandled msf header type: %i\n", __FILE__, __LINE__, header->type);
+        exit(EXIT_FAILURE);
+    }
+
+    fprintf_depth(stream, depth, "}");
+}
+
+void msf_stream_dispose(struct msf_stream *msf_stream)
+{
+    assert(msf_stream);
+
+    free(msf_stream->page_indices);
+}
+
+void msf_stream_print(struct msf_stream *msf_stream, uint32_t depth, FILE *file_stream)
+{
+    assert(msf_stream);
+    assert(file_stream);
+
+    fprintf(file_stream, "msf_stream {\n");
+    fprintf_depth(file_stream, depth + 1, "size: %u,\n", msf_stream->size);
+    fprintf_depth(file_stream, depth + 1, "page_count: %u,\n", msf_stream->page_count);
+    
+    fprintf_depth(file_stream, depth + 1, "page_indices: [");
+    for (uint32_t i = 0; i < msf_stream->page_count; i++)
+    {
+        if (i > 0)
+            fprintf(file_stream, ", ");        
+        fprintf(file_stream, "%u", msf_stream->page_indices[i]);
+    }
+    fprintf(file_stream, "],\n");
+
+    fprintf_depth(file_stream, depth, "}");
+}
+
+void msf_dispose(struct msf *msf)
+{
+    assert(msf);
+
+    msf_stream_dispose(&msf->root_stream);
+
+    for (uint32_t i = 0; i < msf->stream_count; i++)
+        msf_stream_dispose(&msf->streams[i]);
+    
+    free(msf->streams);
+}
+
+void msf_print(struct msf *msf, uint32_t depth, FILE *stream)
+{
+    assert(msf);
+    assert(stream);
+
+    fprintf(stream, "msf {\n");
+
+    fprintf_depth(stream, depth + 1, "header: ");
+    msf_header_print(&msf->header, depth + 1, stream);
+    fprintf(stream, ",\n");
+
+    fprintf_depth(stream, depth + 1, "root_stream: ");
+    msf_stream_print(&msf->root_stream, depth + 1, stream);
+    fprintf(stream, ",\n");
+
+    fprintf_depth(stream, depth + 1, "stream_count: %u,\n", msf->stream_count);
+    fprintf_depth(stream, depth + 1, "streams: [\n");
+
+    for (uint32_t i = 0; i < msf->stream_count; i++)
+    {
+        fprintf_depth(stream, depth + 2, "[%u] = ", i);
+        msf_stream_print(&msf->streams[i], depth + 2, stream);
+        fprintf(stream, ",\n");
+    }
+
+    fprintf_depth(stream, depth + 1, "],\n");
+    fprintf_depth(stream, depth, "}");
+}
+
+uint32_t msf_get_page_count(struct msf *msf)
+{
+    assert(msf);
+
+    switch (msf->header.type)
+    {
+    case MSF_HEADER_V2:
+        return msf->header.v2.file_page_count;
+    
+    case MSF_HEADER_V7:
+        return msf->header.v7.file_page_count;
+    
+    default:
+        fprintf(stderr, "%s:%i: ERROR: unhandled msf header type: %i\n", __FILE__, __LINE__, msf->header.type);
+        exit(EXIT_FAILURE);
+    }
+}
+
+void msf_verify_page_index(struct msf *msf, uint32_t page_index)
+{
+    assert(msf);
+    assert(page_index != 0);
+    assert(page_index < msf_get_page_count(msf));
+}
+
+uint32_t msf_get_page_size(struct msf *msf)
+{
+    assert(msf);
+
+    switch (msf->header.type)
+    {
+    case MSF_HEADER_V2:
+        return msf->header.v2.page_size;
+    
+    case MSF_HEADER_V7:
+        return msf->header.v7.page_size;
+    
+    default:
+        fprintf(stderr, "%s:%i: ERROR: unhandled msf header type: %i\n", __FILE__, __LINE__, msf->header.type);
+        exit(EXIT_FAILURE);
+    }
+}
+
+uint32_t msf_get_page_offset(struct msf *msf, uint32_t page_index)
+{
+    msf_verify_page_index(msf, page_index);
+    return page_index * msf_get_page_size(msf);
+}
+
+uint32_t msf_get_page_index_for_offset(struct msf *msf, uint32_t offset)
+{
+    uint32_t page_size = msf_get_page_size(msf);
+
+    return offset / page_size;
+}
+
+uint32_t msf_get_page_count_for_size(struct msf *msf, uint32_t size)
+{
+    uint32_t page_size = msf_get_page_size(msf);
+
+    return (size + (page_size - 1)) / page_size;
+}
+
+uint32_t msf_get_root_stream_size(struct msf *msf)
+{
+    assert(msf);
+
+    switch (msf->header.type)
+    {
+    case MSF_HEADER_V2:
+        return msf->header.v2.root_stream_size;
+    
+    case MSF_HEADER_V7:
+        return msf->header.v7.root_stream_size;
+    
+    default:
+        fprintf(stderr, "%s:%i: ERROR: unhandled msf header type: %i\n", __FILE__, __LINE__, msf->header.type);
+        exit(EXIT_FAILURE);
+    }
+}
+
+void msf_stream_initialize(struct msf *msf, struct msf_stream *stream, uint32_t size)
+{
+    stream->size = size;
+    stream->page_count = msf_get_page_count_for_size(msf, size);
+
+    if (stream->page_count)
+    {
+        stream->page_indices = malloc(sizeof(uint32_t) * stream->page_count);
+        assert(stream->page_indices);
+    }
+}
+
+void msf_stream_read_data(
+    struct msf *msf,
+    struct msf_stream *stream,
+    uint32_t offset,
+    uint32_t size,
+    void *destination,
+    FILE *file_stream)
+{
+    assert(msf);
+    assert(stream);
+    assert(destination);
+    assert(file_stream);
+    assert(size <= stream->size);
+
+    uint32_t start_page_index = msf_get_page_index_for_offset(msf, offset);
+    
+    uint32_t page_count = msf_get_page_count_for_size(msf, size);
+    assert(start_page_index + page_count <= stream->page_count);
+
+    uint32_t page_size = msf_get_page_size(msf);
+    
+    uint32_t write_offset = 0;
+    uint32_t data_remaining = size;
+
+    for (uint32_t i = 0; i < page_count && data_remaining; i++)
+    {
+        uint32_t read_offset = msf_get_page_offset(msf, stream->page_indices[start_page_index + i]);
+        uint32_t read_size = data_remaining > page_size ? page_size : data_remaining;
+
+        if (i == 0)
+        {
+            uint32_t inset_size = offset - (start_page_index * page_size);
+
+            read_offset += inset_size;
+            read_size = data_remaining > read_size ? read_size - inset_size : data_remaining;
+        }
+        
+        fseek(file_stream, read_offset, SEEK_SET);
+        fread((char *)destination + write_offset, read_size, 1, file_stream);
+
+        write_offset += read_size;
+        data_remaining -= read_size;
+    }
+}
+
+char *msf_stream_read_cstring(
+    struct msf *msf,
+    struct msf_stream *stream,
+    uint32_t read_offset,
+    uint32_t *out_length,
+    FILE *file_stream)
+{
+    uint32_t length = 0;
+    char *string = NULL;
+
+    char c;
+    
+    do
+    {
+        msf_stream_read_data(
+            msf,
+            stream,
+            read_offset,
+            sizeof(char),
+            &c,
+            file_stream);
+
+        read_offset += sizeof(char);
+        
+        string = realloc(string, ++length * sizeof(char));
+        assert(string);
+
+        string[length - 1] = c;
+    }
+    while (c != '\0');
+
+    if (out_length)
+        *out_length = length;
+    
+    return string;
+}
+
+char *msf_stream_read_u8_pascal_string(
+    struct msf *msf,
+    struct msf_stream *msf_stream,
+    uint32_t offset,
+    uint32_t *out_length,
+    FILE *file_stream)
+{
+    uint8_t length;
+    msf_stream_read_data(msf, msf_stream, offset, sizeof(length), &length, file_stream);
+    offset += sizeof(length);
+
+    char *string = malloc(length + 1);
+    assert(string);
+    msf_stream_read_data(msf, msf_stream, offset, length, string, file_stream);
+    string[length - 1] = '\0';
+
+    if (out_length)
+        *out_length = length;
+    
+    return string;
+}
+
+uint64_t msf_read_tpi_lf_unsigned(
+    struct msf *msf,
+    struct msf_stream *msf_stream,
+    uint32_t *out_offset,
+    FILE *file_stream)
+{
+    uint16_t size_leaf = 0;
+    msf_stream_read_data(msf, msf_stream, *out_offset, sizeof(size_leaf), &size_leaf, file_stream);
+    *out_offset += sizeof(size_leaf);
+
+    if (size_leaf < LF_NUMERIC)
+        return (uint64_t)size_leaf;
+
+    switch (size_leaf)
+    {
+    case LF_CHAR:
+        {
+            uint8_t value;
+            msf_stream_read_data(msf, msf_stream, *out_offset, sizeof(value), &value, file_stream);
+            *out_offset += sizeof(value);
+            
+            return (uint64_t)value;
+        }
+        
+    case LF_USHORT:
+        {
+            uint16_t value;
+            msf_stream_read_data(msf, msf_stream, *out_offset, sizeof(value), &value, file_stream);
+            *out_offset += sizeof(value);
+            
+            return (uint64_t)value;
+        }
+        
+    case LF_ULONG:
+        {
+            uint32_t value;
+            msf_stream_read_data(msf, msf_stream, *out_offset, sizeof(value), &value, file_stream);
+            *out_offset += sizeof(value);
+            
+            return (uint64_t)value;
+        }
+        
+    case LF_UQUADWORD:
+        {
+            uint64_t value;
+            msf_stream_read_data(msf, msf_stream, *out_offset, sizeof(value), &value, file_stream);
+            *out_offset += sizeof(value);
+            
+            return value;
+        }
+        
+    default:
+        fprintf(stderr, "%s:%i: ERROR: Unhandled class size leaf type: ", __FILE__, __LINE__);
+        tpi_leaf_print(size_leaf, stderr);
+        fprintf(stderr, "\n");
+        exit(EXIT_FAILURE);
+    }
+}
+
+char *msf_read_tpi_lf_string(
+    struct msf *msf,
+    struct msf_stream *msf_stream,
+    uint32_t *out_offset,
+    uint16_t leaf,
+    FILE *file_stream)
+{
+    uint32_t length;
+    char *result;
+
+    if (leaf < LF_ST_MAX)
+    {
+        result = msf_stream_read_u8_pascal_string(msf, msf_stream, *out_offset, &length, file_stream);
+        *out_offset += length + 1;
+    }
+    else
+    {
+        result = msf_stream_read_cstring(msf, msf_stream, *out_offset, &length, file_stream);
+        *out_offset += length;
+    }
+
+    return result;
+}
+
+void msf_read_padding(
+    struct msf *msf,
+    struct msf_stream *msf_stream,
+    uint32_t end_offset,
+    uint32_t *out_offset,
+    FILE *file_stream)
+{
+    assert(msf);
+    assert(msf_stream);
+    assert(out_offset);
+    assert(file_stream);
+
+    while (*out_offset < end_offset)
+    {
+        uint8_t padding = 0;
+        msf_stream_read_data(msf, msf_stream, *out_offset, sizeof(padding), &padding, file_stream);
+
+        if (padding < 0xf0)
+            break;
+        
+        *out_offset += sizeof(padding);
+
+        if (padding > 0xf0)
+            *out_offset += ((uint32_t)(padding & 0x0f)) - 1;
+    }
+}
+
+void msf_read(struct msf *msf, FILE *stream)
+{
+    assert(msf);
+    assert(stream);
+
+    memset(msf, 0, sizeof(*msf));
+
+    if (!msf_header_read(&msf->header, stream))
+    {
+        fprintf(stderr, "ERROR: Failed to read MSF header\n");
+        exit(EXIT_FAILURE);
+    }
+    
+    msf_stream_initialize(msf, &msf->root_stream, msf_get_root_stream_size(msf));
+
+    switch (msf->header.type)
+    {
+    case MSF_HEADER_V2:
+        {
+            uint16_t *page_indices_v2 = malloc(sizeof(uint16_t) * msf->root_stream.page_count);
+            assert(page_indices_v2);
+
+            fread(page_indices_v2, sizeof(uint16_t), msf->root_stream.page_count, stream);
+
+            for (uint32_t i = 0; i < msf->root_stream.page_count; i++)
+                msf->root_stream.page_indices[i] = (uint32_t)page_indices_v2[i];
+            
+            free(page_indices_v2);
+            break;
+        }
+    
+    case MSF_HEADER_V7:
+        {
+            uint32_t page_list_offset = msf_get_page_offset(msf, msf->header.v7.root_stream_page_list_page_index);
+            fseek(stream, page_list_offset, SEEK_SET);
+            fread(msf->root_stream.page_indices, sizeof(uint32_t), msf->root_stream.page_count, stream);
+            break;
+        }
+    
+    default:
+        fprintf(stderr, "%s:%i: ERROR: unhandled msf header type: %i\n", __FILE__, __LINE__, msf->header.type);
+        exit(EXIT_FAILURE);
+    }
+
+    for (uint32_t i = 0; i < msf->root_stream.page_count; i++)
+        msf_verify_page_index(msf, msf->root_stream.page_indices[i]);
+    
+    char *root_stream_data = malloc(msf->root_stream.size);
+    assert(root_stream_data);
+
+    msf_stream_read_data(msf, &msf->root_stream, 0, msf->root_stream.size, root_stream_data, stream);
+
+    switch (msf->header.type)
+    {
+    case MSF_HEADER_V2:
+        {
+            msf->stream_count = *(uint16_t *)(root_stream_data + 0);
+            
+            // uint16_t _reserved = *(uint16_t *)(root_stream_data + 2);
+            
+            msf->streams = malloc(msf->stream_count * sizeof(*msf->streams));
+            assert(msf->streams);
+
+            uint32_t offset = 4;
+
+            for (uint32_t i = 0; i < msf->stream_count; i++)
+            {
+                uint32_t stream_size = *(uint32_t *)(root_stream_data + offset);
+                msf_stream_initialize(msf, &msf->streams[i], stream_size);
+                offset += sizeof(uint32_t);
+
+                // uint32_t _reserved2 = *(uint32_t *)(root_stream_data + offset);
+                offset += sizeof(uint32_t);
+            }
+
+            for (uint32_t i = 0; i < msf->stream_count; i++)
+            {
+                for (uint32_t j = 0; j < msf->streams[i].page_count; j++)
+                {
+                    msf->streams[i].page_indices[j] = *(uint16_t *)(root_stream_data + offset);
+                    offset += sizeof(uint16_t);
+                }
+            }
+
+            break;
+        }
+
+    case MSF_HEADER_V7:
+        {
+            msf->stream_count = *(uint32_t *)(root_stream_data + 0);
+            
+            msf->streams = malloc(msf->stream_count * sizeof(*msf->streams));
+            assert(msf->streams);
+
+            uint32_t offset = 4;
+
+            for (uint32_t i = 0; i < msf->stream_count; i++)
+            {
+                uint32_t stream_size = *(uint32_t *)(root_stream_data + offset);
+                msf_stream_initialize(msf, &msf->streams[i], stream_size);
+                offset += sizeof(uint32_t);
+            }
+
+            for (uint32_t i = 0; i < msf->stream_count; i++)
+            {
+                for (uint32_t j = 0; j < msf->streams[i].page_count; j++)
+                {
+                    msf->streams[i].page_indices[j] = *(uint32_t *)(root_stream_data + offset);
+                    offset += sizeof(uint32_t);
+                }
+            }
+
+            break;
+        }
+        
+    default:
+        fprintf(stderr, "%s:%i: ERROR: unhandled msf header type: %i\n", __FILE__, __LINE__, msf->header.type);
+        exit(EXIT_FAILURE);
+    }
+
+    free(root_stream_data);
+}
