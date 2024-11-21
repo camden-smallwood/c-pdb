@@ -5,16 +5,14 @@
 #include "pdbi.h"
 #include "utils.h"
 
-void pdb_header_print(struct pdb_header *header, uint32_t depth, FILE *stream)
+#include "macros_print.h"
+
+void pdb_header_print(struct pdb_header *item, uint32_t depth, FILE *stream)
 {
-    assert(header);
+    assert(item);
     assert(stream);
     
-    fprintf(stream, "pdb_header {\n");
-    fprintf_depth(stream, depth + 1, "version: %u,\n", header->version);
-    fprintf_depth(stream, depth + 1, "signature: %u,\n", header->signature);
-    fprintf_depth(stream, depth + 1, "age: %u,\n", header->age);
-    fprintf_depth(stream, depth, "}");
+    PDB_HEADER_STRUCT
 }
 
 void pdb_header_read(struct pdb_header *header, struct msf *msf, FILE *stream)
@@ -22,18 +20,12 @@ void pdb_header_read(struct pdb_header *header, struct msf *msf, FILE *stream)
     msf_stream_read_data(msf, &msf->streams[MSF_STREAM_PDB], 0, sizeof(*header), header, stream);
 }
 
-void pdb_named_stream_print(
-    struct pdb_named_stream *named_stream,
-    uint32_t depth,
-    FILE *file_stream)
+void pdb_named_stream_print(struct pdb_named_stream *item, uint32_t depth, FILE *stream)
 {
-    assert(named_stream);
-    assert(file_stream);
+    assert(item);
+    assert(stream);
 
-    fprintf(file_stream, "pdb_named_stream {\n");
-    fprintf_depth(file_stream, depth + 1, "name_offset: %u,\n", named_stream->name_offset);
-    fprintf_depth(file_stream, depth + 1, "stream_index: %u,\n", named_stream->stream_index);
-    fprintf_depth(file_stream, depth, "}");
+    PDB_NAMED_STREAM_STRUCT
 }
 
 void pdb_info_read(
@@ -103,63 +95,27 @@ void pdb_info_dispose(struct pdb_info *info)
     free(info->entries);
 }
 
-void pdb_info_print(struct pdb_info *info, uint32_t depth, FILE *stream)
+void pdb_info_print(struct pdb_info *item, uint32_t depth, FILE *stream)
 {
-    assert(info);
+    assert(item);
     assert(stream);
 
-    fprintf(stream, "pdb_info {\n");
-    fprintf_depth(stream, depth + 1, "pdb_header: ");
-    pdb_header_print(&info->pdb_header, depth + 1, stream);
-    fprintf(stream, ",\n");
-    
-    fprintf_depth(stream, depth + 1, "guid: \"%08X%08X%08X%08X\",\n", info->guid[0], info->guid[1], info->guid[2], info->guid[3]);
-    fprintf_depth(stream, depth + 1, "names_size: %u,\n", info->names_size);
-    fprintf_depth(stream, depth + 1, "entry_count: %u,\n", info->entry_count);
-    fprintf_depth(stream, depth + 1, "entries_size: %u,\n", info->entries_size);
-    fprintf_depth(stream, depth + 1, "ok_words: %u,\n", info->ok_words);
-    
-    fprintf_depth(stream, depth + 1, "ok_bits: [");
-    for (uint32_t i = 0; i < info->ok_words; i++)
-    {
-        if (i > 0)
-            fprintf(stream, ", ");
-        fprintf(stream, "0x%X", info->ok_bits[i]);
-    }
-    fprintf(stream, "],\n");
-
-    fprintf_depth(stream, depth + 1, "deleted_words: %u,\n", info->deleted_words);
-
-    fprintf_depth(stream, depth + 1, "deleted_bits: [");
-    for (uint32_t i = 0; i < info->deleted_words; i++)
-    {
-        if (i > 0)
-            fprintf(stream, ", ");
-        fprintf(stream, "0x%X", info->deleted_bits[i]);
-    }
-    fprintf(stream, "],\n");
-
-    fprintf_depth(stream, depth + 1, "entries: [\n");
-    for (uint32_t i = 0; i < info->entry_count; i++)
-    {
-        fprintf_depth(stream, depth + 2, "[%u] = ", i);
-        pdb_named_stream_print(&info->entries[i], depth + 2, stream);
-        fprintf(stream, ",\n");
-    }
-    fprintf_depth(stream, depth + 1, "],\n");
-    fprintf_depth(stream, depth, "}");
+    PDB_INFO_STRUCT
 }
 
-void pdb_string_table_header_print(struct pdb_string_table_header *header, uint32_t depth, FILE *stream)
+void pdb_string_table_hash_version_print(enum pdb_string_table_hash_version item, FILE *stream)
 {
-    assert(header);
     assert(stream);
 
-    fprintf(stream, "pdb_string_table_header {\n");
-    fprintf_depth(stream, depth + 1, "magic: %u\n", header->magic);
-    fprintf_depth(stream, depth + 1, "hash_version: %u\n", header->hash_version);
-    fprintf_depth(stream, depth + 1, "names_size: %u\n", header->names_size);
-    fprintf_depth(stream, depth, "}");
+    PDB_STRING_TABLE_HASH_VERSION_ENUM
+}
+
+void pdb_string_table_header_print(struct pdb_string_table_header *item, uint32_t depth, FILE *stream)
+{
+    assert(item);
+    assert(stream);
+
+    PDB_STRING_TABLE_HEADER_STRUCT
 }
 
 void pdb_string_table_read(struct pdb_string_table *table, struct msf *msf, struct pdb_info *pdb_info, FILE *stream)
@@ -200,24 +156,20 @@ void pdb_string_table_dispose(struct pdb_string_table *table)
     free(table->names_data);
 }
 
-void pdb_string_table_print(struct pdb_string_table *table, uint32_t depth, FILE *stream)
+void pdb_string_table_print(struct pdb_string_table *item, uint32_t depth, FILE *stream)
 {
-    assert(table);
+    assert(item);
     assert(stream);
 
-    fprintf(stream, "pdb_string_table {\n");
-    
-    fprintf_depth(stream, depth + 1, "header: ");
-    pdb_string_table_header_print(&table->header, depth + 1, stream);
-    fprintf(stream, ",\n");
+    PDB_STRING_TABLE_STRUCT
 
-    fprintf_depth(stream, depth + 1, "names_data: [\n");
-    for (uint32_t i = 0; i < table->header.names_size; i++)
-    {
-        uint32_t length = strlen(table->names_data + i);
-        fprintf_depth(stream, depth + 2, "[0x%X..0x%X] = \"%s\",\n", i, i + length, table->names_data + i);
-        i += length;
-    }
-    fprintf_depth(stream, depth + 1, "],\n");
-    fprintf_depth(stream, depth, "}");
+    // TODO: implement this?
+    // fprintf_depth(stream, depth + 1, "names_data: [\n");
+    // for (uint32_t i = 0; i < table->header.names_size; i++)
+    // {
+    //     uint32_t length = strlen(table->names_data + i);
+    //     fprintf_depth(stream, depth + 2, "[0x%X..0x%X] = \"%s\",\n", i, i + length, table->names_data + i);
+    //     i += length;
+    // }
+    // fprintf_depth(stream, depth + 1, "],\n");
 }

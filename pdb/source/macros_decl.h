@@ -19,7 +19,7 @@
 #define STRUCT_DECL(name) struct name {
 
 #define FIELD_PRIMITIVE(type, name, fmt) type name;
-#define FIELD_PRIMITIVE_FMT FIELD_PRIMITIVE
+#define FIELD_PRIMITIVE_FMT(type, name, fmt_fn) type name;
 
 #define FIELD_PRIMITIVE_FIXED_ARRAY(type, name, count, fmt) type name[count];
 #define FIELD_PRIMITIVE_FIXED_ARRAY_FMT(type, name, count, fmt_fn) type name[count];

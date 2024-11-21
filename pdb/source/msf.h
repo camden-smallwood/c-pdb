@@ -3,83 +3,118 @@
 #include <stdint.h>
 #include <stdio.h>
 
+#include "macros_decl.h"
+
+/* ---------- MSF header V2 */
+
 static const char msf_header_v2_signature[] = "Microsoft C/C++ program database 2.00\r\n\032JG\0";
 static_assert(sizeof(msf_header_v2_signature) == 44);
 
-struct msf_header_v2
-{
-    char signature[sizeof(msf_header_v2_signature)];
-    uint32_t page_size;
-    uint16_t start_page;
-    uint16_t file_page_count;
-    uint32_t root_stream_size;
-    uint32_t reserved;
-};
+#define MSF_HEADER_V2_STRUCT \
+STRUCT_DECL(msf_header_v2) \
+    FIELD_PRIMITIVE_FIXED_ARRAY_FMT(char, signature, sizeof(msf_header_v2_signature), fixed_string_print) \
+    FIELD_PRIMITIVE(uint32_t, page_size, "%u") \
+    FIELD_PRIMITIVE(uint16_t, start_page, "%u") \
+    FIELD_PRIMITIVE(uint16_t, file_page_count, "%u") \
+    FIELD_PRIMITIVE(uint32_t, root_stream_size, "%u") \
+    FIELD_PRIMITIVE(uint32_t, reserved, "%u") \
+STRUCT_END(msf_header_v2)
+
+MSF_HEADER_V2_STRUCT
 static_assert(sizeof(struct msf_header_v2) == 60);
+
+void msf_header_v2_print(struct msf_header_v2 *item, uint32_t depth, FILE *stream);
+int msf_header_v2_read(struct msf_header_v2 *v2, FILE *stream);
+
+/* ---------- MSF header V7 */
 
 static const char msf_header_v7_signature[] = "Microsoft C/C++ MSF 7.00\r\n\032DS\0\0";
 static_assert(sizeof(msf_header_v7_signature) == 32);
 
-struct msf_header_v7
-{
-    char signature[sizeof(msf_header_v7_signature)];
-    uint32_t page_size;
-    uint32_t allocation_table_pointer;
-    uint32_t file_page_count;
-    uint32_t root_stream_size;
-    uint32_t reserved;
-    uint32_t root_stream_page_list_page_index;
-};
+#define MSF_HEADER_V7_STRUCT \
+STRUCT_DECL(msf_header_v7) \
+    FIELD_PRIMITIVE_FIXED_ARRAY_FMT(char, signature, sizeof(msf_header_v7_signature), fixed_string_print) \
+    FIELD_PRIMITIVE(uint32_t, page_size, "%u") \
+    FIELD_PRIMITIVE(uint32_t, allocation_table_pointer, "0x%X") \
+    FIELD_PRIMITIVE(uint32_t, file_page_count, "%u") \
+    FIELD_PRIMITIVE(uint32_t, root_stream_size, "%u") \
+    FIELD_PRIMITIVE(uint32_t, reserved, "%u") \
+    FIELD_PRIMITIVE(uint32_t, root_stream_page_list_page_index, "%u") \
+STRUCT_END(msf_header_v7)
+
+MSF_HEADER_V7_STRUCT
 static_assert(sizeof(struct msf_header_v7) == 56);
 
-enum msf_header_type
-{
-    MSF_HEADER_UNKNOWN,
-    MSF_HEADER_V2,
-    MSF_HEADER_V7,
-};
+void msf_header_v7_print(struct msf_header_v7 *item, uint32_t depth, FILE *stream);
+int msf_header_v7_read(struct msf_header_v7 *v7, FILE *stream);
 
-struct msf_header
-{
-    enum msf_header_type type;
-    union
-    {
-        struct msf_header_v2 v2;
-        struct msf_header_v7 v7;
-    };
-};
+/* ---------- MSF header type */
 
-int msf_header_read(struct msf_header *header, FILE *stream);
+#define MSF_HEADER_TYPE_ENUM \
+ENUM_DECL(msf_header_type) \
+    ENUM_VALUE(MSF_HEADER_UNKNOWN) \
+    ENUM_VALUE(MSF_HEADER_V2) \
+    ENUM_VALUE(MSF_HEADER_V7) \
+ENUM_END(msf_header_type)
+
+MSF_HEADER_TYPE_ENUM
+
+void msf_header_type_print(enum msf_header_type type, FILE *stream);
+
+/* ---------- MSF header */
+
+#define MSF_HEADER_STRUCT \
+STRUCT_DECL(msf_header) \
+    FIELD_PRIMITIVE_FMT(enum msf_header_type, type, msf_header_type_print) \
+    FIELD_UNION_DECL() \
+        FIELD_UNION_FIELD_STRUCT(struct msf_header_v2, v2, type, MSF_HEADER_V2, msf_header_v2_print) \
+        FIELD_UNION_FIELD_STRUCT(struct msf_header_v7, v7, type, MSF_HEADER_V7, msf_header_v7_print) \
+    FIELD_UNION_END() \
+STRUCT_END(msf_header)
+
+MSF_HEADER_STRUCT
+
 void msf_header_print(struct msf_header *header, uint32_t depth, FILE *stream);
+int msf_header_read(struct msf_header *header, FILE *stream);
 
-enum msf_stream_index
-{
-    MSF_STREAM_DIR,
-    MSF_STREAM_PDB,
-    MSF_STREAM_TPI,
-    MSF_STREAM_DBI,
-    MSF_STREAM_IPI,
-};
+/* ---------- MSF stream index */
 
-struct msf_stream
-{
-    uint32_t size;
-    uint32_t page_count;
-    uint32_t *page_indices;
-};
+#define MSF_STREAM_INDEX_ENUM \
+ENUM_DECL(msf_stream_index) \
+    ENUM_VALUE(MSF_STREAM_DIR) \
+    ENUM_VALUE(MSF_STREAM_PDB) \
+    ENUM_VALUE(MSF_STREAM_TPI) \
+    ENUM_VALUE(MSF_STREAM_DBI) \
+    ENUM_VALUE(MSF_STREAM_IPI) \
+ENUM_END(msf_stream_index)
+
+MSF_STREAM_INDEX_ENUM
+
+/* ---------- MSF stream */
+
+#define MSF_STREAM_STRUCT \
+STRUCT_DECL(msf_stream) \
+    FIELD_PRIMITIVE(uint32_t, size, "%u") \
+    FIELD_PRIMITIVE(uint32_t, page_count, "%u") \
+    FIELD_PRIMITIVE_DYNAMIC_ARRAY(uint32_t *, page_indices, page_count, "%u") \
+STRUCT_END(msf_stream)
+
+MSF_STREAM_STRUCT
 
 void msf_stream_dispose(struct msf_stream *msf_stream);
 void msf_stream_print(struct msf_stream *msf_stream, uint32_t depth, FILE *file_stream);
 
-struct msf
-{
-    struct msf_header header;
+/* ---------- MSF */
 
-    struct msf_stream root_stream;
+#define MSF_STRUCT \
+STRUCT_DECL(msf) \
+    FIELD_STRUCT(struct msf_header, header, msf_header_print) \
+    FIELD_STRUCT(struct msf_stream, root_stream, msf_stream_print) \
+    FIELD_PRIMITIVE(uint32_t, stream_count, "%u") \
+    FIELD_STRUCT_DYNAMIC_ARRAY(struct msf_stream *, streams, stream_count, msf_stream_print) \
+STRUCT_END(msf)
 
-    uint32_t stream_count;
-    struct msf_stream *streams;
-};
+MSF_STRUCT
 
 void msf_dispose(struct msf *msf);
 void msf_print(struct msf *msf, uint32_t depth, FILE *stream);

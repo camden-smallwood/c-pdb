@@ -6,8 +6,21 @@
 #include "utils.h"
 #include "tpi.h"
 
-static inline int msf_header_v2_read(struct msf_header_v2 *v2, FILE *stream)
+#include "macros_print.h"
+
+void msf_header_v2_print(struct msf_header_v2 *item, uint32_t depth, FILE *stream)
 {
+    assert(item);
+    assert(stream);
+
+    MSF_HEADER_V2_STRUCT
+}
+
+int msf_header_v2_read(struct msf_header_v2 *v2, FILE *stream)
+{
+    assert(v2);
+    assert(stream);
+
     fseek(stream, 0, SEEK_END);
     long size = ftell(stream);
     
@@ -25,8 +38,19 @@ static inline int msf_header_v2_read(struct msf_header_v2 *v2, FILE *stream)
     return 1;
 }
 
-static inline int msf_header_v7_read(struct msf_header_v7 *v7, FILE *stream)
+void msf_header_v7_print(struct msf_header_v7 *item, uint32_t depth, FILE *stream)
+{
+    assert(item);
+    assert(stream);
+    
+    MSF_HEADER_V7_STRUCT
+}
+
+int msf_header_v7_read(struct msf_header_v7 *v7, FILE *stream)
 {   
+    assert(v7);
+    assert(stream);
+
     fseek(stream, 0, SEEK_END);
     long size = ftell(stream);
     
@@ -42,6 +66,21 @@ static inline int msf_header_v7_read(struct msf_header_v7 *v7, FILE *stream)
     fread(&v7->page_size, sizeof(*v7) - sizeof(v7->signature), 1, stream);
 
     return 1;
+}
+
+void msf_header_type_print(enum msf_header_type item, FILE *stream)
+{
+    assert(stream);
+
+    MSF_HEADER_TYPE_ENUM
+}
+
+void msf_header_print(struct msf_header *item, uint32_t depth, FILE *stream)
+{
+    assert(item);
+    assert(stream);
+
+    MSF_HEADER_STRUCT
 }
 
 int msf_header_read(struct msf_header *header, FILE *stream)
@@ -63,40 +102,6 @@ int msf_header_read(struct msf_header *header, FILE *stream)
     return 0;
 }
 
-void msf_header_print(struct msf_header *header, uint32_t depth, FILE *stream)
-{
-    assert(header);
-    assert(stream);
-
-    fprintf(stream, "msf_header {\n");
-
-    switch (header->type)
-    {
-    case MSF_HEADER_V2:
-        fprintf_depth(stream, depth + 1, "page_size: %u,\n", header->v2.page_size);
-        fprintf_depth(stream, depth + 1, "start_page: %u,\n", header->v2.start_page);
-        fprintf_depth(stream, depth + 1, "file_page_count: %u,\n", header->v2.file_page_count);
-        fprintf_depth(stream, depth + 1, "root_stream_size: %u,\n", header->v2.root_stream_size);
-        fprintf_depth(stream, depth + 1, "reserved: %u,\n", header->v2.reserved);
-        break;
-    
-    case MSF_HEADER_V7:
-        fprintf_depth(stream, depth + 1, "page_size: %u,\n", header->v7.page_size);
-        fprintf_depth(stream, depth + 1, "allocation_table_pointer: %u,\n", header->v7.allocation_table_pointer);
-        fprintf_depth(stream, depth + 1, "file_page_count: %u,\n", header->v7.file_page_count);
-        fprintf_depth(stream, depth + 1, "root_stream_size: %u,\n", header->v7.root_stream_size);
-        fprintf_depth(stream, depth + 1, "reserved: %u,\n", header->v7.reserved);
-        fprintf_depth(stream, depth + 1, "root_stream_page_list_page_index: %u,\n", header->v7.root_stream_page_list_page_index);
-        break;
-    
-    default:
-        fprintf(stderr, "%s:%i: ERROR: unhandled msf header type: %i\n", __FILE__, __LINE__, header->type);
-        exit(EXIT_FAILURE);
-    }
-
-    fprintf_depth(stream, depth, "}");
-}
-
 void msf_stream_dispose(struct msf_stream *msf_stream)
 {
     assert(msf_stream);
@@ -104,25 +109,12 @@ void msf_stream_dispose(struct msf_stream *msf_stream)
     free(msf_stream->page_indices);
 }
 
-void msf_stream_print(struct msf_stream *msf_stream, uint32_t depth, FILE *file_stream)
+void msf_stream_print(struct msf_stream *item, uint32_t depth, FILE *stream)
 {
-    assert(msf_stream);
-    assert(file_stream);
+    assert(item);
+    assert(stream);
 
-    fprintf(file_stream, "msf_stream {\n");
-    fprintf_depth(file_stream, depth + 1, "size: %u,\n", msf_stream->size);
-    fprintf_depth(file_stream, depth + 1, "page_count: %u,\n", msf_stream->page_count);
-    
-    fprintf_depth(file_stream, depth + 1, "page_indices: [");
-    for (uint32_t i = 0; i < msf_stream->page_count; i++)
-    {
-        if (i > 0)
-            fprintf(file_stream, ", ");        
-        fprintf(file_stream, "%u", msf_stream->page_indices[i]);
-    }
-    fprintf(file_stream, "],\n");
-
-    fprintf_depth(file_stream, depth, "}");
+    MSF_STREAM_STRUCT
 }
 
 void msf_dispose(struct msf *msf)
@@ -137,33 +129,12 @@ void msf_dispose(struct msf *msf)
     free(msf->streams);
 }
 
-void msf_print(struct msf *msf, uint32_t depth, FILE *stream)
+void msf_print(struct msf *item, uint32_t depth, FILE *stream)
 {
-    assert(msf);
+    assert(item);
     assert(stream);
 
-    fprintf(stream, "msf {\n");
-
-    fprintf_depth(stream, depth + 1, "header: ");
-    msf_header_print(&msf->header, depth + 1, stream);
-    fprintf(stream, ",\n");
-
-    fprintf_depth(stream, depth + 1, "root_stream: ");
-    msf_stream_print(&msf->root_stream, depth + 1, stream);
-    fprintf(stream, ",\n");
-
-    fprintf_depth(stream, depth + 1, "stream_count: %u,\n", msf->stream_count);
-    fprintf_depth(stream, depth + 1, "streams: [\n");
-
-    for (uint32_t i = 0; i < msf->stream_count; i++)
-    {
-        fprintf_depth(stream, depth + 2, "[%u] = ", i);
-        msf_stream_print(&msf->streams[i], depth + 2, stream);
-        fprintf(stream, ",\n");
-    }
-
-    fprintf_depth(stream, depth + 1, "],\n");
-    fprintf_depth(stream, depth, "}");
+    MSF_STRUCT
 }
 
 uint32_t msf_get_page_count(struct msf *msf)

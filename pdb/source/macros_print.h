@@ -54,7 +54,7 @@
 
 #define FIELD_PRIMITIVE_DYNAMIC_ARRAY_FMT(type, name, count_field, fmt_fn) \
     fprintf_depth(stream, depth + 1, #name ": ");                          \
-    fmt_fn(item->name, item->count_field, depth + 1, stream);              \
+    fmt_fn(item->name, item->count_field, stream);              \
     fprintf(stream, ",\n");
 
 #define FIELD_STRUCT(type, name, fmt_fn)          \

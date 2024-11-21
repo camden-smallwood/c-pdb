@@ -6,6 +6,8 @@
 
 #include "macros_decl.h"
 
+/* ---------- machine types */
+
 #define DBI_MACHINE_TYPE_ENUM \
 ENUM_DECL(dbi_machine_type) \
     ENUM_VALUE(DBI_MACHINE_TYPE_UNKNOWN, 0x0) \
@@ -41,6 +43,8 @@ DBI_MACHINE_TYPE_ENUM
 
 void dbi_machine_type_print(enum dbi_machine_type type, FILE *stream);
 
+/* ---------- DBI section header */
+
 #define DBI_HEADER_STRUCT \
 STRUCT_DECL(dbi_header) \
     FIELD_PRIMITIVE(uint32_t, signature, "%u") \
@@ -71,6 +75,8 @@ static_assert(sizeof(struct dbi_header) == 64);
 void dbi_header_read(struct dbi_header *header, struct msf *msf, FILE *stream);
 void dbi_header_print(struct dbi_header *header, uint32_t depth, FILE *stream);
 
+/* ---------- DBI section contribution */
+
 #define DBI_SECTION_CONTRIBUTION_STRUCT \
 STRUCT_DECL(dbi_section_contribution) \
     FIELD_PRIMITIVE(uint16_t, section, "%u") \
@@ -89,6 +95,8 @@ static_assert(sizeof(struct dbi_section_contribution) == 28);
 
 void dbi_section_contribution_print(struct dbi_section_contribution *contribution, uint32_t depth, FILE *stream);
 
+/* ---------- DBI section contributions list */
+
 #define DBI_SECTION_CONTRIBUTIONS_STRUCT \
 STRUCT_DECL(dbi_section_contributions) \
     FIELD_PRIMITIVE(uint32_t, version, "%u") \
@@ -101,6 +109,8 @@ DBI_SECTION_CONTRIBUTIONS_STRUCT
 void dbi_section_contributions_read(struct dbi_section_contributions *contributions, struct msf *msf, struct dbi_header *dbi_header, FILE *stream);
 void dbi_section_contributions_dispose(struct dbi_section_contributions *contributions);
 void dbi_section_contributions_print(struct dbi_section_contributions *contributions, uint32_t depth, FILE *stream);
+
+/* ---------- DBI module header */
 
 #define DBI_MODULE_HEADER_STRUCT \
 STRUCT_DECL(dbi_module_header) \

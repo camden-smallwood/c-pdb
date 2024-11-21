@@ -59,7 +59,6 @@ void pdb_data_print(struct pdb_data *item, uint32_t depth, FILE *stream)
 {
     assert(item);
     assert(stream);
-
     
     PDB_DATA_STRUCT
 }
