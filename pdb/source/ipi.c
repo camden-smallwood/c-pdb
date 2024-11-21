@@ -3,16 +3,14 @@
 #include "utils.h"
 #include "ipi.h"
 
+#include "macros_print.h"
+
 void tpi_udt_src_line_print(struct tpi_udt_src_line *item, uint32_t depth, FILE *stream)
 {
     assert(item);
     assert(stream);
 
-    fprintf(stream, "tpi_udt_src_line {\n");
-    fprintf_depth(stream, depth + 1, "udt_index: %u,\n", item->udt_index);
-    fprintf_depth(stream, depth + 1, "file_id: %u,\n", item->file_id);
-    fprintf_depth(stream, depth + 1, "line: %u,\n", item->line);
-    fprintf_depth(stream, depth, "}");
+    TPI_UDT_SRC_LINE_STRUCT
 }
 
 void tpi_udt_mod_src_line_print(struct tpi_udt_mod_src_line *item, uint32_t depth, FILE *stream)
@@ -20,12 +18,7 @@ void tpi_udt_mod_src_line_print(struct tpi_udt_mod_src_line *item, uint32_t dept
     assert(item);
     assert(stream);
 
-    fprintf(stream, "tpi_udt_mod_src_line {\n");
-    fprintf_depth(stream, depth + 1, "udt_index: %u,\n", item->udt_index);
-    fprintf_depth(stream, depth + 1, "file_id: %u,\n", item->file_id);
-    fprintf_depth(stream, depth + 1, "line: %u,\n", item->line);
-    fprintf_depth(stream, depth + 1, "mod: %u,\n", item->mod);
-    fprintf_depth(stream, depth, "}");
+    TPI_UDT_MOD_SRC_LINE_STRUCT
 }
 
 void tpi_string_id_dispose(struct tpi_string_id *item)
@@ -40,10 +33,7 @@ void tpi_string_id_print(struct tpi_string_id *item, uint32_t depth, FILE *strea
     assert(item);
     assert(stream);
 
-    fprintf(stream, "tpi_string_id {\n");
-    fprintf_depth(stream, depth + 1, "substrings_index: %u,\n", item->substrings_index);
-    fprintf_depth(stream, depth + 1, "string: \"%s\",\n", item->string);
-    fprintf_depth(stream, depth, "}");
+    TPI_STRING_ID_STRUCT
 }
 
 void tpi_substr_list_dispose(struct tpi_substr_list *item)
@@ -58,17 +48,7 @@ void tpi_substr_list_print(struct tpi_substr_list *item, uint32_t depth, FILE *s
     assert(item);
     assert(stream);
 
-    fprintf(stream, "tpi_substr_list {\n");
-    fprintf_depth(stream, depth + 1, "count: %u,\n", item->count);
-    fprintf_depth(stream, depth + 1, "substring_indices: [");
-    for (uint32_t i = 0; i < item->count; i++)
-    {
-        if (i > 0)
-            fprintf(stream, ", ");
-        fprintf(stream, "%u", item->substring_indices[i]);
-    }
-    fprintf(stream, "],\n");
-    fprintf_depth(stream, depth, "}");
+    TPI_SUBSTR_LIST_STRUCT
 }
 
 void tpi_build_info_dispose(struct tpi_build_info *item)
@@ -83,17 +63,7 @@ void tpi_build_info_print(struct tpi_build_info *item, uint32_t depth, FILE *str
     assert(item);
     assert(stream);
 
-    fprintf(stream, "tpi_build_info {\n");
-    fprintf_depth(stream, depth + 1, "count: %u,\n", item->count);
-    fprintf_depth(stream, depth + 1, "argument_indices: [");
-    for (uint32_t i = 0; i < item->count; i++)
-    {
-        if (i > 0)
-            fprintf(stream, ", ");
-        fprintf(stream, "%u", item->argument_indices[i]);
-    }
-    fprintf(stream, "],\n");
-    fprintf_depth(stream, depth, "}");
+    TPI_BUILD_INFO_STRUCT
 }
 
 void tpi_func_id_dispose(struct tpi_func_id *item)
@@ -108,11 +78,7 @@ void tpi_func_id_print(struct tpi_func_id *item, uint32_t depth, FILE *stream)
     assert(item);
     assert(stream);
 
-    fprintf(stream, "tpi_func_id {\n");
-    fprintf_depth(stream, depth + 1, "scope_index: %u,\n", item->scope_index);
-    fprintf_depth(stream, depth + 1, "function_type_index: %u,\n", item->function_type_index);
-    fprintf_depth(stream, depth + 1, "name: \"%s\",\n", item->name);
-    fprintf_depth(stream, depth, "}");
+    TPI_FUNC_ID_STRUCT
 }
 
 void tpi_mfunc_id_dispose(struct tpi_mfunc_id *item)
@@ -127,11 +93,7 @@ void tpi_mfunc_id_print(struct tpi_mfunc_id *item, uint32_t depth, FILE *stream)
     assert(item);
     assert(stream);
 
-    fprintf(stream, "tpi_mfunc_id {\n");
-    fprintf_depth(stream, depth + 1, "parent: %u,\n", item->parent);
-    fprintf_depth(stream, depth + 1, "function_type_index: %u,\n", item->function_type_index);
-    fprintf_depth(stream, depth + 1, "name: \"%s\",\n", item->name);
-    fprintf_depth(stream, depth, "}");
+    TPI_MFUNC_ID_STRUCT
 }
 
 void ipi_symbol_dispose(struct ipi_symbol *symbol)
@@ -142,14 +104,14 @@ void ipi_symbol_dispose(struct ipi_symbol *symbol)
     {
     case LF_UDT_SRC_LINE:
         break;
-    
+
     case LF_UDT_MOD_SRC_LINE:
         break;
-    
+
     case LF_STRING_ID:
         tpi_string_id_dispose(&symbol->string_id);
         break;
-    
+
     case LF_SUBSTR_LIST:
         tpi_substr_list_dispose(&symbol->substr_list);
         break;
@@ -165,74 +127,19 @@ void ipi_symbol_dispose(struct ipi_symbol *symbol)
     case LF_MFUNC_ID:
         tpi_mfunc_id_dispose(&symbol->mfunc_id);
         break;
-    
+
     default:
         fprintf(stderr, "%s:%i: ERROR: Unhandled IPI symbol type: %u\n", __FILE__, __LINE__, symbol->type);
         exit(EXIT_FAILURE);
     }
 }
 
-void ipi_symbol_print(struct ipi_symbol *symbol, uint32_t depth, FILE *stream)
+void ipi_symbol_print(struct ipi_symbol *item, uint32_t depth, FILE *stream)
 {
-    assert(symbol);
+    assert(item);
     assert(stream);
 
-    fprintf(stream, "ipi_symbol {\n");
-    
-    fprintf_depth(stream, depth + 1, "type: ");
-    tpi_leaf_print(symbol->type, stream);
-    fprintf(stream, ",\n");
-
-    switch (symbol->type)
-    {
-    case LF_UDT_SRC_LINE:
-        fprintf_depth(stream, depth + 1, "udt_src_line: ");
-        tpi_udt_src_line_print(&symbol->udt_src_line, depth + 1, stream);
-        fprintf(stream, ",\n");
-        break;
-    
-    case LF_UDT_MOD_SRC_LINE:
-        fprintf_depth(stream, depth + 1, "udt_mod_src_line: ");
-        tpi_udt_mod_src_line_print(&symbol->udt_mod_src_line, depth + 1, stream);
-        fprintf(stream, ",\n");
-        break;
-    
-    case LF_STRING_ID:
-        fprintf_depth(stream, depth + 1, "string_id: ");
-        tpi_string_id_print(&symbol->string_id, depth + 1, stream);
-        fprintf(stream, ",\n");
-        break;
-
-    case LF_SUBSTR_LIST:
-        fprintf_depth(stream, depth + 1, "substr_list: ");
-        tpi_substr_list_print(&symbol->substr_list, depth + 1, stream);
-        fprintf(stream, ",\n");
-        break;
-
-    case LF_BUILDINFO:
-        fprintf_depth(stream, depth + 1, "build_info: ");
-        tpi_build_info_print(&symbol->build_info, depth + 1, stream);
-        fprintf(stream, ",\n");
-        break;
-
-    case LF_FUNC_ID:
-        fprintf_depth(stream, depth + 1, "func_id: ");
-        tpi_func_id_print(&symbol->func_id, depth + 1, stream);
-        fprintf(stream, ",\n");
-        break;
-
-    case LF_MFUNC_ID:
-        fprintf_depth(stream, depth + 1, "mfunc_id: ");
-        tpi_mfunc_id_print(&symbol->mfunc_id, depth + 1, stream);
-        fprintf(stream, ",\n");
-        break;
-    
-    default:
-        fprintf(stderr, "%s:%i: ERROR: Unhandled IPI symbol type: ", __FILE__, __LINE__);
-        exit(EXIT_FAILURE);
-    }
-
-    fprintf_depth(stream, depth, "}");
+    IPI_SYMBOL_STRUCT
 }
 
 void ipi_header_read(struct tpi_header *header, struct msf *msf, FILE *stream)
@@ -278,78 +185,78 @@ void ipi_symbols_read(
         case LF_UDT_SRC_LINE:
             msf_stream_read_data(msf, msf_stream, offset, sizeof(symbol->udt_src_line), &symbol->udt_src_line, file_stream);
             break;
-        
+
         case LF_UDT_MOD_SRC_LINE:
             msf_stream_read_data(msf, msf_stream, offset, sizeof(symbol->udt_mod_src_line), &symbol->udt_mod_src_line, file_stream);
             break;
-        
+
         case LF_STRING_ID:
-            {
-                uint32_t temp_offset = offset;
-                
-                msf_stream_read_data(msf, msf_stream, temp_offset, sizeof(symbol->string_id.substrings_index), &symbol->string_id.substrings_index, file_stream);
-                temp_offset += sizeof(symbol->string_id.substrings_index);
+        {
+            uint32_t temp_offset = offset;
 
-                symbol->string_id.string = msf_read_tpi_lf_string(msf, msf_stream, &temp_offset, symbol->type, file_stream);
-                break;
-            }
-        
+            msf_stream_read_data(msf, msf_stream, temp_offset, sizeof(symbol->string_id.substrings_index), &symbol->string_id.substrings_index, file_stream);
+            temp_offset += sizeof(symbol->string_id.substrings_index);
+
+            symbol->string_id.string = msf_read_tpi_lf_string(msf, msf_stream, &temp_offset, symbol->type, file_stream);
+            break;
+        }
+
         case LF_SUBSTR_LIST:
-            {
-                uint32_t temp_offset = offset;
-                
-                msf_stream_read_data(msf, msf_stream, temp_offset, sizeof(symbol->substr_list.count), &symbol->substr_list.count, file_stream);
-                temp_offset += sizeof(symbol->substr_list.count);
+        {
+            uint32_t temp_offset = offset;
 
-                symbol->substr_list.substring_indices = malloc(symbol->substr_list.count * sizeof(*symbol->substr_list.substring_indices));
-                assert(symbol->substr_list.substring_indices);
-                msf_stream_read_data(msf, msf_stream, temp_offset, symbol->substr_list.count * sizeof(*symbol->substr_list.substring_indices), symbol->substr_list.substring_indices, file_stream);
-                break;
-            }
-        
+            msf_stream_read_data(msf, msf_stream, temp_offset, sizeof(symbol->substr_list.count), &symbol->substr_list.count, file_stream);
+            temp_offset += sizeof(symbol->substr_list.count);
+
+            symbol->substr_list.substring_indices = malloc(symbol->substr_list.count * sizeof(*symbol->substr_list.substring_indices));
+            assert(symbol->substr_list.substring_indices);
+            msf_stream_read_data(msf, msf_stream, temp_offset, symbol->substr_list.count * sizeof(*symbol->substr_list.substring_indices), symbol->substr_list.substring_indices, file_stream);
+            break;
+        }
+
         case LF_BUILDINFO:
-            {
-                uint32_t temp_offset = offset;
-                
-                msf_stream_read_data(msf, msf_stream, temp_offset, sizeof(symbol->build_info.count), &symbol->build_info.count, file_stream);
-                temp_offset += sizeof(symbol->build_info.count);
+        {
+            uint32_t temp_offset = offset;
 
-                symbol->build_info.argument_indices = malloc(symbol->build_info.count * sizeof(*symbol->build_info.argument_indices));
-                assert(symbol->build_info.argument_indices);
-                msf_stream_read_data(msf, msf_stream, temp_offset, symbol->build_info.count * sizeof(*symbol->build_info.argument_indices), symbol->build_info.argument_indices, file_stream);
-                break;
-            }
-        
+            msf_stream_read_data(msf, msf_stream, temp_offset, sizeof(symbol->build_info.count), &symbol->build_info.count, file_stream);
+            temp_offset += sizeof(symbol->build_info.count);
+
+            symbol->build_info.argument_indices = malloc(symbol->build_info.count * sizeof(*symbol->build_info.argument_indices));
+            assert(symbol->build_info.argument_indices);
+            msf_stream_read_data(msf, msf_stream, temp_offset, symbol->build_info.count * sizeof(*symbol->build_info.argument_indices), symbol->build_info.argument_indices, file_stream);
+            break;
+        }
+
         case LF_FUNC_ID:
-            {
-                uint32_t temp_offset = offset;
-                
-                struct tpi_func_id item;
-                memset(&item, 0, sizeof(item));
+        {
+            uint32_t temp_offset = offset;
 
-                msf_stream_read_data(msf, msf_stream, temp_offset, sizeof(item.scope_index), &item.scope_index, file_stream);
-                temp_offset += sizeof(item.scope_index);
+            struct tpi_func_id item;
+            memset(&item, 0, sizeof(item));
 
-                msf_stream_read_data(msf, msf_stream, temp_offset, sizeof(item.function_type_index), &item.function_type_index, file_stream);
-                temp_offset += sizeof(item.function_type_index);
+            msf_stream_read_data(msf, msf_stream, temp_offset, sizeof(item.scope_index), &item.scope_index, file_stream);
+            temp_offset += sizeof(item.scope_index);
 
-                item.name = msf_read_tpi_lf_string(msf, msf_stream, &temp_offset, symbol->type, file_stream);
-                break;
-            }
-        
+            msf_stream_read_data(msf, msf_stream, temp_offset, sizeof(item.function_type_index), &item.function_type_index, file_stream);
+            temp_offset += sizeof(item.function_type_index);
+
+            item.name = msf_read_tpi_lf_string(msf, msf_stream, &temp_offset, symbol->type, file_stream);
+            break;
+        }
+
         case LF_MFUNC_ID:
-            {
-                uint32_t temp_offset = offset;
-                
-                msf_stream_read_data(msf, msf_stream, temp_offset, sizeof(symbol->mfunc_id.parent), &symbol->mfunc_id.parent, file_stream);
-                temp_offset += sizeof(symbol->mfunc_id.parent);
+        {
+            uint32_t temp_offset = offset;
 
-                msf_stream_read_data(msf, msf_stream, temp_offset, sizeof(symbol->mfunc_id.function_type_index), &symbol->mfunc_id.function_type_index, file_stream);
-                temp_offset += sizeof(symbol->mfunc_id.function_type_index);
+            msf_stream_read_data(msf, msf_stream, temp_offset, sizeof(symbol->mfunc_id.parent), &symbol->mfunc_id.parent, file_stream);
+            temp_offset += sizeof(symbol->mfunc_id.parent);
 
-                symbol->mfunc_id.name = msf_read_tpi_lf_string(msf, msf_stream, &temp_offset, symbol->type, file_stream);
-                break;
-            }
+            msf_stream_read_data(msf, msf_stream, temp_offset, sizeof(symbol->mfunc_id.function_type_index), &symbol->mfunc_id.function_type_index, file_stream);
+            temp_offset += sizeof(symbol->mfunc_id.function_type_index);
+
+            symbol->mfunc_id.name = msf_read_tpi_lf_string(msf, msf_stream, &temp_offset, symbol->type, file_stream);
+            break;
+        }
 
         default:
             fprintf(stderr, "%s:%i: ERROR: Unsupported IPI symbol leaf: ", __FILE__, __LINE__);
@@ -368,23 +275,14 @@ void ipi_symbols_dispose(struct ipi_symbols *symbols)
 
     for (uint32_t i = 0; i < symbols->count; i++)
         ipi_symbol_dispose(&symbols->symbols[i]);
-    
+
     free(symbols->symbols);
 }
 
-void ipi_symbols_print(struct ipi_symbols *symbols, uint32_t depth, FILE *stream)
+void ipi_symbols_print(struct ipi_symbols *item, uint32_t depth, FILE *stream)
 {
-    assert(symbols);
+    assert(item);
     assert(stream);
 
-    fprintf(stream, "[\n");
-
-    for (uint32_t i = 0; i < symbols->count; i++)
-    {
-        fprintf_depth(stream, depth + 1, "");
-        ipi_symbol_print(&symbols->symbols[i], depth + 1, stream);
-        fprintf(stream, ",\n");
-    }
-
-    fprintf_depth(stream, depth, "]");
+    IPI_SYMBOLS_STRUCT
 }

@@ -5,99 +5,134 @@
 #include "msf.h"
 #include "tpi.h"
 
-struct tpi_udt_src_line
-{
-    uint32_t udt_index;
-    uint32_t file_id;
-    uint32_t line;
-};
+#include "macros_decl.h"
+
+/* ---------- UDT source lines */
+
+#define TPI_UDT_SRC_LINE_STRUCT \
+STRUCT_DECL(tpi_udt_src_line) \
+    FIELD_PRIMITIVE(uint32_t, udt_index, "%u") \
+    FIELD_PRIMITIVE(uint32_t, file_id, "%u") \
+    FIELD_PRIMITIVE(uint32_t, line, "%u") \
+STRUCT_END(tpi_udt_src_line)
+
+TPI_UDT_SRC_LINE_STRUCT
 static_assert(sizeof(struct tpi_udt_src_line) == 12);
 
 void tpi_udt_src_line_print(struct tpi_udt_src_line *item, uint32_t depth, FILE *stream);
 
+/* ---------- UDT module source lines */
+
+#define TPI_UDT_MOD_SRC_LINE_STRUCT \
+STRUCT_DECL(tpi_udt_mod_src_line) \
+    FIELD_PRIMITIVE(uint32_t, udt_index, "%u") \
+    FIELD_PRIMITIVE(uint32_t, file_id, "%u") \
+    FIELD_PRIMITIVE(uint32_t, line, "%u") \
+    FIELD_PRIMITIVE(uint16_t, mod, "%u") \
+STRUCT_END(tpi_udt_mod_src_line)
+
 #pragma pack(push, 1)
-struct tpi_udt_mod_src_line
-{
-    uint32_t udt_index;
-    uint32_t file_id;
-    uint32_t line;
-    uint16_t mod;
-};
+TPI_UDT_MOD_SRC_LINE_STRUCT
 #pragma pack(pop)
 static_assert(sizeof(struct tpi_udt_mod_src_line) == 14);
 
 void tpi_udt_mod_src_line_print(struct tpi_udt_mod_src_line *item, uint32_t depth, FILE *stream);
 
-struct tpi_string_id
-{
-    uint32_t substrings_index;
-    char *string;
-};
+/* ---------- string IDs */
+
+#define TPI_STRING_ID_STRUCT \
+STRUCT_DECL(tpi_string_id) \
+    FIELD_PRIMITIVE(uint32_t, substrings_index, "%u") \
+    FIELD_PRIMITIVE(char *, string, "\"%s\"") \
+STRUCT_END(tpi_string_id)
+
+TPI_STRING_ID_STRUCT
 
 void tpi_string_id_dispose(struct tpi_string_id *item);
 void tpi_string_id_print(struct tpi_string_id *item, uint32_t depth, FILE *stream);
 
-struct tpi_substr_list
-{
-    uint32_t count;
-    uint32_t *substring_indices;
-};
+/* ---------- substring lists */
+
+#define TPI_SUBSTR_LIST_STRUCT \
+STRUCT_DECL(tpi_substr_list) \
+    FIELD_PRIMITIVE(uint32_t , count, "%u") \
+    FIELD_PRIMITIVE_DYNAMIC_ARRAY(uint32_t *, substring_indices, count, "%u") \
+STRUCT_END(tpi_substr_list)
+
+TPI_SUBSTR_LIST_STRUCT
 
 void tpi_substr_list_dispose(struct tpi_substr_list *item);
 void tpi_substr_list_print(struct tpi_substr_list *item, uint32_t depth, FILE *stream);
 
-struct tpi_build_info
-{
-    uint16_t count;
-    uint32_t *argument_indices;
-};
+/* ---------- build info */
+
+#define TPI_BUILD_INFO_STRUCT \
+STRUCT_DECL(tpi_build_info) \
+    FIELD_PRIMITIVE(uint16_t, count, "%u") \
+    FIELD_PRIMITIVE_DYNAMIC_ARRAY(uint32_t *, argument_indices, count, "%u") \
+STRUCT_END(tpi_build_info)
+
+TPI_BUILD_INFO_STRUCT
 
 void tpi_build_info_dispose(struct tpi_build_info *item);
 void tpi_build_info_print(struct tpi_build_info *item, uint32_t depth, FILE *stream);
 
-struct tpi_func_id
-{
-    uint32_t scope_index;
-    uint32_t function_type_index;
-    char *name;
-};
+/* ---------- function IDs */
+
+#define TPI_FUNC_ID_STRUCT \
+STRUCT_DECL(tpi_func_id) \
+    FIELD_PRIMITIVE(uint32_t, scope_index, "%u") \
+    FIELD_PRIMITIVE(uint32_t, function_type_index, "%u") \
+    FIELD_PRIMITIVE(char *, name, "\"%s\"") \
+STRUCT_END(tpi_func_id)
+
+TPI_FUNC_ID_STRUCT
 
 void tpi_func_id_dispose(struct tpi_func_id *item);
 void tpi_func_id_print(struct tpi_func_id *item, uint32_t depth, FILE *stream);
 
-struct tpi_mfunc_id
-{
-    uint32_t parent;
-    uint32_t function_type_index;
-    char *name;
-};
+/* ---------- member function IDs */
+
+#define TPI_MFUNC_ID_STRUCT \
+STRUCT_DECL(tpi_mfunc_id) \
+    FIELD_PRIMITIVE(uint32_t , parent, "%u") \
+    FIELD_PRIMITIVE(uint32_t , function_type_index, "%u") \
+    FIELD_PRIMITIVE(char *, name, "\"%s\"") \
+STRUCT_END(tpi_mfunc_id)
+
+TPI_MFUNC_ID_STRUCT
 
 void tpi_mfunc_id_dispose(struct tpi_mfunc_id *item);
 void tpi_mfunc_id_print(struct tpi_mfunc_id *item, uint32_t depth, FILE *stream);
 
-struct ipi_symbol
-{
-    uint16_t type;
-    union
-    {
-        struct tpi_udt_src_line udt_src_line;
-        struct tpi_udt_mod_src_line udt_mod_src_line;
-        struct tpi_string_id string_id;
-        struct tpi_substr_list substr_list;
-        struct tpi_build_info build_info;
-        struct tpi_func_id func_id;
-        struct tpi_mfunc_id mfunc_id;
-    };
-};
+/* ---------- symbols */
+
+#define IPI_SYMBOL_STRUCT \
+STRUCT_DECL(ipi_symbol) \
+    FIELD_PRIMITIVE(uint16_t, type, "%u") \
+    FIELD_UNION_DECL() \
+        FIELD_UNION_FIELD_STRUCT(struct tpi_udt_src_line, udt_src_line, type, LF_UDT_SRC_LINE, tpi_udt_src_line_print) \
+        FIELD_UNION_FIELD_STRUCT(struct tpi_udt_mod_src_line, udt_mod_src_line, type, LF_UDT_MOD_SRC_LINE, tpi_udt_mod_src_line_print) \
+        FIELD_UNION_FIELD_STRUCT(struct tpi_string_id, string_id, type, LF_STRING_ID, tpi_string_id_print) \
+        FIELD_UNION_FIELD_STRUCT(struct tpi_substr_list, substr_list, type, LF_SUBSTR_LIST, tpi_substr_list_print) \
+        FIELD_UNION_FIELD_STRUCT(struct tpi_build_info, build_info, type, LF_BUILDINFO, tpi_build_info_print) \
+        FIELD_UNION_FIELD_STRUCT(struct tpi_func_id, func_id, type, LF_FUNC_ID, tpi_func_id_print) \
+        FIELD_UNION_FIELD_STRUCT(struct tpi_mfunc_id, mfunc_id, type, LF_MFUNC_ID, tpi_mfunc_id_print) \
+    FIELD_UNION_END() \
+STRUCT_END(ipi_symbol)
+
+IPI_SYMBOL_STRUCT
 
 void ipi_symbol_dispose(struct ipi_symbol *symbol);
 void ipi_symbol_print(struct ipi_symbol *symbol, uint32_t depth, FILE *stream);
 
-struct ipi_symbols
-{
-    uint32_t count;
-    struct ipi_symbol *symbols;
-};
+#define IPI_SYMBOLS_STRUCT \
+STRUCT_DECL(ipi_symbols) \
+    FIELD_PRIMITIVE(uint32_t, count, "%u") \
+    FIELD_STRUCT_DYNAMIC_ARRAY(struct ipi_symbol *, symbols, count, ipi_symbol_print) \
+STRUCT_END(ipi_symbols)
+
+IPI_SYMBOLS_STRUCT
 
 void ipi_header_read(struct tpi_header *header, struct msf *msf, FILE *stream);
 

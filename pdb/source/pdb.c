@@ -3,6 +3,8 @@
 #include "pdb.h"
 #include "utils.h"
 
+#include "macros_print.h"
+
 void pdb_data_read(struct pdb_data *pdb_data, FILE *stream)
 {
     assert(pdb_data);
@@ -53,56 +55,11 @@ void pdb_data_dispose(struct pdb_data *pdb_data)
     msf_dispose(&pdb_data->msf);
 }
 
-void pdb_data_print(struct pdb_data *pdb_data, uint32_t depth, FILE *stream)
+void pdb_data_print(struct pdb_data *item, uint32_t depth, FILE *stream)
 {
-    assert(pdb_data);
+    assert(item);
     assert(stream);
 
-    fprintf(stream, "pdb_data {\n");
-
-    fprintf_depth(stream, depth + 1, "pdb_info: ");
-    pdb_info_print(&pdb_data->pdb_info, depth + 1, stream);
-    fprintf(stream, ",\n");
-
-    fprintf_depth(stream, depth + 1, "string_table: ");
-    pdb_string_table_print(&pdb_data->string_table, depth + 1, stream);
-    fprintf(stream, ",\n");
-
-    fprintf_depth(stream, depth + 1, "tpi_header: ");
-    tpi_header_print(&pdb_data->tpi_header, depth + 1, stream);
-    fprintf(stream, ",\n");
-
-    fprintf_depth(stream, depth + 1, "tpi_symbols: ");
-    tpi_symbols_print(&pdb_data->tpi_symbols, depth + 1, stream);
-    fprintf(stream, ",\n");
-
-    fprintf_depth(stream, depth + 1, "ipi_header: ");
-    tpi_header_print(&pdb_data->ipi_header, depth + 1, stream);
-    fprintf(stream, ",\n");
-
-    fprintf_depth(stream, depth + 1, "ipi_symbols: ");
-    ipi_symbols_print(&pdb_data->ipi_symbols, depth + 1, stream);
-    fprintf(stream, ",\n");
-
-    fprintf_depth(stream, depth + 1, "dbi_header: ");
-    dbi_header_print(&pdb_data->dbi_header, depth + 1, stream);
-    fprintf(stream, ",\n");
-
-    fprintf_depth(stream, depth + 1, "modules: ");
-    dbi_modules_print(&pdb_data->modules, depth + 1, stream);
-    fprintf(stream, ",\n");
-
-    fprintf_depth(stream, depth + 1, "section_contributions: ");
-    dbi_section_contributions_print(&pdb_data->section_contributions, depth + 1, stream);
-    fprintf(stream, ",\n");
-
-    fprintf_depth(stream, depth + 1, "extra_streams: ");
-    dbi_extra_streams_print(&pdb_data->extra_streams, depth + 1, stream);
-    fprintf(stream, ",\n");
-
-    fprintf_depth(stream, depth + 1, "address_map: ");
-    dbi_address_map_print(&pdb_data->address_map, depth + 1, stream);
-    fprintf(stream, ",\n");
-
-    fprintf_depth(stream, depth, "}");
+    
+    PDB_DATA_STRUCT
 }

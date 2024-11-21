@@ -12,3 +12,5 @@
     } while (0)
 
 __attribute__((__format__(__printf__, 3, 4))) void fprintf_depth(FILE *stream, uint32_t depth, char *fmt, ...);
+
+void fixed_string_print(char *string, uint32_t length, FILE *stream);
