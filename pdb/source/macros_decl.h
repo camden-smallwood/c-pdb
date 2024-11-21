@@ -22,10 +22,10 @@
 #define FIELD_PRIMITIVE_FMT FIELD_PRIMITIVE
 
 #define FIELD_PRIMITIVE_FIXED_ARRAY(type, name, count, fmt) type name[count];
-#define FIELD_PRIMITIVE_FIXED_ARRAY_FMT FIELD_PRIMITIVE_FIXED_ARRAY
+#define FIELD_PRIMITIVE_FIXED_ARRAY_FMT(type, name, count, fmt_fn) type name[count];
 
 #define FIELD_PRIMITIVE_DYNAMIC_ARRAY(type, name, count_field, fmt) type name;
-#define FIELD_PRIMITIVE_DYNAMIC_ARRAY_FMT FIELD_PRIMITIVE_DYNAMIC_ARRAY
+#define FIELD_PRIMITIVE_DYNAMIC_ARRAY_FMT(type, name, count_field, fmt_fn) type name;
 
 #define FIELD_STRUCT(type, name, fmt_fn) type name;
 #define FIELD_STRUCT_FIXED_ARRAY(type, name, count, fmt_fn) type name[count];

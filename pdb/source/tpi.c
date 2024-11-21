@@ -442,9 +442,9 @@ void tpi_leaf_print(
     // case LF_ENDOFLEAFRECORD:
     //     fprintf(stream, "LF_ENDOFLEAFRECORD");
     //     break;
-    case LF_TYPE_LAST:
-        fprintf(stream, "LF_TYPE_LAST");
-        break;
+    // case LF_TYPE_LAST:
+    //     fprintf(stream, "LF_TYPE_LAST");
+    //     break;
     // case LF_TYPE_MAX:
     //     fprintf(stream, "LF_TYPE_MAX");
     //     break;
@@ -472,9 +472,9 @@ void tpi_leaf_print(
     case LF_STRUCTURE19:
         fprintf(stream, "LF_STRUCTURE19");
         break;
-    case LF_ID_LAST:
-        fprintf(stream, "LF_ID_LAST");
-        break;
+    // case LF_ID_LAST:
+    //     fprintf(stream, "LF_ID_LAST");
+    //     break;
     // case LF_ID_MAX:
     //     fprintf(stream, "LF_ID_MAX");
     //     break;
