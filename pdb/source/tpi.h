@@ -223,6 +223,88 @@ TPI_LEAF_ENUM
 
 void tpi_leaf_print(enum tpi_leaf leaf, FILE *stream);
 
+/* ---------- TPI primitive types */
+
+#define TPI_PRIMITIVE_TYPE_ENUM \
+ENUM_DECL(tpi_primitive_type) \
+    ENUM_VALUE(TPI_PRIMITIVE_TYPE_NONE) \
+    ENUM_VALUE(TPI_PRIMITIVE_TYPE_VOID) \
+    ENUM_VALUE(TPI_PRIMITIVE_TYPE_CHAR) \
+    ENUM_VALUE(TPI_PRIMITIVE_TYPE_UCHAR) \
+    ENUM_VALUE(TPI_PRIMITIVE_TYPE_RCHAR) \
+    ENUM_VALUE(TPI_PRIMITIVE_TYPE_WCHAR) \
+    ENUM_VALUE(TPI_PRIMITIVE_TYPE_RCHAR16) \
+    ENUM_VALUE(TPI_PRIMITIVE_TYPE_RCHAR32) \
+    ENUM_VALUE(TPI_PRIMITIVE_TYPE_INT8) \
+    ENUM_VALUE(TPI_PRIMITIVE_TYPE_UINT8) \
+    ENUM_VALUE(TPI_PRIMITIVE_TYPE_SHORT) \
+    ENUM_VALUE(TPI_PRIMITIVE_TYPE_USHORT) \
+    ENUM_VALUE(TPI_PRIMITIVE_TYPE_INT16) \
+    ENUM_VALUE(TPI_PRIMITIVE_TYPE_UINT16) \
+    ENUM_VALUE(TPI_PRIMITIVE_TYPE_LONG) \
+    ENUM_VALUE(TPI_PRIMITIVE_TYPE_ULONG) \
+    ENUM_VALUE(TPI_PRIMITIVE_TYPE_INT32) \
+    ENUM_VALUE(TPI_PRIMITIVE_TYPE_UINT32) \
+    ENUM_VALUE(TPI_PRIMITIVE_TYPE_QUAD) \
+    ENUM_VALUE(TPI_PRIMITIVE_TYPE_UQUAD) \
+    ENUM_VALUE(TPI_PRIMITIVE_TYPE_INT64) \
+    ENUM_VALUE(TPI_PRIMITIVE_TYPE_UINT64) \
+    ENUM_VALUE(TPI_PRIMITIVE_TYPE_OCTA) \
+    ENUM_VALUE(TPI_PRIMITIVE_TYPE_UOCTA) \
+    ENUM_VALUE(TPI_PRIMITIVE_TYPE_INT128) \
+    ENUM_VALUE(TPI_PRIMITIVE_TYPE_UINT128) \
+    ENUM_VALUE(TPI_PRIMITIVE_TYPE_FLOAT16) \
+    ENUM_VALUE(TPI_PRIMITIVE_TYPE_FLOAT32) \
+    ENUM_VALUE(TPI_PRIMITIVE_TYPE_FLOAT32_PP) \
+    ENUM_VALUE(TPI_PRIMITIVE_TYPE_FLOAT48) \
+    ENUM_VALUE(TPI_PRIMITIVE_TYPE_FLOAT64) \
+    ENUM_VALUE(TPI_PRIMITIVE_TYPE_FLOAT80) \
+    ENUM_VALUE(TPI_PRIMITIVE_TYPE_FLOAT128) \
+    ENUM_VALUE(TPI_PRIMITIVE_TYPE_COMPLEX32) \
+    ENUM_VALUE(TPI_PRIMITIVE_TYPE_COMPLEX64) \
+    ENUM_VALUE(TPI_PRIMITIVE_TYPE_COMPLEX80) \
+    ENUM_VALUE(TPI_PRIMITIVE_TYPE_COMPLEX128) \
+    ENUM_VALUE(TPI_PRIMITIVE_TYPE_BOOL8) \
+    ENUM_VALUE(TPI_PRIMITIVE_TYPE_BOOL16) \
+    ENUM_VALUE(TPI_PRIMITIVE_TYPE_BOOL32) \
+    ENUM_VALUE(TPI_PRIMITIVE_TYPE_BOOL64) \
+    ENUM_VALUE(TPI_PRIMITIVE_TYPE_HRESULT) \
+ENUM_END(tpi_primitive_type)
+
+TPI_PRIMITIVE_TYPE_ENUM
+
+void tpi_primitive_type_print(enum tpi_primitive_type type, FILE *stream);
+
+/* ---------- TPI primitive indirection types */
+
+#define TPI_PRIMITIVE_INDIRECTION_ENUM \
+ENUM_DECL(tpi_primitive_indirection) \
+    ENUM_VALUE(TPI_PRIMITIVE_INDIRECTION_NONE) \
+    ENUM_VALUE(TPI_PRIMITIVE_INDIRECTION_NEAR16) \
+    ENUM_VALUE(TPI_PRIMITIVE_INDIRECTION_FAR16) \
+    ENUM_VALUE(TPI_PRIMITIVE_INDIRECTION_HUGE16) \
+    ENUM_VALUE(TPI_PRIMITIVE_INDIRECTION_NEAR32) \
+    ENUM_VALUE(TPI_PRIMITIVE_INDIRECTION_FAR32) \
+    ENUM_VALUE(TPI_PRIMITIVE_INDIRECTION_NEAR64) \
+    ENUM_VALUE(TPI_PRIMITIVE_INDIRECTION_NEAR128) \
+ENUM_END(tpi_primitive_indirection)
+
+TPI_PRIMITIVE_INDIRECTION_ENUM
+
+void tpi_primitive_indirection_print(enum tpi_primitive_indirection indirection, FILE *stream);
+
+/* ---------- TPI primitives */
+
+#define TPI_PRIMITIVE_STRUCT \
+STRUCT_DECL(tpi_primitive) \
+    FIELD_PRIMITIVE_FMT(enum tpi_primitive_type, type, tpi_primitive_type_print) \
+    FIELD_PRIMITIVE_FMT(enum tpi_primitive_indirection, indirection, tpi_primitive_indirection_print) \
+STRUCT_END(tpi_primitive)
+
+TPI_PRIMITIVE_STRUCT
+
+void tpi_primitive_print(struct tpi_primitive *item, uint32_t depth, FILE *stream);
+
 /* ---------- TPI HFA types */
 
 #define TPI_HFA_TYPE_ENUM \
@@ -1114,4 +1196,6 @@ void tpi_symbols_read(struct tpi_symbols *symbols, struct msf *msf, struct msf_s
 void tpi_symbols_dispose(struct tpi_symbols *symbols);
 void tpi_symbols_print(struct tpi_symbols *symbols, uint32_t depth, FILE *stream);
 
-uint32_t tpi_symbol_index_to_absolute_index(struct tpi_header *tpi_header, struct tpi_symbols *tpi_symbols, uint32_t index);
+uint32_t tpi_index_to_absolute_index(struct tpi_header *tpi_header, struct tpi_symbols *tpi_symbols, uint32_t index);
+int tpi_primitive_get(struct tpi_primitive *primitive, struct tpi_header *tpi_header, struct tpi_symbols *tpi_symbols, uint32_t index);
+struct tpi_symbol *tpi_symbol_get(struct tpi_header *tpi_header, struct tpi_symbols *tpi_symbols, uint32_t index);

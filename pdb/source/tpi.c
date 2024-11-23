@@ -36,6 +36,28 @@ void tpi_leaf_print(enum tpi_leaf item, FILE *stream)
     TPI_LEAF_ENUM
 }
 
+void tpi_primitive_type_print(enum tpi_primitive_type item, FILE *stream)
+{
+    assert(stream);
+
+    TPI_PRIMITIVE_TYPE_ENUM
+}
+
+void tpi_primitive_indirection_print(enum tpi_primitive_indirection item, FILE *stream)
+{
+    assert(stream);
+
+    TPI_PRIMITIVE_INDIRECTION_ENUM
+}
+
+void tpi_primitive_print(struct tpi_primitive *item, uint32_t depth, FILE *stream)
+{
+    assert(item);
+    assert(stream);
+
+    TPI_PRIMITIVE_STRUCT
+}
+
 void tpi_hfa_type_print(enum tpi_hfa_type item, FILE *stream)
 {
     assert(stream);
@@ -1165,7 +1187,7 @@ void tpi_symbols_print(struct tpi_symbols *item, uint32_t depth, FILE *stream)
     TPI_SYMBOLS_STRUCT
 }
 
-uint32_t tpi_symbol_index_to_absolute_index(struct tpi_header *tpi_header, struct tpi_symbols *tpi_symbols, uint32_t index)
+uint32_t tpi_index_to_absolute_index(struct tpi_header *tpi_header, struct tpi_symbols *tpi_symbols, uint32_t index)
 {
     assert(tpi_header);
     assert(tpi_symbols);
@@ -1177,4 +1199,199 @@ uint32_t tpi_symbol_index_to_absolute_index(struct tpi_header *tpi_header, struc
     assert(absolute_index < tpi_symbols->count);
 
     return absolute_index;
+}
+
+int tpi_primitive_get(struct tpi_primitive *primitive, struct tpi_header *tpi_header, struct tpi_symbols *tpi_symbols, uint32_t index)
+{
+    assert(primitive);
+    assert(tpi_header);
+    assert(tpi_symbols);
+    
+    memset(primitive, 0, sizeof(*primitive));
+
+    if (index >= 0x1000)
+        return 0;
+    
+    uint32_t type = index & 0xff;
+
+    switch (type)
+    {
+    case 0x00:
+        primitive->type = TPI_PRIMITIVE_TYPE_NONE;
+        break;
+    case 0x03:
+        primitive->type = TPI_PRIMITIVE_TYPE_VOID;
+        break;
+    case 0x08:
+        primitive->type = TPI_PRIMITIVE_TYPE_HRESULT;
+        break;
+    case 0x10:
+        primitive->type = TPI_PRIMITIVE_TYPE_CHAR;
+        break;
+    case 0x20:
+        primitive->type = TPI_PRIMITIVE_TYPE_UCHAR;
+        break;
+    case 0x68:
+        primitive->type = TPI_PRIMITIVE_TYPE_INT8;
+        break;
+    case 0x69:
+        primitive->type = TPI_PRIMITIVE_TYPE_UINT8;
+        break;
+    case 0x70:
+        primitive->type = TPI_PRIMITIVE_TYPE_RCHAR;
+        break;
+    case 0x71:
+        primitive->type = TPI_PRIMITIVE_TYPE_WCHAR;
+        break;
+    case 0x7a:
+        primitive->type = TPI_PRIMITIVE_TYPE_RCHAR16;
+        break;
+    case 0x7b:
+        primitive->type = TPI_PRIMITIVE_TYPE_RCHAR32;
+        break;
+    case 0x11:
+        primitive->type = TPI_PRIMITIVE_TYPE_SHORT;
+        break;
+    case 0x21:
+        primitive->type = TPI_PRIMITIVE_TYPE_USHORT;
+        break;
+    case 0x72:
+        primitive->type = TPI_PRIMITIVE_TYPE_INT16;
+        break;
+    case 0x73:
+        primitive->type = TPI_PRIMITIVE_TYPE_UINT16;
+        break;
+    case 0x12:
+        primitive->type = TPI_PRIMITIVE_TYPE_LONG;
+        break;
+    case 0x22:
+        primitive->type = TPI_PRIMITIVE_TYPE_ULONG;
+        break;
+    case 0x74:
+        primitive->type = TPI_PRIMITIVE_TYPE_INT32;
+        break;
+    case 0x75:
+        primitive->type = TPI_PRIMITIVE_TYPE_UINT32;
+        break;
+    case 0x13:
+        primitive->type = TPI_PRIMITIVE_TYPE_QUAD;
+        break;
+    case 0x23:
+        primitive->type = TPI_PRIMITIVE_TYPE_UQUAD;
+        break;
+    case 0x76:
+        primitive->type = TPI_PRIMITIVE_TYPE_INT64;
+        break;
+    case 0x77:
+        primitive->type = TPI_PRIMITIVE_TYPE_UINT64;
+        break;
+    case 0x14:
+        primitive->type = TPI_PRIMITIVE_TYPE_OCTA;
+        break;
+    case 0x24:
+        primitive->type = TPI_PRIMITIVE_TYPE_UOCTA;
+        break;
+    case 0x78:
+        primitive->type = TPI_PRIMITIVE_TYPE_INT128;
+        break;
+    case 0x79:
+        primitive->type = TPI_PRIMITIVE_TYPE_UINT128;
+        break;
+    case 0x46:
+        primitive->type = TPI_PRIMITIVE_TYPE_FLOAT16;
+        break;
+    case 0x40:
+        primitive->type = TPI_PRIMITIVE_TYPE_FLOAT32;
+        break;
+    case 0x45:
+        primitive->type = TPI_PRIMITIVE_TYPE_FLOAT32_PP;
+        break;
+    case 0x44:
+        primitive->type = TPI_PRIMITIVE_TYPE_FLOAT48;
+        break;
+    case 0x41:
+        primitive->type = TPI_PRIMITIVE_TYPE_FLOAT64;
+        break;
+    case 0x42:
+        primitive->type = TPI_PRIMITIVE_TYPE_FLOAT80;
+        break;
+    case 0x43:
+        primitive->type = TPI_PRIMITIVE_TYPE_FLOAT128;
+        break;
+    case 0x50:
+        primitive->type = TPI_PRIMITIVE_TYPE_COMPLEX32;
+        break;
+    case 0x51:
+        primitive->type = TPI_PRIMITIVE_TYPE_COMPLEX64;
+        break;
+    case 0x52:
+        primitive->type = TPI_PRIMITIVE_TYPE_COMPLEX80;
+        break;
+    case 0x53:
+        primitive->type = TPI_PRIMITIVE_TYPE_COMPLEX128;
+        break;
+    case 0x30:
+        primitive->type = TPI_PRIMITIVE_TYPE_BOOL8;
+        break;
+    case 0x31:
+        primitive->type = TPI_PRIMITIVE_TYPE_BOOL16;
+        break;
+    case 0x32:
+        primitive->type = TPI_PRIMITIVE_TYPE_BOOL32;
+        break;
+    case 0x33:
+        primitive->type = TPI_PRIMITIVE_TYPE_BOOL64;
+        break;
+    default:
+        fprintf(stderr, "%s:%i: ERROR: Unhandled tpi_primitive_type value: 0x%X\n", __FILE__, __LINE__, type);
+        exit(EXIT_FAILURE);
+    }
+    
+    uint32_t indirection = index & 0xf00;
+
+    switch (indirection)
+    {
+    case 0x000:
+        primitive->indirection = TPI_PRIMITIVE_INDIRECTION_NONE;
+        break;
+    case 0x100:
+        primitive->indirection = TPI_PRIMITIVE_INDIRECTION_NEAR16;
+        break;
+    case 0x200:
+        primitive->indirection = TPI_PRIMITIVE_INDIRECTION_FAR16;
+        break;
+    case 0x300:
+        primitive->indirection = TPI_PRIMITIVE_INDIRECTION_HUGE16;
+        break;
+    case 0x400:
+        primitive->indirection = TPI_PRIMITIVE_INDIRECTION_NEAR32;
+        break;
+    case 0x500:
+        primitive->indirection = TPI_PRIMITIVE_INDIRECTION_FAR32;
+        break;
+    case 0x600:
+        primitive->indirection = TPI_PRIMITIVE_INDIRECTION_NEAR64;
+        break;
+    case 0x700:
+        primitive->indirection = TPI_PRIMITIVE_INDIRECTION_NEAR128;
+        break;
+    default:
+        fprintf(stderr, "%s:%i: ERROR: Unhandled tpi_primitive_indirection value: 0x%X\n", __FILE__, __LINE__, indirection);
+        exit(EXIT_FAILURE);
+    }
+
+    return 1;
+}
+
+struct tpi_symbol *tpi_symbol_get(struct tpi_header *tpi_header, struct tpi_symbols *tpi_symbols, uint32_t index)
+{
+    assert(tpi_header);
+    assert(tpi_symbols);
+
+    uint32_t absolute_index = tpi_index_to_absolute_index(tpi_header, tpi_symbols, index);
+
+    if (absolute_index == UINT32_MAX)
+        return NULL;
+    
+    return &tpi_symbols->symbols[absolute_index];
 }

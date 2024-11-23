@@ -121,6 +121,7 @@ struct cpp_enum
 };
 
 void cpp_enum_dispose(struct cpp_enum *item);
+void cpp_enum_add_members(struct cpp_enum *item, struct pdb_data *pdb, uint32_t members_type_index);
 
 /* ---------- fields */
 
@@ -200,6 +201,7 @@ struct cpp_class
 };
 
 void cpp_class_dispose(struct cpp_class *item);
+void cpp_class_add_members(struct cpp_class *item, struct pdb_data *pdb, uint32_t members_type_index, uint64_t *offset);
 
 /* ---------- class members */
 

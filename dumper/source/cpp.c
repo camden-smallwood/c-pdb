@@ -122,6 +122,15 @@ void cpp_enum_dispose(
     free(item->values);
 }
 
+void cpp_enum_add_members(struct cpp_enum *item, struct pdb_data *pdb, uint32_t members_type_index)
+{
+    assert(item);
+    assert(pdb);
+
+    // TODO
+    (void)members_type_index;
+}
+
 /* ---------- fields */
 
 void cpp_field_dispose(
@@ -177,6 +186,32 @@ void cpp_class_dispose(
         cpp_class_member_dispose(&item->members[i]);
     
     free(item->members);
+}
+
+void cpp_class_add_members(struct cpp_class *item, struct pdb_data *pdb, uint32_t members_type_index, uint64_t *offset)
+{
+    assert(item);
+    assert(pdb);
+
+    struct tpi_primitive primitive;
+    if (tpi_primitive_get(&primitive, &pdb->tpi_header, &pdb->tpi_symbols, members_type_index))
+    {
+        // TODO
+        printf("%s:%i: TODO: ", __FILE__, __LINE__);
+        tpi_primitive_print(&primitive, 0, stdout);
+        printf("\n");
+    }
+
+    struct tpi_symbol *members_symbol = tpi_symbol_get(&pdb->tpi_header, &pdb->tpi_symbols, members_type_index);
+    assert(members_symbol);
+    assert(members_symbol->leaf == LF_FIELDLIST);
+
+    printf("%s:%i: TODO: ", __FILE__, __LINE__);
+    tpi_symbol_print(members_symbol, 0, stdout);
+    printf("\n");
+
+    // TODO
+    (void)offset;
 }
 
 /* ---------- class members */
@@ -299,9 +334,12 @@ void cpp_module_add_type_definition(
 {
     assert(module);
     assert(pdb);
-    
-    (void)line; // TODO
 
+    struct tpi_symbol *symbol = tpi_symbol_get(&pdb->tpi_header, &pdb->tpi_symbols, type_index);
+
+    if (!symbol)
+        return;
+    
     // Don't add a class or enum if we already have
     for (uint32_t i = 0; i < module->member_count; i++)
     {
@@ -324,12 +362,6 @@ void cpp_module_add_type_definition(
         }
     }
 
-    uint32_t absolute_index = tpi_symbol_index_to_absolute_index(&pdb->tpi_header, &pdb->tpi_symbols, type_index);
-    if (absolute_index == UINT32_MAX)
-        return;
-    
-    struct tpi_symbol *symbol = &pdb->tpi_symbols.symbols[absolute_index];
-
     switch (symbol->leaf)
     {
     case LF_CLASS:
@@ -343,10 +375,24 @@ void cpp_module_add_type_definition(
         memset(&member, 0, sizeof(member));
 
         member.type = CPP_MODULE_MEMBER_TYPE_CLASS;
-        member.class_.type = CPP_CLASS_TYPE_CLASS;
-        member.class_.type_index = type_index;
-        member.class_.line = line;
-        member.class_.size = symbol->class_.size;
+
+        switch (symbol->leaf)
+        {
+        case LF_CLASS:
+        case LF_CLASS_ST:
+            member.class_.type = CPP_CLASS_TYPE_CLASS;
+            break;
+        case LF_STRUCTURE:
+        case LF_STRUCTURE_ST:
+        case LF_STRUCTURE19:
+            member.class_.type = CPP_CLASS_TYPE_STRUCT;
+            break;
+        case LF_INTERFACE:
+            member.class_.type = CPP_CLASS_TYPE_INTERFACE;
+            break;
+        default:
+            break;
+        }
 
         if (symbol->class_.name)
         {
@@ -354,8 +400,13 @@ void cpp_module_add_type_definition(
             assert(member.class_.name);
         }
 
-        uint32_t derived_from_type_index = tpi_symbol_index_to_absolute_index(&pdb->tpi_header, &pdb->tpi_symbols, symbol->class_.derived_from_type_index);
-        if (derived_from_type_index != UINT32_MAX)
+        member.class_.type_index = type_index;
+        member.class_.line = line;
+        member.class_.size = symbol->class_.size;
+
+        struct tpi_symbol *derived_from_symbol = tpi_symbol_get(&pdb->tpi_header, &pdb->tpi_symbols, symbol->class_.derived_from_type_index);
+        
+        if (derived_from_symbol)
         {
             //
             // TODO: add derived from?
@@ -363,24 +414,9 @@ void cpp_module_add_type_definition(
         }
 
         if (symbol->class_.header.properties.fwdref)
-        {
-            //
-            // TODO: add forward reference
-            //
-        }
+            member.class_.flags |= CPP_CLASS_IS_DECLARATION;
         else
-        {
-            uint32_t fields_absolute_index = tpi_symbol_index_to_absolute_index(&pdb->tpi_header, &pdb->tpi_symbols, symbol->union_.header.fields_type_index);
-            if (fields_absolute_index == UINT32_MAX)
-                break;
-            
-            struct tpi_symbol *fields_symbol = &pdb->tpi_symbols.symbols[fields_absolute_index];
-            assert(fields_symbol->leaf == LF_FIELDLIST);
-
-            //
-            // TODO: add fields
-            //
-        }
+            cpp_class_add_members(&member.class_, pdb, symbol->class_.header.fields_type_index, NULL);
 
         DYNARRAY_PUSH(module->members, module->member_count, member);
         break;
@@ -389,14 +425,55 @@ void cpp_module_add_type_definition(
     case LF_UNION:
     case LF_UNION_ST:
     {
-        // TODO: same as above
+        struct cpp_module_member member;
+        memset(&member, 0, sizeof(member));
+
+        member.type = CPP_MODULE_MEMBER_TYPE_CLASS;
+        member.class_.type = CPP_CLASS_TYPE_STRUCT;
+
+        if (symbol->union_.name)
+        {
+            member.class_.name = strdup(symbol->union_.name);
+            assert(member.class_.name);
+        }
+
+        member.class_.flags |= CPP_CLASS_IS_UNION;
+        member.class_.type_index = type_index;
+        member.class_.line = line;
+        member.class_.size = symbol->union_.size;
+
+        if (symbol->union_.header.properties.fwdref)
+            member.class_.flags |= CPP_CLASS_IS_DECLARATION;
+        else
+            cpp_class_add_members(&member.class_, pdb, symbol->union_.header.fields_type_index, NULL);
+
+        DYNARRAY_PUSH(module->members, module->member_count, member);
         break;
     }
     
     case LF_ENUM:
     case LF_ENUM_ST:
     {
-        // TODO: same as above
+        struct cpp_module_member member;
+        memset(&member, 0, sizeof(member));
+
+        member.type = CPP_MODULE_MEMBER_TYPE_ENUM;
+
+        if (symbol->enumeration.name)
+        {
+            member.enum_.name = strdup(symbol->enumeration.name);
+            assert(member.enum_.name);
+        }
+
+        member.enum_.type_index = type_index;
+        member.enum_.line = line;
+
+        if (symbol->enumeration.header.properties.fwdref)
+            member.enum_.flags |= CPP_CLASS_IS_DECLARATION;
+        else
+            cpp_enum_add_members(&member.enum_, pdb, symbol->enumeration.header.fields_type_index);
+
+        DYNARRAY_PUSH(module->members, module->member_count, member);
         break;
     }
     
