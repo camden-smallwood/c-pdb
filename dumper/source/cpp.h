@@ -96,6 +96,7 @@ struct cpp_enum_value
 };
 
 void cpp_enum_value_dispose(struct cpp_enum_value *item);
+void cpp_enum_value_print(struct cpp_enum_value *item, FILE *stream);
 
 /* ---------- enums */
 
@@ -121,6 +122,7 @@ struct cpp_enum
 };
 
 void cpp_enum_dispose(struct cpp_enum *item);
+void cpp_enum_print(struct cpp_enum *item, uint32_t depth, FILE *stream);
 void cpp_enum_add_members(struct cpp_enum *item, struct pdb_data *pdb, uint32_t members_type_index);
 
 /* ---------- fields */

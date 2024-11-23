@@ -6,8 +6,7 @@
 
 /* ---------- labels */
 
-void cpp_label_dispose(
-    struct cpp_label *label)
+void cpp_label_dispose(struct cpp_label *label)
 {
     assert(label);
 
@@ -16,8 +15,7 @@ void cpp_label_dispose(
 
 /* ---------- variables */
 
-void cpp_variable_dispose(
-    struct cpp_variable *variable)
+void cpp_variable_dispose(struct cpp_variable *variable)
 {
     assert(variable);
 
@@ -28,8 +26,7 @@ void cpp_variable_dispose(
 
 /* ---------- code blocks */
 
-void cpp_block_dispose(
-    struct cpp_block *block)
+void cpp_block_dispose(struct cpp_block *block)
 {
     assert(block);
 
@@ -41,8 +38,7 @@ void cpp_block_dispose(
 
 /* ---------- statements */
 
-void cpp_statement_dispose(
-    struct cpp_statement *statement)
+void cpp_statement_dispose(struct cpp_statement *statement)
 {
     assert(statement);
 
@@ -72,8 +68,7 @@ void cpp_statement_dispose(
 
 /* ---------- procedures */
 
-void cpp_procedure_dispose(
-    struct cpp_procedure *procedure)
+void cpp_procedure_dispose(struct cpp_procedure *procedure)
 {
     assert(procedure);
 
@@ -88,8 +83,7 @@ void cpp_procedure_dispose(
 
 /* ---------- typedefs */
 
-void cpp_typedef_dispose(
-    struct cpp_typedef *item)
+void cpp_typedef_dispose(struct cpp_typedef *item)
 {
     assert(item);
 
@@ -98,18 +92,57 @@ void cpp_typedef_dispose(
 
 /* ---------- enum values */
 
-void cpp_enum_value_dispose(
-    struct cpp_enum_value *item)
+void cpp_enum_value_dispose(struct cpp_enum_value *item)
 {
     assert(item);
 
     free(item->name);
 }
 
+void cpp_enum_value_print(struct cpp_enum_value *item, FILE *stream)
+{
+    assert(item);
+    assert(stream);
+
+    fprintf(stream, "%s = ", item->name);
+
+    switch (item->variant.type)
+    {
+    case TPI_ENUMERATE_VARIANT_UINT8:
+        fprintf(stream, "%u", item->variant.uint8);
+        break;
+    case TPI_ENUMERATE_VARIANT_UINT16:
+        fprintf(stream, "%u", item->variant.uint16);
+        break;
+    case TPI_ENUMERATE_VARIANT_UINT32:
+        fprintf(stream, "%u", item->variant.uint32);
+        break;
+    case TPI_ENUMERATE_VARIANT_UINT64:
+        fprintf(stream, "%llu", item->variant.uint64);
+        break;
+    case TPI_ENUMERATE_VARIANT_INT8:
+        fprintf(stream, "%i", item->variant.int8);
+        break;
+    case TPI_ENUMERATE_VARIANT_INT16:
+        fprintf(stream, "%i", item->variant.int16);
+        break;
+    case TPI_ENUMERATE_VARIANT_INT32:
+        fprintf(stream, "%i", item->variant.int32);
+        break;
+    case TPI_ENUMERATE_VARIANT_INT64:
+        fprintf(stream, "%lli", item->variant.int64);
+        break;
+    default:
+        fprintf(stderr, "%s:%i: ERROR: unhandled tpi_enumerate_variant value: ", __FILE__, __LINE__);
+        tpi_enumerate_variant_print(&item->variant, 0, stderr);
+        fprintf(stderr, "\n");
+        exit(EXIT_FAILURE);
+    }
+}
+
 /* ---------- enums */
 
-void cpp_enum_dispose(
-    struct cpp_enum *item)
+void cpp_enum_dispose(struct cpp_enum *item)
 {
     assert(item);
 
@@ -122,19 +155,83 @@ void cpp_enum_dispose(
     free(item->values);
 }
 
+void cpp_enum_print(struct cpp_enum *item, uint32_t depth, FILE *stream)
+{
+    assert(item);
+    assert(stream);
+
+    fprintf(stream, "enum %s", item->name);
+
+    if (item->underlying_type_name)
+        fprintf(stream, " : %s", item->underlying_type_name);
+
+    if (item->flags & CPP_ENUM_IS_DECLARATION)
+    {
+        fprintf(stream, ";");
+        return;
+    }
+
+    fprintf(stream, "\n");
+    fprintf_depth(stream, depth, "{\n");
+
+    for (uint32_t i = 0; i < item->value_count; i++)
+    {
+        fprintf_depth(stream, depth + 1, "");
+        cpp_enum_value_print(&item->values[i], stream);
+        fprintf(stream, ",\n");
+    }
+
+    fprintf_depth(stream, depth, "}");
+}
+
 void cpp_enum_add_members(struct cpp_enum *item, struct pdb_data *pdb, uint32_t members_type_index)
 {
     assert(item);
     assert(pdb);
 
-    // TODO
-    (void)members_type_index;
+    struct tpi_primitive primitive;
+    if (tpi_primitive_get(&primitive, &pdb->tpi_header, &pdb->tpi_symbols, members_type_index))
+    {
+        if (primitive.type != TPI_PRIMITIVE_TYPE_NONE || primitive.indirection != TPI_PRIMITIVE_INDIRECTION_NONE)
+        {
+            fprintf(stderr, "%s:%i: ERROR: unhandled enum primitive type: ", __FILE__, __LINE__);
+            tpi_primitive_print(&primitive, 0, stderr);
+            fprintf(stderr, "\n");
+            exit(EXIT_FAILURE);
+        }
+        
+        assert(item->value_count == 0);
+        item->flags |= CPP_ENUM_IS_DECLARATION;
+        return;
+    }
+
+    struct tpi_symbol *members_symbol = tpi_symbol_get(&pdb->tpi_header, &pdb->tpi_symbols, members_type_index);
+    assert(members_symbol);
+    assert(members_symbol->leaf == LF_FIELDLIST);
+
+    for (uint32_t i = 0; i < members_symbol->field_list.count; i++)
+    {
+        struct tpi_symbol *value_symbol = &members_symbol->field_list.fields[i];
+        assert(value_symbol->leaf == LF_ENUMERATE || value_symbol->leaf == LF_ENUMERATE_ST);
+
+        struct cpp_enum_value value;
+        memset(&value, 0, sizeof(value));
+
+        value.name = strdup(value_symbol->enumerate.name);
+        assert(value.name);
+
+        memcpy(&value.variant, &value_symbol->enumerate.variant, sizeof(value.variant));
+
+        DYNARRAY_PUSH(item->values, item->value_count, value);
+    }
+
+    if (members_symbol->field_list.continuation_type_index)
+        cpp_enum_add_members(item, pdb, members_symbol->field_list.continuation_type_index);
 }
 
 /* ---------- fields */
 
-void cpp_field_dispose(
-    struct cpp_field *field)
+void cpp_field_dispose(struct cpp_field *field)
 {
     assert(field);
 
@@ -144,8 +241,7 @@ void cpp_field_dispose(
 
 /* ---------- methods */
 
-void cpp_method_dispose(
-    struct cpp_method *method)
+void cpp_method_dispose(struct cpp_method *method)
 {
     assert(method);
 
@@ -160,8 +256,7 @@ void cpp_method_dispose(
 
 /* ---------- base classes */
 
-void cpp_base_class_dispose(
-    struct cpp_base_class *item)
+void cpp_base_class_dispose(struct cpp_base_class *item)
 {
     assert(item);
 
@@ -170,8 +265,7 @@ void cpp_base_class_dispose(
 
 /* ---------- classes */
 
-void cpp_class_dispose(
-    struct cpp_class *item)
+void cpp_class_dispose(struct cpp_class *item)
 {
     assert(item);
 
@@ -197,18 +291,18 @@ void cpp_class_add_members(struct cpp_class *item, struct pdb_data *pdb, uint32_
     if (tpi_primitive_get(&primitive, &pdb->tpi_header, &pdb->tpi_symbols, members_type_index))
     {
         // TODO
-        printf("%s:%i: TODO: ", __FILE__, __LINE__);
-        tpi_primitive_print(&primitive, 0, stdout);
-        printf("\n");
+        // printf("%s:%i: TODO: ", __FILE__, __LINE__);
+        // tpi_primitive_print(&primitive, 0, stdout);
+        // printf("\n");
     }
 
     struct tpi_symbol *members_symbol = tpi_symbol_get(&pdb->tpi_header, &pdb->tpi_symbols, members_type_index);
     assert(members_symbol);
     assert(members_symbol->leaf == LF_FIELDLIST);
 
-    printf("%s:%i: TODO: ", __FILE__, __LINE__);
-    tpi_symbol_print(members_symbol, 0, stdout);
-    printf("\n");
+    // printf("%s:%i: TODO: ", __FILE__, __LINE__);
+    // tpi_symbol_print(members_symbol, 0, stdout);
+    // printf("\n");
 
     // TODO
     (void)offset;
@@ -216,8 +310,7 @@ void cpp_class_add_members(struct cpp_class *item, struct pdb_data *pdb, uint32_
 
 /* ---------- class members */
 
-void cpp_class_member_dispose(
-    struct cpp_class_member *member)
+void cpp_class_member_dispose(struct cpp_class_member *member)
 {
     assert(member);
 
@@ -251,8 +344,7 @@ void cpp_class_member_dispose(
 
 /* ---------- headers */
 
-void cpp_header_dispose(
-    struct cpp_header *header)
+void cpp_header_dispose(struct cpp_header *header)
 {
     assert(header);
 
@@ -261,8 +353,7 @@ void cpp_header_dispose(
 
 /* ---------- module members */
 
-void cpp_module_member_dispose(
-    struct cpp_module_member *member)
+void cpp_module_member_dispose(struct cpp_module_member *member)
 {
     assert(member);
 
@@ -308,8 +399,7 @@ void cpp_module_member_dispose(
 
 /* ---------- modules */
 
-void cpp_module_dispose(
-    struct cpp_module *module)
+void cpp_module_dispose(struct cpp_module *module)
 {
     assert(module);
 
@@ -468,21 +558,28 @@ void cpp_module_add_type_definition(
         member.enum_.type_index = type_index;
         member.enum_.line = line;
 
+        //
+        // TODO: get underlying_type_name here
+        //
+
         if (symbol->enumeration.header.properties.fwdref)
-            member.enum_.flags |= CPP_CLASS_IS_DECLARATION;
+            member.enum_.flags |= CPP_ENUM_IS_DECLARATION;
         else
             cpp_enum_add_members(&member.enum_, pdb, symbol->enumeration.header.fields_type_index);
+
+        // TODO: remove this VVV
+        cpp_enum_print(&member.enum_, 0, stdout);
+        printf("\n");
 
         DYNARRAY_PUSH(module->members, module->member_count, member);
         break;
     }
     
     default:
-        // TODO
         break;
+        // fprintf(stderr, "%s:%i: ERROR: Unhandled tpi_leaf value in %s: ", __FILE__, __LINE__, __FUNCTION__);
+        // tpi_leaf_print(symbol->leaf, stderr);
+        // fprintf(stderr, "\n");
+        // exit(EXIT_FAILURE);
     }
-
-    //
-    // TODO: finish
-    //
 }
