@@ -3,645 +3,64 @@
 #include "utils.h"
 #include "tpi.h"
 
-void tpi_slice_print(
-    struct tpi_slice *slice,
-    uint32_t depth,
-    FILE *stream)
+#include "macros_print.h"
+
+void tpi_slice_print(struct tpi_slice *item, uint32_t depth, FILE *stream)
 {
-    assert(slice);
+    assert(item);
     assert(stream);
 
-    fprintf(stream, "tpi_slice {\n");
-    fprintf_depth(stream, depth + 1, "offset: %u,\n", slice->offset);
-    fprintf_depth(stream, depth + 1, "size: %u,\n", slice->size);
-    fprintf_depth(stream, depth, "}");
+    TPI_SLICE_STRUCT
 }
 
-void tpi_header_read(
-    struct msf *msf,
-    struct tpi_header *out_header,
-    FILE *stream)
+void tpi_header_read(struct msf *msf, struct tpi_header *out_header, FILE *stream)
 {
     msf_stream_read_data(msf, &msf->streams[MSF_STREAM_TPI], 0, sizeof(*out_header), out_header, stream);
 }
 
-void tpi_header_print(
-    struct tpi_header *header,
-    uint32_t depth,
-    FILE *stream)
+void tpi_header_print(struct tpi_header *item, uint32_t depth, FILE *stream)
 {
-    assert(header);
+    assert(item);
     assert(stream);
 
-    fprintf(stream, "tpi_header {\n");
-    fprintf_depth(stream, depth + 1, "version: %u,\n", header->version);
-    fprintf_depth(stream, depth + 1, "header_size: %u,\n", header->header_size);
-    fprintf_depth(stream, depth + 1, "minimum_index: %u,\n", header->minimum_index);
-    fprintf_depth(stream, depth + 1, "maximum_index: %u,\n", header->maximum_index);
-    fprintf_depth(stream, depth + 1, "gprec_size: %u,\n", header->gprec_size);
-    fprintf_depth(stream, depth + 1, "tpi_hash_stream: %u,\n", header->tpi_hash_stream);
-    fprintf_depth(stream, depth + 1, "tpi_hash_pad_stream: %u,\n", header->tpi_hash_pad_stream);
-    fprintf_depth(stream, depth + 1, "hash_key_size: %u,\n", header->hash_key_size);
-    fprintf_depth(stream, depth + 1, "hash_bucket_size: %u,\n", header->hash_bucket_size);
-
-    fprintf_depth(stream, depth + 1, "hash_values: ");
-    tpi_slice_print(&header->hash_values, depth + 1, stream);
-    fprintf(stream, ",\n");
-
-    fprintf_depth(stream, depth + 1, "ti_off: ");
-    tpi_slice_print(&header->ti_off, depth + 1, stream);
-    fprintf(stream, ",\n");
-
-    fprintf_depth(stream, depth + 1, "hash_adj: ");
-    tpi_slice_print(&header->hash_adj, depth + 1, stream);
-    fprintf(stream, ",\n");
-
-    fprintf_depth(stream, depth, "}");
+    TPI_HEADER_STRUCT
 }
 
-void tpi_leaf_print(
-    enum tpi_leaf leaf,
-    FILE *stream)
+void tpi_leaf_print(enum tpi_leaf item, FILE *stream)
 {
     assert(stream);
 
-    switch (leaf)
-    {
-    case LF_MODIFIER_16t:
-        fprintf(stream, "LF_MODIFIER_16t");
-        break;
-    case LF_POINTER_16t:
-        fprintf(stream, "LF_POINTER_16t");
-        break;
-    case LF_ARRAY_16t:
-        fprintf(stream, "LF_ARRAY_16t");
-        break;
-    case LF_CLASS_16t:
-        fprintf(stream, "LF_CLASS_16t");
-        break;
-    case LF_STRUCTURE_16t:
-        fprintf(stream, "LF_STRUCTURE_16t");
-        break;
-    case LF_UNION_16t:
-        fprintf(stream, "LF_UNION_16t");
-        break;
-    case LF_ENUM_16t:
-        fprintf(stream, "LF_ENUM_16t");
-        break;
-    case LF_PROCEDURE_16t:
-        fprintf(stream, "LF_PROCEDURE_16t");
-        break;
-    case LF_MFUNCTION_16t:
-        fprintf(stream, "LF_MFUNCTION_16t");
-        break;
-    case LF_VTSHAPE:
-        fprintf(stream, "LF_VTSHAPE");
-        break;
-    case LF_COBOL0_16t:
-        fprintf(stream, "LF_COBOL0_16t");
-        break;
-    case LF_COBOL1:
-        fprintf(stream, "LF_COBOL1");
-        break;
-    case LF_BARRAY_16t:
-        fprintf(stream, "LF_BARRAY_16t");
-        break;
-    case LF_LABEL:
-        fprintf(stream, "LF_LABEL");
-        break;
-    case LF_NULL:
-        fprintf(stream, "LF_NULL");
-        break;
-    case LF_NOTTRAN:
-        fprintf(stream, "LF_NOTTRAN");
-        break;
-    case LF_DIMARRAY_16t:
-        fprintf(stream, "LF_DIMARRAY_16t");
-        break;
-    case LF_VFTPATH_16t:
-        fprintf(stream, "LF_VFTPATH_16t");
-        break;
-    case LF_PRECOMP_16t:
-        fprintf(stream, "LF_PRECOMP_16t");
-        break;
-    case LF_ENDPRECOMP:
-        fprintf(stream, "LF_ENDPRECOMP");
-        break;
-    case LF_OEM_16t:
-        fprintf(stream, "LF_OEM_16t");
-        break;
-    case LF_TYPESERVER_ST:
-        fprintf(stream, "LF_TYPESERVER_ST");
-        break;
-    case LF_SKIP_16t:
-        fprintf(stream, "LF_SKIP_16t");
-        break;
-    case LF_ARGLIST_16t:
-        fprintf(stream, "LF_ARGLIST_16t");
-        break;
-    case LF_DEFARG_16t:
-        fprintf(stream, "LF_DEFARG_16t");
-        break;
-    case LF_LIST:
-        fprintf(stream, "LF_LIST");
-        break;
-    case LF_FIELDLIST_16t:
-        fprintf(stream, "LF_FIELDLIST_16t");
-        break;
-    case LF_DERIVED_16t:
-        fprintf(stream, "LF_DERIVED_16t");
-        break;
-    case LF_BITFIELD_16t:
-        fprintf(stream, "LF_BITFIELD_16t");
-        break;
-    case LF_METHODLIST_16t:
-        fprintf(stream, "LF_METHODLIST_16t");
-        break;
-    case LF_DIMCONU_16t:
-        fprintf(stream, "LF_DIMCONU_16t");
-        break;
-    case LF_DIMCONLU_16t:
-        fprintf(stream, "LF_DIMCONLU_16t");
-        break;
-    case LF_DIMVARU_16t:
-        fprintf(stream, "LF_DIMVARU_16t");
-        break;
-    case LF_DIMVARLU_16t:
-        fprintf(stream, "LF_DIMVARLU_16t");
-        break;
-    case LF_REFSYM:
-        fprintf(stream, "LF_REFSYM");
-        break;
-    case LF_BCLASS_16t:
-        fprintf(stream, "LF_BCLASS_16t");
-        break;
-    case LF_VBCLASS_16t:
-        fprintf(stream, "LF_VBCLASS_16t");
-        break;
-    case LF_IVBCLASS_16t:
-        fprintf(stream, "LF_IVBCLASS_16t");
-        break;
-    case LF_ENUMERATE_ST:
-        fprintf(stream, "LF_ENUMERATE_ST");
-        break;
-    case LF_FRIENDFCN_16t:
-        fprintf(stream, "LF_FRIENDFCN_16t");
-        break;
-    case LF_INDEX_16t:
-        fprintf(stream, "LF_INDEX_16t");
-        break;
-    case LF_MEMBER_16t:
-        fprintf(stream, "LF_MEMBER_16t");
-        break;
-    case LF_STMEMBER_16t:
-        fprintf(stream, "LF_STMEMBER_16t");
-        break;
-    case LF_METHOD_16t:
-        fprintf(stream, "LF_METHOD_16t");
-        break;
-    case LF_NESTTYPE_16t:
-        fprintf(stream, "LF_NESTTYPE_16t");
-        break;
-    case LF_VFUNCTAB_16t:
-        fprintf(stream, "LF_VFUNCTAB_16t");
-        break;
-    case LF_FRIENDCLS_16t:
-        fprintf(stream, "LF_FRIENDCLS_16t");
-        break;
-    case LF_ONEMETHOD_16t:
-        fprintf(stream, "LF_ONEMETHOD_16t");
-        break;
-    case LF_VFUNCOFF_16t:
-        fprintf(stream, "LF_VFUNCOFF_16t");
-        break;
-    case LF_TI16_MAX:
-        fprintf(stream, "LF_TI16_MAX");
-        break;
-    case LF_MODIFIER:
-        fprintf(stream, "LF_MODIFIER");
-        break;
-    case LF_POINTER:
-        fprintf(stream, "LF_POINTER");
-        break;
-    case LF_ARRAY_ST:
-        fprintf(stream, "LF_ARRAY_ST");
-        break;
-    case LF_CLASS_ST:
-        fprintf(stream, "LF_CLASS_ST");
-        break;
-    case LF_STRUCTURE_ST:
-        fprintf(stream, "LF_STRUCTURE_ST");
-        break;
-    case LF_UNION_ST:
-        fprintf(stream, "LF_UNION_ST");
-        break;
-    case LF_ENUM_ST:
-        fprintf(stream, "LF_ENUM_ST");
-        break;
-    case LF_PROCEDURE:
-        fprintf(stream, "LF_PROCEDURE");
-        break;
-    case LF_MFUNCTION:
-        fprintf(stream, "LF_MFUNCTION");
-        break;
-    case LF_COBOL0:
-        fprintf(stream, "LF_COBOL0");
-        break;
-    case LF_BARRAY:
-        fprintf(stream, "LF_BARRAY");
-        break;
-    case LF_DIMARRAY_ST:
-        fprintf(stream, "LF_DIMARRAY_ST");
-        break;
-    case LF_VFTPATH:
-        fprintf(stream, "LF_VFTPATH");
-        break;
-    case LF_PRECOMP_ST:
-        fprintf(stream, "LF_PRECOMP_ST");
-        break;
-    case LF_OEM:
-        fprintf(stream, "LF_OEM");
-        break;
-    case LF_ALIAS_ST:
-        fprintf(stream, "LF_ALIAS_ST");
-        break;
-    case LF_OEM2:
-        fprintf(stream, "LF_OEM2");
-        break;
-    case LF_SKIP:
-        fprintf(stream, "LF_SKIP");
-        break;
-    case LF_ARGLIST:
-        fprintf(stream, "LF_ARGLIST");
-        break;
-    case LF_DEFARG_ST:
-        fprintf(stream, "LF_DEFARG_ST");
-        break;
-    case LF_FIELDLIST:
-        fprintf(stream, "LF_FIELDLIST");
-        break;
-    case LF_DERIVED:
-        fprintf(stream, "LF_DERIVED");
-        break;
-    case LF_BITFIELD:
-        fprintf(stream, "LF_BITFIELD");
-        break;
-    case LF_METHODLIST:
-        fprintf(stream, "LF_METHODLIST");
-        break;
-    case LF_DIMCONU:
-        fprintf(stream, "LF_DIMCONU");
-        break;
-    case LF_DIMCONLU:
-        fprintf(stream, "LF_DIMCONLU");
-        break;
-    case LF_DIMVARU:
-        fprintf(stream, "LF_DIMVARU");
-        break;
-    case LF_DIMVARLU:
-        fprintf(stream, "LF_DIMVARLU");
-        break;
-    case LF_BCLASS:
-        fprintf(stream, "LF_BCLASS");
-        break;
-    case LF_VBCLASS:
-        fprintf(stream, "LF_VBCLASS");
-        break;
-    case LF_IVBCLASS:
-        fprintf(stream, "LF_IVBCLASS");
-        break;
-    case LF_FRIENDFCN_ST:
-        fprintf(stream, "LF_FRIENDFCN_ST");
-        break;
-    case LF_INDEX:
-        fprintf(stream, "LF_INDEX");
-        break;
-    case LF_MEMBER_ST:
-        fprintf(stream, "LF_MEMBER_ST");
-        break;
-    case LF_STMEMBER_ST:
-        fprintf(stream, "LF_STMEMBER_ST");
-        break;
-    case LF_METHOD_ST:
-        fprintf(stream, "LF_METHOD_ST");
-        break;
-    case LF_NESTTYPE_ST:
-        fprintf(stream, "LF_NESTTYPE_ST");
-        break;
-    case LF_VFUNCTAB:
-        fprintf(stream, "LF_VFUNCTAB");
-        break;
-    case LF_FRIENDCLS:
-        fprintf(stream, "LF_FRIENDCLS");
-        break;
-    case LF_ONEMETHOD_ST:
-        fprintf(stream, "LF_ONEMETHOD_ST");
-        break;
-    case LF_VFUNCOFF:
-        fprintf(stream, "LF_VFUNCOFF");
-        break;
-    case LF_NESTTYPEEX_ST:
-        fprintf(stream, "LF_NESTTYPEEX_ST");
-        break;
-    case LF_MEMBERMODIFY_ST:
-        fprintf(stream, "LF_MEMBERMODIFY_ST");
-        break;
-    case LF_MANAGED_ST:
-        fprintf(stream, "LF_MANAGED_ST");
-        break;
-    case LF_ST_MAX:
-        fprintf(stream, "LF_ST_MAX");
-        break;
-    case LF_TYPESERVER:
-        fprintf(stream, "LF_TYPESERVER");
-        break;
-    case LF_ENUMERATE:
-        fprintf(stream, "LF_ENUMERATE");
-        break;
-    case LF_ARRAY:
-        fprintf(stream, "LF_ARRAY");
-        break;
-    case LF_CLASS:
-        fprintf(stream, "LF_CLASS");
-        break;
-    case LF_STRUCTURE:
-        fprintf(stream, "LF_STRUCTURE");
-        break;
-    case LF_UNION:
-        fprintf(stream, "LF_UNION");
-        break;
-    case LF_ENUM:
-        fprintf(stream, "LF_ENUM");
-        break;
-    case LF_DIMARRAY:
-        fprintf(stream, "LF_DIMARRAY");
-        break;
-    case LF_PRECOMP:
-        fprintf(stream, "LF_PRECOMP");
-        break;
-    case LF_ALIAS:
-        fprintf(stream, "LF_ALIAS");
-        break;
-    case LF_DEFARG:
-        fprintf(stream, "LF_DEFARG");
-        break;
-    case LF_FRIENDFCN:
-        fprintf(stream, "LF_FRIENDFCN");
-        break;
-    case LF_MEMBER:
-        fprintf(stream, "LF_MEMBER");
-        break;
-    case LF_STMEMBER:
-        fprintf(stream, "LF_STMEMBER");
-        break;
-    case LF_METHOD:
-        fprintf(stream, "LF_METHOD");
-        break;
-    case LF_NESTTYPE:
-        fprintf(stream, "LF_NESTTYPE");
-        break;
-    case LF_ONEMETHOD:
-        fprintf(stream, "LF_ONEMETHOD");
-        break;
-    case LF_NESTTYPEEX:
-        fprintf(stream, "LF_NESTTYPEEX");
-        break;
-    case LF_MEMBERMODIFY:
-        fprintf(stream, "LF_MEMBERMODIFY");
-        break;
-    case LF_MANAGED:
-        fprintf(stream, "LF_MANAGED");
-        break;
-    case LF_TYPESERVER2:
-        fprintf(stream, "LF_TYPESERVER2");
-        break;
-    case LF_STRIDED_ARRAY:
-        fprintf(stream, "LF_STRIDED_ARRAY");
-        break;
-    case LF_HLSL:
-        fprintf(stream, "LF_HLSL");
-        break;
-    case LF_MODIFIER_EX:
-        fprintf(stream, "LF_MODIFIER_EX");
-        break;
-    case LF_INTERFACE:
-        fprintf(stream, "LF_INTERFACE");
-        break;
-    case LF_BINTERFACE:
-        fprintf(stream, "LF_BINTERFACE");
-        break;
-    case LF_VECTOR:
-        fprintf(stream, "LF_VECTOR");
-        break;
-    case LF_MATRIX:
-        fprintf(stream, "LF_MATRIX");
-        break;
-    case LF_VFTABLE:
-        fprintf(stream, "LF_VFTABLE");
-        break;
-    // case LF_ENDOFLEAFRECORD:
-    //     fprintf(stream, "LF_ENDOFLEAFRECORD");
-    //     break;
-    // case LF_TYPE_LAST:
-    //     fprintf(stream, "LF_TYPE_LAST");
-    //     break;
-    // case LF_TYPE_MAX:
-    //     fprintf(stream, "LF_TYPE_MAX");
-    //     break;
-    case LF_FUNC_ID:
-        fprintf(stream, "LF_FUNC_ID");
-        break;
-    case LF_MFUNC_ID:
-        fprintf(stream, "LF_MFUNC_ID");
-        break;
-    case LF_BUILDINFO:
-        fprintf(stream, "LF_BUILDINFO");
-        break;
-    case LF_SUBSTR_LIST:
-        fprintf(stream, "LF_SUBSTR_LIST");
-        break;
-    case LF_STRING_ID:
-        fprintf(stream, "LF_STRING_ID");
-        break;
-    case LF_UDT_SRC_LINE:
-        fprintf(stream, "LF_UDT_SRC_LINE");
-        break;
-    case LF_UDT_MOD_SRC_LINE:
-        fprintf(stream, "LF_UDT_MOD_SRC_LINE");
-        break;
-    case LF_STRUCTURE19:
-        fprintf(stream, "LF_STRUCTURE19");
-        break;
-    // case LF_ID_LAST:
-    //     fprintf(stream, "LF_ID_LAST");
-    //     break;
-    // case LF_ID_MAX:
-    //     fprintf(stream, "LF_ID_MAX");
-    //     break;
-    // case LF_NUMERIC:
-    //     fprintf(stream, "LF_NUMERIC");
-    //     break;
-    case LF_CHAR:
-        fprintf(stream, "LF_CHAR");
-        break;
-    case LF_SHORT:
-        fprintf(stream, "LF_SHORT");
-        break;
-    case LF_USHORT:
-        fprintf(stream, "LF_USHORT");
-        break;
-    case LF_LONG:
-        fprintf(stream, "LF_LONG");
-        break;
-    case LF_ULONG:
-        fprintf(stream, "LF_ULONG");
-        break;
-    case LF_REAL32:
-        fprintf(stream, "LF_REAL32");
-        break;
-    case LF_REAL64:
-        fprintf(stream, "LF_REAL64");
-        break;
-    case LF_REAL80:
-        fprintf(stream, "LF_REAL80");
-        break;
-    case LF_REAL128:
-        fprintf(stream, "LF_REAL128");
-        break;
-    case LF_QUADWORD:
-        fprintf(stream, "LF_QUADWORD");
-        break;
-    case LF_UQUADWORD:
-        fprintf(stream, "LF_UQUADWORD");
-        break;
-    case LF_REAL48:
-        fprintf(stream, "LF_REAL48");
-        break;
-    case LF_COMPLEX32:
-        fprintf(stream, "LF_COMPLEX32");
-        break;
-    case LF_COMPLEX64:
-        fprintf(stream, "LF_COMPLEX64");
-        break;
-    case LF_COMPLEX80:
-        fprintf(stream, "LF_COMPLEX80");
-        break;
-    case LF_COMPLEX128:
-        fprintf(stream, "LF_COMPLEX128");
-        break;
-    case LF_VARSTRING:
-        fprintf(stream, "LF_VARSTRING");
-        break;
-    case LF_OCTWORD:
-        fprintf(stream, "LF_OCTWORD");
-        break;
-    case LF_UOCTWORD:
-        fprintf(stream, "LF_UOCTWORD");
-        break;
-    case LF_DECIMAL:
-        fprintf(stream, "LF_DECIMAL");
-        break;
-    case LF_DATE:
-        fprintf(stream, "LF_DATE");
-        break;
-    case LF_UTF8STRING:
-        fprintf(stream, "LF_UTF8STRING");
-        break;
-    case LF_REAL16:
-        fprintf(stream, "LF_REAL16");
-        break;
-    case LF_PAD0:
-        fprintf(stream, "LF_PAD0");
-        break;
-    case LF_PAD1:
-        fprintf(stream, "LF_PAD1");
-        break;
-    case LF_PAD2:
-        fprintf(stream, "LF_PAD2");
-        break;
-    case LF_PAD3:
-        fprintf(stream, "LF_PAD3");
-        break;
-    case LF_PAD4:
-        fprintf(stream, "LF_PAD4");
-        break;
-    case LF_PAD5:
-        fprintf(stream, "LF_PAD5");
-        break;
-    case LF_PAD6:
-        fprintf(stream, "LF_PAD6");
-        break;
-    case LF_PAD7:
-        fprintf(stream, "LF_PAD7");
-        break;
-    case LF_PAD8:
-        fprintf(stream, "LF_PAD8");
-        break;
-    case LF_PAD9:
-        fprintf(stream, "LF_PAD9");
-        break;
-    case LF_PAD10:
-        fprintf(stream, "LF_PAD10");
-        break;
-    case LF_PAD11:
-        fprintf(stream, "LF_PAD11");
-        break;
-    case LF_PAD12:
-        fprintf(stream, "LF_PAD12");
-        break;
-    case LF_PAD13:
-        fprintf(stream, "LF_PAD13");
-        break;
-    case LF_PAD14:
-        fprintf(stream, "LF_PAD14");
-        break;
-    case LF_PAD15:
-        fprintf(stream, "LF_PAD15");
-        break;
-    default:
-        fprintf(stderr, "%s:%i: ERROR: Unhandled tpi_leaf value: %i\n", __FILE__, __LINE__, leaf);
-        exit(EXIT_FAILURE);
-    }
+    TPI_LEAF_ENUM
 }
 
-void tpi_properties_print(
-    struct tpi_properties *properties,
-    uint32_t depth,
-    FILE *stream)
+void tpi_hfa_type_print(enum tpi_hfa_type item, FILE *stream)
 {
-    assert(properties);
     assert(stream);
 
-    fprintf(stream, "tpi_properties {\n");
-    fprintf_depth(stream, depth + 1, "packed: %u,\n", properties->packed);
-    fprintf_depth(stream, depth + 1, "ctor: %u,\n", properties->ctor);
-    fprintf_depth(stream, depth + 1, "ovlops: %u,\n", properties->ovlops);
-    fprintf_depth(stream, depth + 1, "isnested: %u,\n", properties->isnested);
-    fprintf_depth(stream, depth + 1, "cnested: %u,\n", properties->cnested);
-    fprintf_depth(stream, depth + 1, "opassign: %u,\n", properties->opassign);
-    fprintf_depth(stream, depth + 1, "opcast: %u,\n", properties->opcast);
-    fprintf_depth(stream, depth + 1, "fwdref: %u,\n", properties->fwdref);
-    fprintf_depth(stream, depth + 1, "scoped: %u,\n", properties->scoped);
-    fprintf_depth(stream, depth + 1, "hasuniquename: %u,\n", properties->hasuniquename);
-    fprintf_depth(stream, depth + 1, "sealed: %u,\n", properties->sealed);
-    fprintf_depth(stream, depth + 1, "hfa: %u,\n", properties->hfa);
-    fprintf_depth(stream, depth + 1, "intrinsic: %u,\n", properties->intrinsic);
-    fprintf_depth(stream, depth + 1, "mocom: %u,\n", properties->mocom);
-    fprintf_depth(stream, depth, "}");
+    TPI_HFA_TYPE_ENUM
 }
 
-void tpi_member_header_print(
-    struct tpi_member_header *header,
-    uint32_t depth,
-    FILE *stream)
+void tpi_mocom_udt_type_print(enum tpi_mocom_udt_type item, FILE *stream)
 {
-    assert(header);
     assert(stream);
 
-    fprintf(stream, "tpi_member_header {\n");
-    fprintf_depth(stream, depth + 1, "attributes: %u,\n", header->attributes);
-    fprintf_depth(stream, depth + 1, "field_type: %u,\n", header->field_type);
-    fprintf_depth(stream, depth, "}");
+    TPI_MOCOM_UDT_TYPE_ENUM
+}
+
+void tpi_properties_print(struct tpi_properties *item, uint32_t depth, FILE *stream)
+{
+    assert(item);
+    assert(stream);
+
+    TPI_PROPERTIES_STRUCT
+}
+
+void tpi_member_header_print(struct tpi_member_header *item, uint32_t depth, FILE *stream)
+{
+    assert(item);
+    assert(stream);
+
+    TPI_MEMBER_HEADER_STRUCT
 }
 
 void tpi_member_read(
@@ -664,49 +83,27 @@ void tpi_member_read(
     item->name = msf_read_tpi_lf_string(msf, msf_stream, out_offset, leaf, file_stream);
 }
 
-void tpi_member_dispose(
-    struct tpi_member *item)
+void tpi_member_dispose(struct tpi_member *item)
 {
     assert(item);
 
     free(item->name);
 }
 
-void tpi_member_print(
-    struct tpi_member *item,
-    uint32_t depth,
-    FILE *stream)
+void tpi_member_print(struct tpi_member *item, uint32_t depth, FILE *stream)
 {
     assert(item);
     assert(stream);
 
-    fprintf(stream, "tpi_member {\n");
-
-    fprintf_depth(stream, depth + 1, "header: ");
-    tpi_member_header_print(&item->header, depth + 1, stream);
-    fprintf(stream, ",\n");
-
-    fprintf_depth(stream, depth + 1, "offset: %llu,\n", item->offset);
-    fprintf_depth(stream, depth + 1, "name: \"%s\",\n", item->name);
-    fprintf_depth(stream, depth, "}");
+    TPI_MEMBER_STRUCT
 }
 
-void tpi_static_member_header_print(
-    struct tpi_static_member_header *header,
-    uint32_t depth,
-    FILE *stream)
+void tpi_static_member_header_print(struct tpi_static_member_header *item, uint32_t depth, FILE *stream)
 {
-    assert(header);
+    assert(item);
     assert(stream);
 
-    fprintf(stream, "tpi_static_member_header {\n");
-
-    fprintf_depth(stream, depth + 1, "attributes: ");
-    tpi_field_attributes_print(&header->attributes, depth + 1, stream);
-    fprintf(stream, ",\n");
-
-    fprintf_depth(stream, depth + 1, "field_type_index: %u,\n", header->field_type_index);
-    fprintf_depth(stream, depth, "}");
+    TPI_STATIC_MEMBER_HEADER_STRUCT
 }
 
 void tpi_static_member_dispose(struct tpi_static_member *item)
@@ -716,210 +113,96 @@ void tpi_static_member_dispose(struct tpi_static_member *item)
     free(item->name);
 }
 
-void tpi_static_member_print(
-    struct tpi_static_member *item,
-    uint32_t depth,
-    FILE *stream)
+void tpi_static_member_print(struct tpi_static_member *item, uint32_t depth, FILE *stream)
 {
     assert(item);
     assert(stream);
 
-    fprintf(stream, "tpi_static_member {\n");
-
-    fprintf_depth(stream, depth + 1, "header: ");
-    tpi_static_member_header_print(&item->header, depth + 1, stream);
-    fprintf(stream, ",\n");
-
-    fprintf_depth(stream, depth + 1, "name: \"%s\",\n", item->name);
-    fprintf_depth(stream, depth, "}");
+    TPI_STATIC_MEMBER_STRUCT
 }
 
-void tpi_pointer_attributes_print(
-    struct tpi_pointer_attributes *attributes,
-    uint32_t depth,
-    FILE *stream)
+void tpi_pointer_type_print(enum tpi_pointer_type item, FILE *stream)
 {
-    assert(attributes);
     assert(stream);
 
-    fprintf(stream, "tpi_pointer_attributes {\n");
-    fprintf_depth(stream, depth + 1, "ptrtype: %u,\n", attributes->ptrtype);
-    fprintf_depth(stream, depth + 1, "ptrmode: %u,\n", attributes->ptrmode);
-    fprintf_depth(stream, depth + 1, "isflat32: %u,\n", attributes->isflat32);
-    fprintf_depth(stream, depth + 1, "isvolatile: %u,\n", attributes->isvolatile);
-    fprintf_depth(stream, depth + 1, "isconst: %u,\n", attributes->isconst);
-    fprintf_depth(stream, depth + 1, "isunaligned: %u,\n", attributes->isunaligned);
-    fprintf_depth(stream, depth + 1, "isrestrict: %u,\n", attributes->isrestrict);
-    fprintf_depth(stream, depth + 1, "size: %u,\n", attributes->size);
-    fprintf_depth(stream, depth + 1, "ismocom: %u,\n", attributes->ismocom);
-    fprintf_depth(stream, depth + 1, "islref: %u,\n", attributes->islref);
-    fprintf_depth(stream, depth + 1, "isrref: %u,\n", attributes->isrref);
-    fprintf_depth(stream, depth + 1, "unused: %u,\n", attributes->unused);
-    fprintf_depth(stream, depth, "}");
+    TPI_POINTER_TYPE_ENUM
 }
 
-void tpi_pointer_header_print(
-    struct tpi_pointer_header *header,
-    uint32_t depth,
-    FILE *stream)
+void tpi_pointer_mode_print(enum tpi_pointer_mode item, FILE *stream)
 {
-    assert(header);
     assert(stream);
 
-    fprintf(stream, "tpi_pointer_header {\n");
-    fprintf_depth(stream, depth + 1, "underlying_type_index: %u,\n", header->underlying_type_index);
-
-    fprintf_depth(stream, depth + 1, "attributes: ");
-    tpi_pointer_attributes_print(&header->attributes, depth + 1, stream);
-    fprintf(stream, ",\n");
-
-    fprintf_depth(stream, depth, "}");
+    TPI_POINTER_MODE_ENUM
 }
 
-void tpi_pointer_print(
-    struct tpi_pointer *item,
-    uint32_t depth,
-    FILE *stream)
+void tpi_pointer_attributes_print(struct tpi_pointer_attributes *item, uint32_t depth, FILE *stream)
 {
     assert(item);
     assert(stream);
 
-    fprintf(stream, "tpi_pointer {\n");
-
-    fprintf_depth(stream, depth + 1, "header: ");
-    tpi_pointer_header_print(&item->header, depth + 1, stream);
-    fprintf(stream, ",\n");
-
-    fprintf_depth(stream, depth + 1, "containing_class_type_index: %u,\n", item->containing_class_type_index);
-    fprintf_depth(stream, depth, "}");
+    TPI_POINTER_ATTRIBUTES_STRUCT
 }
 
-void tpi_argument_list_dispose(
-    struct tpi_argument_list *item)
+void tpi_pointer_header_print(struct tpi_pointer_header *item, uint32_t depth, FILE *stream)
+{
+    assert(item);
+    assert(stream);
+
+    TPI_POINTER_HEADER_STRUCT
+}
+
+void tpi_pointer_print(struct tpi_pointer *item, uint32_t depth, FILE *stream)
+{
+    assert(item);
+    assert(stream);
+
+    TPI_POINTER_STRUCT
+}
+
+void tpi_argument_list_dispose(struct tpi_argument_list *item)
 {
     assert(item);
 
     free(item->type_indices);
 }
 
-void tpi_argument_list_print(
-    struct tpi_argument_list *item,
-    uint32_t depth,
-    FILE *stream)
+void tpi_argument_list_print(struct tpi_argument_list *item, uint32_t depth, FILE *stream)
 {
     assert(item);
     assert(stream);
 
-    fprintf(stream, "tpi_argument_list {\n");
-    fprintf_depth(stream, depth + 1, "count: %u,\n", item->count);
-    fprintf_depth(stream, depth + 1, "type_indices: [");
-    for (uint32_t i = 0; i < item->count; i++)
-    {
-        if (i > 0)
-            fprintf(stream, ", ");
-
-        fprintf(stream, "%u", item->type_indices[i]);
-    }
-    fprintf(stream, "],");
-    fprintf(stream, "\n");
-    fprintf_depth(stream, depth, "}");
+    TPI_ARGUMENT_LIST_STRUCT
 }
 
-void tpi_procedure_attributes_print(
-    struct tpi_procedure_attributes *attributes,
-    uint32_t depth,
-    FILE *stream)
-{
-    assert(attributes);
-    assert(stream);
-
-    fprintf(stream, "tpi_procedure_attributes {\n");
-    fprintf_depth(stream, depth + 1, "cxxreturnudt: %u,\n", attributes->cxxreturnudt);
-    fprintf_depth(stream, depth + 1, "ctor: %u,\n", attributes->ctor);
-    fprintf_depth(stream, depth + 1, "ctorvbase: %u,\n", attributes->ctorvbase);
-    fprintf_depth(stream, depth + 1, "unused: %u,\n", attributes->unused);
-    fprintf_depth(stream, depth, "}");
-}
-
-void tpi_procedure_print(
-    struct tpi_procedure *item,
-    uint32_t depth,
-    FILE *stream)
+void tpi_procedure_attributes_print(struct tpi_procedure_attributes *item, uint32_t depth, FILE *stream)
 {
     assert(item);
     assert(stream);
 
-    fprintf(stream, "tpi_procedure {\n");
-    fprintf_depth(stream, depth + 1, "return_type_index: %u,\n", item->return_type_index);
-
-    fprintf_depth(stream, depth + 1, "attributes: ");
-    tpi_procedure_attributes_print(&item->attributes, depth + 1, stream);
-    fprintf(stream, ",\n");
-
-    fprintf_depth(stream, depth + 1, "parameter_count: %u,\n", item->parameter_count);
-    fprintf_depth(stream, depth + 1, "argument_list_type_index: %u,\n", item->argument_list_type_index);
-    fprintf_depth(stream, depth + 1, "padding: %u,\n", item->padding);
-    fprintf_depth(stream, depth, "}");
+    TPI_PROCEDURE_ATTRIBUTES_STRUCT
 }
 
-void tpi_modifier_print(
-    struct tpi_modifier *item,
-    uint32_t depth,
-    FILE *stream)
+void tpi_procedure_print(struct tpi_procedure *item, uint32_t depth, FILE *stream)
 {
     assert(item);
     assert(stream);
 
-    fprintf(stream, "tpi_modifier {\n");
-    fprintf_depth(stream, depth + 1, "underlying_type_index: %u,\n", item->underlying_type_index);
-    fprintf_depth(stream, depth + 1, "flags: %u,\n", item->flags);
-    fprintf_depth(stream, depth, "}");
+    TPI_PROCEDURE_STRUCT
 }
 
-void tpi_enumerate_variant_type_print(
-    enum tpi_enumerate_variant_type type,
-    FILE *stream)
+void tpi_modifier_print(struct tpi_modifier *item, uint32_t depth, FILE *stream)
+{
+    assert(item);
+    assert(stream);
+
+    TPI_MODIFIER_STRUCT
+}
+
+void tpi_enumerate_variant_type_print(enum tpi_enumerate_variant_type item, FILE *stream)
 {
     assert(stream);
 
-    switch (type)
-    {
-    case TPI_ENUMERATE_VARIANT_UINT8:
-        fprintf(stream, "TPI_ENUMERATE_VARIANT_UINT8");
-        break;
-
-    case TPI_ENUMERATE_VARIANT_UINT16:
-        fprintf(stream, "TPI_ENUMERATE_VARIANT_UINT16");
-        break;
-
-    case TPI_ENUMERATE_VARIANT_UINT32:
-        fprintf(stream, "TPI_ENUMERATE_VARIANT_UINT32");
-        break;
-
-    case TPI_ENUMERATE_VARIANT_UINT64:
-        fprintf(stream, "TPI_ENUMERATE_VARIANT_UINT64");
-        break;
-
-    case TPI_ENUMERATE_VARIANT_INT8:
-        fprintf(stream, "TPI_ENUMERATE_VARIANT_INT8");
-        break;
-
-    case TPI_ENUMERATE_VARIANT_INT16:
-        fprintf(stream, "TPI_ENUMERATE_VARIANT_INT16");
-        break;
-
-    case TPI_ENUMERATE_VARIANT_INT32:
-        fprintf(stream, "TPI_ENUMERATE_VARIANT_INT32");
-        break;
-
-    case TPI_ENUMERATE_VARIANT_INT64:
-        fprintf(stream, "TPI_ENUMERATE_VARIANT_INT64");
-        break;
-
-    default:
-        fprintf(stderr, "%s:%i: ERROR: Unhandled tpi_enumerate_variant_type value: %i\n", __FILE__, __LINE__, type);
-        exit(EXIT_FAILURE);
-    }
+    TPI_ENUMERATE_VARIANT_TYPE_ENUM
 }
 
 void tpi_enumerate_variant_read(
@@ -990,114 +273,38 @@ void tpi_enumerate_variant_read(
     }
 }
 
-void tpi_enumerate_variant_print(
-    struct tpi_enumerate_variant *variant,
-    uint32_t depth,
-    FILE *stream)
+void tpi_enumerate_variant_print(struct tpi_enumerate_variant *item, uint32_t depth, FILE *stream)
 {
-    assert(variant);
+    assert(item);
     assert(stream);
 
-    fprintf(stream, "tpi_enumerate_variant {\n");
-
-    fprintf_depth(stream, depth + 1, "type: ");
-    tpi_enumerate_variant_type_print(variant->type, stream);
-    fprintf(stream, ",\n");
-
-    switch (variant->type)
-    {
-    case TPI_ENUMERATE_VARIANT_UINT8:
-        fprintf_depth(stream, depth + 1, "uint8: %u,\n", variant->uint8);
-        break;
-
-    case TPI_ENUMERATE_VARIANT_UINT16:
-        fprintf_depth(stream, depth + 1, "uint16: %u,\n", variant->uint16);
-        break;
-
-    case TPI_ENUMERATE_VARIANT_UINT32:
-        fprintf_depth(stream, depth + 1, "uint32: %u,\n", variant->uint32);
-        break;
-
-    case TPI_ENUMERATE_VARIANT_UINT64:
-        fprintf_depth(stream, depth + 1, "uint64: %llu,\n", variant->uint64);
-        break;
-
-    case TPI_ENUMERATE_VARIANT_INT8:
-        fprintf_depth(stream, depth + 1, "int8: %i,\n", variant->int8);
-        break;
-
-    case TPI_ENUMERATE_VARIANT_INT16:
-        fprintf_depth(stream, depth + 1, "int16: %i,\n", variant->int16);
-        break;
-
-    case TPI_ENUMERATE_VARIANT_INT32:
-        fprintf_depth(stream, depth + 1, "int32: %i,\n", variant->int32);
-        break;
-
-    case TPI_ENUMERATE_VARIANT_INT64:
-        fprintf_depth(stream, depth + 1, "int64: %lli,\n", variant->int64);
-        break;
-
-    default:
-        fprintf(stderr, "%s:%i: ERROR: Unhandled tpi_enumerate_variant_type value: %i\n", __FILE__, __LINE__, variant->type);
-        exit(EXIT_FAILURE);
-    }
-
-    fprintf_depth(stream, depth, "}");
+    TPI_ENUMERATE_VARIANT_STRUCT
 }
 
-void tpi_enumerate_dispose(
-    struct tpi_enumerate *item)
+void tpi_enumerate_dispose(struct tpi_enumerate *item)
 {
     assert(item);
 
     free(item->name);
 }
 
-void tpi_enumerate_print(
-    struct tpi_enumerate *item,
-    uint32_t depth,
-    FILE *stream)
+void tpi_enumerate_print(struct tpi_enumerate *item, uint32_t depth, FILE *stream)
 {
     assert(item);
     assert(stream);
 
-    fprintf(stream, "tpi_enumerate {\n");
-
-    fprintf_depth(stream, depth + 1, "attributes: ");
-    tpi_field_attributes_print(&item->attributes, depth + 1, stream);
-    fprintf(stream, ",\n");
-
-    fprintf_depth(stream, depth + 1, "variant: ");
-    tpi_enumerate_variant_print(&item->variant, depth + 1, stream);
-    fprintf(stream, ",\n");
-
-    fprintf_depth(stream, depth + 1, "name: \"%s\",\n", item->name);
-    fprintf_depth(stream, depth, "}");
+    TPI_ENUMERATE_STRUCT
 }
 
-void tpi_enumeration_header_print(
-    struct tpi_enumeration_header *header,
-    uint32_t depth,
-    FILE *stream)
+void tpi_enumeration_header_print(struct tpi_enumeration_header *item, uint32_t depth, FILE *stream)
 {
-    assert(header);
+    assert(item);
     assert(stream);
 
-    fprintf(stream, "tpi_enumeration_header {\n");
-    fprintf_depth(stream, depth + 1, "count: %u,\n", header->count);
-
-    fprintf_depth(stream, depth + 1, "properties: ");
-    tpi_properties_print(&header->properties, depth + 1, stream);
-    fprintf(stream, ",\n");
-
-    fprintf_depth(stream, depth + 1, "underlying_type_index: %u,\n", header->underlying_type_index);
-    fprintf_depth(stream, depth + 1, "fields_type_index: %u,\n", header->fields_type_index);
-    fprintf_depth(stream, depth, "}");
+    TPI_ENUMERATION_HEADER_STRUCT
 }
 
-void tpi_enumeration_dispose(
-    struct tpi_enumeration *item)
+void tpi_enumeration_dispose(struct tpi_enumeration *item)
 {
     assert(item);
 
@@ -1105,34 +312,20 @@ void tpi_enumeration_dispose(
     free(item->unique_name);
 }
 
-void tpi_enumeration_print(
-    struct tpi_enumeration *item,
-    uint32_t depth,
-    FILE *stream)
+void tpi_enumeration_print(struct tpi_enumeration *item, uint32_t depth, FILE *stream)
 {
     assert(item);
     assert(stream);
 
-    fprintf(stream, "tpi_enumeration {\n");
-
-    fprintf_depth(stream, depth + 1, "header: ");
-    tpi_enumeration_header_print(&item->header, depth + 1, stream);
-    fprintf(stream, ",\n");
-
-    fprintf_depth(stream, depth + 1, "name: \"%s\",\n", item->name);
-    fprintf_depth(stream, depth + 1, "unique_name: \"%s\",\n", item->unique_name);
-    fprintf_depth(stream, depth, "}");
+    TPI_ENUMERATION_STRUCT
 }
 
-void tpi_array_header_print(struct tpi_array_header *header, uint32_t depth, FILE *stream)
+void tpi_array_header_print(struct tpi_array_header *item, uint32_t depth, FILE *stream)
 {
-    assert(header);
+    assert(item);
     assert(stream);
 
-    fprintf(stream, "tpi_array_header {\n");
-    fprintf_depth(stream, depth + 1, "element_type_index: %u,\n", header->element_type_index);
-    fprintf_depth(stream, depth + 1, "indexing_type_index: %u,\n", header->indexing_type_index);
-    fprintf_depth(stream, depth, "}");
+    TPI_ARRAY_HEADER_STRUCT
 }
 
 void tpi_array_dispose(struct tpi_array *item)
@@ -1145,49 +338,20 @@ void tpi_array_dispose(struct tpi_array *item)
 void tpi_array_print(struct tpi_array *item, uint32_t depth, FILE *stream)
 {
     assert(item);
-    fprintf(stream, "tpi_array {\n");
-
-    fprintf_depth(stream, depth + 1, "header: ");
-    tpi_array_header_print(&item->header, depth + 1, stream);
-    fprintf(stream, ",\n");
-
-    fprintf_depth(stream, depth + 1, "stride: %u,\n", item->stride);
-    fprintf_depth(stream, depth + 1, "dimension_count: %u,\n", item->dimension_count);
-
-    fprintf_depth(stream, depth + 1, "dimensions: [");
-    for (uint32_t i = 0; i < item->dimension_count; i++)
-    {
-        if (i > 0)
-            fprintf(stream, ", ");
-
-        fprintf(stream, "%u", item->dimensions[i]);
-    }
-    fprintf(stream, "],\n");
-    fprintf_depth(stream, depth, "}");
-}
-
-void tpi_field_attributes_print(
-    struct tpi_field_attributes *attributes,
-    uint32_t depth,
-    FILE *stream)
-{
-    assert(attributes);
     assert(stream);
 
-    fprintf(stream, "tpi_field_attributes {\n");
-    fprintf_depth(stream, depth + 1, "access: %u,\n", attributes->access);
-    fprintf_depth(stream, depth + 1, "mprop: %u,\n", attributes->mprop);
-    fprintf_depth(stream, depth + 1, "pseudo: %u,\n", attributes->pseudo);
-    fprintf_depth(stream, depth + 1, "noinherit: %u,\n", attributes->noinherit);
-    fprintf_depth(stream, depth + 1, "noconstruct: %u,\n", attributes->noconstruct);
-    fprintf_depth(stream, depth + 1, "compgenx: %u,\n", attributes->compgenx);
-    fprintf_depth(stream, depth + 1, "sealed: %u,\n", attributes->sealed);
-    fprintf_depth(stream, depth + 1, "unused: %u,\n", attributes->unused);
-    fprintf_depth(stream, depth, "}");
+    TPI_ARRAY_STRUCT
 }
 
-void tpi_field_list_dispose(
-    struct tpi_field_list *item)
+void tpi_field_attributes_print(struct tpi_field_attributes *item, uint32_t depth, FILE *stream)
+{
+    assert(item);
+    assert(stream);
+
+    TPI_FIELD_ATTRIBUTES_STRUCT
+}
+
+void tpi_field_list_dispose(struct tpi_field_list *item)
 {
     assert(item);
 
@@ -1197,48 +361,23 @@ void tpi_field_list_dispose(
     free(item->fields);
 }
 
-void tpi_field_list_print(
-    struct tpi_field_list *item,
-    uint32_t depth,
-    FILE *stream)
+void tpi_field_list_print(struct tpi_field_list *item, uint32_t depth, FILE *stream)
 {
     assert(item);
     assert(stream);
 
-    fprintf(stream, "tpi_field_list {\n");
-    fprintf_depth(stream, depth + 1, "count: %u,\n", item->count);
-    fprintf_depth(stream, depth + 1, "fields: [\n");
-    for (uint32_t i = 0; i < item->count; i++)
-    {
-        fprintf_depth(stream, depth + 2, "[%u] = ", i);
-        tpi_symbol_print(&item->fields[i], depth + 2, stream);
-        fprintf(stream, ",\n");
-    }
-    fprintf_depth(stream, depth + 1, "],\n");
-    fprintf_depth(stream, depth, "}");
+    TPI_FIELD_LIST_STRUCT
 }
 
-void tpi_union_header_print(
-    struct tpi_union_header *header,
-    uint32_t depth,
-    FILE *stream)
+void tpi_union_header_print(struct tpi_union_header *item, uint32_t depth, FILE *stream)
 {
-    assert(header);
+    assert(item);
     assert(stream);
 
-    fprintf(stream, "tpi_union_header {\n");
-    fprintf_depth(stream, depth + 1, "count: %u,\n", header->count);
-
-    fprintf_depth(stream, depth + 1, "properties: ");
-    tpi_properties_print(&header->properties, depth + 1, stream);
-    fprintf(stream, ",\n");
-
-    fprintf_depth(stream, depth + 1, "fields_type_index: %u,\n", header->fields_type_index);
-    fprintf_depth(stream, depth, "}");
+    TPI_UNION_HEADER_STRUCT
 }
 
-void tpi_union_dispose(
-    struct tpi_union *item)
+void tpi_union_dispose(struct tpi_union *item)
 {
     assert(item);
 
@@ -1246,40 +385,20 @@ void tpi_union_dispose(
     free(item->unique_name);
 }
 
-void tpi_union_print(
-    struct tpi_union *item,
-    uint32_t depth,
-    FILE *stream)
+void tpi_union_print(struct tpi_union *item, uint32_t depth, FILE *stream)
 {
     assert(item);
     assert(stream);
 
-    fprintf(stream, "tpi_union {\n");
-
-    fprintf_depth(stream, depth + 1, "header: ");
-    tpi_union_header_print(&item->header, depth + 1, stream);
-    fprintf(stream, ",\n");
-
-    fprintf_depth(stream, depth + 1, "size: %llu,\n", item->size);
-    fprintf_depth(stream, depth + 1, "name: \"%s\",\n", item->name);
-    fprintf_depth(stream, depth + 1, "unique_name: \"%s\",\n", item->unique_name);
-    fprintf_depth(stream, depth, "}");
+    TPI_UNION_STRUCT
 }
 
-void tpi_bitfield_print(
-    struct tpi_bitfield *item,
-    uint32_t depth,
-    FILE *stream)
+void tpi_bitfield_print(struct tpi_bitfield *item, uint32_t depth, FILE *stream)
 {
     assert(item);
     assert(stream);
 
-    fprintf(stream, "tpi_bitfield {\n");
-    fprintf_depth(stream, depth + 1, "underlying_type_index: %u,\n", item->underlying_type_index);
-    fprintf_depth(stream, depth + 1, "length: %u,\n", item->length);
-    fprintf_depth(stream, depth + 1, "position: %u,\n", item->position);
-    fprintf_depth(stream, depth + 1, "padding: %u,\n", item->padding);
-    fprintf_depth(stream, depth, "}");
+    TPI_BITFIELD_STRUCT
 }
 
 void tpi_member_function_read(
@@ -1298,202 +417,105 @@ void tpi_member_function_read(
     MSF_STREAM_READ(msf, msf_stream, out_offset, *item, file_stream);
 }
 
-void tpi_member_function_print(
-    struct tpi_member_function *item,
-    uint32_t depth,
-    FILE *stream)
+void tpi_member_function_print(struct tpi_member_function *item, uint32_t depth, FILE *stream)
 {
     assert(item);
     assert(stream);
 
-    fprintf(stream, "tpi_member_function {\n");
-    fprintf_depth(stream, depth + 1, "return_type_index: %u,\n", item->return_type_index);
-    fprintf_depth(stream, depth + 1, "class_type_index: %u,\n", item->class_type_index);
-    fprintf_depth(stream, depth + 1, "this_pointer_type_index: %u,\n", item->this_pointer_type_index);
-    fprintf_depth(stream, depth + 1, "attributes: %u,\n", item->attributes);
-    fprintf_depth(stream, depth + 1, "parameter_count: %u,\n", item->parameter_count);
-    fprintf_depth(stream, depth + 1, "argument_list_type_index: %u,\n", item->argument_list_type_index);
-    fprintf_depth(stream, depth + 1, "this_adjustment: %u,\n", item->this_adjustment);
-    fprintf_depth(stream, depth, "}");
+    TPI_MEMBER_FUNCTION_STRUCT
 }
 
-void tpi_overloaded_method_header_print(
-    struct tpi_overloaded_method_header *header,
-    uint32_t depth,
-    FILE *stream)
+void tpi_overloaded_method_header_print(struct tpi_overloaded_method_header *item, uint32_t depth, FILE *stream)
 {
-    assert(header);
+    assert(item);
     assert(stream);
 
-    fprintf(stream, "tpi_overloaded_method_header {\n");
-    fprintf_depth(stream, depth + 1, "count: %u,\n", header->count);
-    fprintf_depth(stream, depth + 1, "method_list_type_index: %u,\n", header->method_list_type_index);
-    fprintf_depth(stream, depth, "}");
+    TPI_OVERLOADED_METHOD_HEADER_STRUCT
 }
 
-void tpi_overloaded_method_dispose(
-    struct tpi_overloaded_method *item)
+void tpi_overloaded_method_dispose(struct tpi_overloaded_method *item)
 {
     assert(item);
 
     free(item->name);
 }
 
-void tpi_overloaded_method_print(
-    struct tpi_overloaded_method *item,
-    uint32_t depth,
-    FILE *stream)
+void tpi_overloaded_method_print(struct tpi_overloaded_method *item, uint32_t depth, FILE *stream)
 {
     assert(item);
     assert(stream);
 
-    fprintf(stream, "tpi_overloaded_method {\n");
-
-    fprintf_depth(stream, depth + 1, "header: ");
-    tpi_overloaded_method_header_print(&item->header, depth + 1, stream);
-    fprintf(stream, ",\n");
-
-    fprintf_depth(stream, depth + 1, "name: \"%s\",\n", item->name);
-    fprintf_depth(stream, depth, "}");
+    TPI_OVERLOADED_METHOD_STRUCT
 }
 
-void tpi_method_header_print(
-    struct tpi_method_header *header,
-    uint32_t depth,
-    FILE *stream)
+void tpi_method_header_print(struct tpi_method_header *item, uint32_t depth, FILE *stream)
 {
-    assert(header);
+    assert(item);
     assert(stream);
 
-    fprintf(stream, "tpi_method_header {\n");
-
-    fprintf_depth(stream, depth + 1, "attributes: ");
-    tpi_field_attributes_print(&header->attributes, depth + 1, stream);
-    fprintf(stream, ",\n");
-
-    fprintf_depth(stream, depth + 1, "method_type_index: %u,\n", header->method_type_index);
-    fprintf_depth(stream, depth, "}");
+    TPI_METHOD_HEADER_STRUCT
 }
 
-void tpi_method_dispose(
-    struct tpi_method *item)
+void tpi_method_dispose(struct tpi_method *item)
 {
     assert(item);
 
     free(item->name);
 }
 
-void tpi_method_print(
-    struct tpi_method *item,
-    uint32_t depth,
-    FILE *stream)
+void tpi_method_print(struct tpi_method *item, uint32_t depth, FILE *stream)
 {
     assert(item);
     assert(stream);
 
-    fprintf(stream, "tpi_method {\n");
-
-    fprintf_depth(stream, depth + 1, "header: ");
-    tpi_method_header_print(&item->header, depth + 1, stream);
-    fprintf(stream, ",\n");
-
-    fprintf_depth(stream, depth + 1, "vtable_offset: %u,\n", item->vtable_offset);
-    fprintf_depth(stream, depth + 1, "name: \"%s\",\n", item->name);
-    fprintf_depth(stream, depth, "}");
+    TPI_METHOD_STRUCT
 }
 
-void tpi_method_list_entry_header_print(
-    struct tpi_method_list_entry_header *header,
-    uint32_t depth,
-    FILE *stream)
+void tpi_method_list_entry_header_print(struct tpi_method_list_entry_header *item, uint32_t depth, FILE *stream)
 {
-    assert(header);
+    assert(item);
     assert(stream);
 
-    fprintf(stream, "tpi_method_list_entry_header {\n");
-
-    fprintf_depth(stream, depth + 1, "attributes: ");
-    tpi_field_attributes_print(&header->attributes, depth + 1, stream);
-    fprintf(stream, ",\n");
-
-    fprintf_depth(stream, depth + 1, "padding: %u,\n", header->padding);
-    fprintf_depth(stream, depth + 1, "method_type_index: %u,\n", header->method_type_index);
-    fprintf_depth(stream, depth, "}");
+    TPI_METHOD_LIST_ENTRY_HEADER_STRUCT
 }
 
-void tpi_method_list_entry_print(
-    struct tpi_method_list_entry *entry,
-    uint32_t depth,
-    FILE *stream)
+void tpi_method_list_entry_print(struct tpi_method_list_entry *item, uint32_t depth, FILE *stream)
 {
-    assert(entry);
+    assert(item);
     assert(stream);
 
-    fprintf(stream, "tpi_method_list_entry {\n");
-
-    fprintf_depth(stream, depth + 1, "header: ");
-    tpi_method_list_entry_header_print(&entry->header, depth + 1, stream);
-    fprintf(stream, ",\n");
-
-    fprintf_depth(stream, depth + 1, "vtable_offset: %u,\n", entry->vtable_offset);
-    fprintf_depth(stream, depth, "}");
+    TPI_METHOD_LIST_ENTRY_STRUCT
 }
 
-void tpi_method_list_dispose(
-    struct tpi_method_list *item)
+void tpi_method_list_dispose(struct tpi_method_list *item)
 {
     assert(item);
 
     free(item->entries);
 }
 
-void tpi_method_list_print(
-    struct tpi_method_list *item,
-    uint32_t depth,
-    FILE *stream)
+void tpi_method_list_print(struct tpi_method_list *item, uint32_t depth, FILE *stream)
 {
     assert(item);
     assert(stream);
 
-    fprintf(stream, "tpi_method_list {\n");
-    fprintf_depth(stream, depth + 1, "count: %u,\n", item->count);
-    fprintf_depth(stream, depth + 1, "entries: [\n");
-    for (uint32_t i = 0; i < item->count; i++)
-    {
-        fprintf_depth(stream, depth + 2, "[%u] = ", i);
-        tpi_method_list_entry_print(&item->entries[i], depth + 2, stream);
-        fprintf(stream, ",\n");
-    }
-    fprintf_depth(stream, depth + 1, "],\n");
-    fprintf_depth(stream, depth, "}");
+    TPI_METHOD_LIST_STRUCT
 }
 
-void tpi_vtable_print(
-    struct tpi_vtable *item,
-    uint32_t depth,
-    FILE *stream)
+void tpi_vtable_print(struct tpi_vtable *item, uint32_t depth, FILE *stream)
 {
     assert(item);
     assert(stream);
 
-    fprintf(stream, "tpi_vtable {\n");
-    fprintf_depth(stream, depth + 1, "padding: %u,\n", item->padding);
-    fprintf_depth(stream, depth + 1, "type_index: %u,\n", item->type_index);
-    fprintf_depth(stream, depth, "}");
+    TPI_VTABLE_STRUCT
 }
 
-void tpi_nested_type_header_print(
-    struct tpi_nested_type_header *header,
-    uint32_t depth,
-    FILE *stream)
+void tpi_nested_type_header_print(struct tpi_nested_type_header *item, uint32_t depth, FILE *stream)
 {
-    assert(header);
+    assert(item);
     assert(stream);
 
-    fprintf(stream, "tpi_nested_type_header {\n");
-    fprintf_depth(stream, depth + 1, "attributes: %u,\n", header->attributes);
-    fprintf_depth(stream, depth + 1, "nested_type_index: %u,\n", header->nested_type_index);
-    fprintf_depth(stream, depth, "}");
+    TPI_NESTED_TYPE_HEADER_STRUCT
 }
 
 void tpi_nested_type_read(
@@ -1515,121 +537,59 @@ void tpi_nested_type_read(
     item->name = msf_read_tpi_lf_string(msf, msf_stream, out_offset, leaf, file_stream);
 }
 
-void tpi_nested_type_dispose(
-    struct tpi_nested_type *item)
+void tpi_nested_type_dispose(struct tpi_nested_type *item)
 {
     assert(item);
 
     free(item->name);
 }
 
-void tpi_nested_type_print(
-    struct tpi_nested_type *item,
-    uint32_t depth,
-    FILE *stream)
+void tpi_nested_type_print(struct tpi_nested_type *item, uint32_t depth, FILE *stream)
 {
     assert(item);
     assert(stream);
 
-    fprintf(stream, "tpi_nested_type {\n");
-
-    fprintf_depth(stream, depth + 1, "header: ");
-    tpi_nested_type_header_print(&item->header, depth + 1, stream);
-    fprintf(stream, ",\n");
-
-    fprintf_depth(stream, depth + 1, "name: \"%s\",\n", item->name);
-    fprintf_depth(stream, depth, "}");
+    TPI_NESTED_TYPE_STRUCT
 }
 
-void tpi_base_class_header_print(
-    struct tpi_base_class_header *header,
-    uint32_t depth,
-    FILE *stream)
-{
-    assert(header);
-    assert(stream);
-
-    fprintf(stream, "tpi_base_class_header {\n");
-
-    fprintf_depth(stream, depth + 1, "attributes: ");
-    tpi_field_attributes_print(&header->attributes, depth + 1, stream);
-    fprintf(stream, ",\n");
-
-    fprintf_depth(stream, depth + 1, "base_class_type_index: %u,\n", header->base_class_type_index);
-    fprintf_depth(stream, depth, "}");
-}
-
-void tpi_base_class_print(
-    struct tpi_base_class *item,
-    uint32_t depth,
-    FILE *stream)
+void tpi_base_class_header_print(struct tpi_base_class_header *item, uint32_t depth, FILE *stream)
 {
     assert(item);
     assert(stream);
 
-    fprintf(stream, "tpi_base_class {\n");
-
-    fprintf_depth(stream, depth + 1, "header: ");
-    tpi_base_class_header_print(&item->header, depth + 1, stream);
-    fprintf(stream, ",\n");
-
-    fprintf_depth(stream, depth + 1, "offset: %u,\n", item->offset);
-    fprintf_depth(stream, depth, "}");
+    TPI_BASE_CLASS_HEADER_STRUCT
 }
 
-void tpi_virtual_base_class_header_print(
-    struct tpi_virtual_base_class_header *header,
-    uint32_t depth,
-    FILE *stream)
-{
-    assert(header);
-    assert(stream);
-
-    fprintf(stream, "tpi_virtual_base_class_header {\n");
-
-    fprintf_depth(stream, depth + 1, "attributes: ");
-    tpi_field_attributes_print(&header->attributes, depth + 1, stream);
-    fprintf(stream, ",\n");
-
-    fprintf_depth(stream, depth + 1, "base_class_type_index: %u,\n", header->base_class_type_index);
-    fprintf_depth(stream, depth + 1, "base_pointer_type_index: %u,\n", header->base_pointer_type_index);
-    fprintf_depth(stream, depth, "}");
-}
-
-void tpi_virtual_base_class_print(
-    struct tpi_virtual_base_class *item,
-    uint32_t depth,
-    FILE *stream)
+void tpi_base_class_print(struct tpi_base_class *item, uint32_t depth, FILE *stream)
 {
     assert(item);
     assert(stream);
 
-    fprintf(stream, "tpi_virtual_base_class {\n");
-
-    fprintf_depth(stream, depth + 1, "header: ");
-    tpi_virtual_base_class_header_print(&item->header, depth + 1, stream);
-    fprintf(stream, ",\n");
-
-    fprintf_depth(stream, depth + 1, "base_pointer_offset: %u,\n", item->base_pointer_offset);
-    fprintf_depth(stream, depth + 1, "virtual_base_offset: %u,\n", item->virtual_base_offset);
-    fprintf_depth(stream, depth, "}");
+    TPI_BASE_CLASS_STRUCT
 }
 
-void tpi_class_header_print(
-    struct tpi_class_header *header,
-    uint32_t depth,
-    FILE *stream)
+void tpi_virtual_base_class_header_print(struct tpi_virtual_base_class_header *item, uint32_t depth, FILE *stream)
 {
-    assert(header);
+    assert(item);
     assert(stream);
 
-    fprintf(stream, "tpi_class_header {\n");
-    fprintf_depth(stream, depth + 1, "count: %u,\n", header->count);
-    fprintf_depth(stream, depth + 1, "properties: ");
-    tpi_properties_print(&header->properties, depth + 1, stream);
-    fprintf(stream, ",\n");
-    fprintf_depth(stream, depth + 1, "fields_type_index: %u,\n", header->fields_type_index);
-    fprintf_depth(stream, depth, "}");
+    TPI_VIRTUAL_BASE_CLASS_HEADER_STRUCT
+}
+
+void tpi_virtual_base_class_print(struct tpi_virtual_base_class *item, uint32_t depth, FILE *stream)
+{
+    assert(item);
+    assert(stream);
+
+    TPI_VIRTUAL_BASE_CLASS_STRUCT
+}
+
+void tpi_class_header_print(struct tpi_class_header *item, uint32_t depth, FILE *stream)
+{
+    assert(item);
+    assert(stream);
+
+    TPI_CLASS_HEADER_STRUCT
 }
 
 void tpi_class_read(
@@ -1677,8 +637,7 @@ void tpi_class_read(
     msf_read_padding(msf, msf_stream, end_offset, out_offset, file_stream);
 }
 
-void tpi_class_dispose(
-    struct tpi_class *item)
+void tpi_class_dispose(struct tpi_class *item)
 {
     assert(item);
 
@@ -1686,24 +645,12 @@ void tpi_class_dispose(
     free(item->unique_name);
 }
 
-void tpi_class_print(
-    struct tpi_class *item,
-    uint32_t depth,
-    FILE *stream)
+void tpi_class_print(struct tpi_class *item, uint32_t depth, FILE *stream)
 {
     assert(item);
     assert(stream);
 
-    fprintf(stream, "tpi_class {\n");
-    fprintf_depth(stream, depth + 1, "header: ");
-    tpi_class_header_print(&item->header, depth + 1, stream);
-    fprintf(stream, ",\n");
-    fprintf_depth(stream, depth + 1, "derived_from_type_index: %u,\n", item->derived_from_type_index);
-    fprintf_depth(stream, depth + 1, "vtable_shape_type_index: %u,\n", item->vtable_shape_type_index);
-    fprintf_depth(stream, depth + 1, "size: %llu,\n", item->size);
-    fprintf_depth(stream, depth + 1, "name: \"%s\",\n", item->name);
-    fprintf_depth(stream, depth + 1, "unique_name: \"%s\",\n", item->unique_name);
-    fprintf_depth(stream, depth, "}");
+    TPI_CLASS_STRUCT
 }
 
 void tpi_symbol_read(
@@ -2136,180 +1083,12 @@ void tpi_symbol_dispose(struct tpi_symbol *symbol)
     }
 }
 
-void tpi_symbol_print(struct tpi_symbol *symbol, uint32_t depth, FILE *stream)
+void tpi_symbol_print(struct tpi_symbol *item, uint32_t depth, FILE *stream)
 {
-    assert(symbol);
+    assert(item);
     assert(stream);
 
-    fprintf(stream, "tpi_symbol {\n");
-
-    fprintf_depth(stream, depth + 1, "leaf: ");
-    tpi_leaf_print(symbol->leaf, stream);
-    fprintf(stream, ",\n");
-
-    switch (symbol->leaf)
-    {
-    case LF_CLASS:
-    case LF_CLASS_ST:
-    case LF_STRUCTURE:
-    case LF_STRUCTURE_ST:
-    case LF_STRUCTURE19:
-    case LF_INTERFACE:
-        fprintf_depth(stream, depth + 1, "class_: ");
-        tpi_class_print(&symbol->class_, depth + 1, stream);
-        fprintf(stream, ",\n");
-        break;
-
-    case LF_MEMBER:
-    case LF_MEMBER_ST:
-        fprintf_depth(stream, depth + 1, "member: ");
-        tpi_member_print(&symbol->member, depth + 1, stream);
-        fprintf(stream, ",\n");
-        break;
-
-    case LF_NESTTYPE:
-    case LF_NESTTYPE_ST:
-    case LF_NESTTYPEEX:
-    case LF_NESTTYPEEX_ST:
-        fprintf_depth(stream, depth + 1, "nested_type: ");
-        tpi_nested_type_print(&symbol->nested_type, depth + 1, stream);
-        fprintf(stream, ",\n");
-        break;
-
-    case LF_MFUNCTION:
-        fprintf_depth(stream, depth + 1, "member_function: ");
-        tpi_member_function_print(&symbol->member_function, depth + 1, stream);
-        fprintf(stream, ",\n");
-        break;
-
-    case LF_METHOD:
-    case LF_METHOD_ST:
-        fprintf_depth(stream, depth + 1, "overloaded_method: ");
-        tpi_overloaded_method_print(&symbol->overloaded_method, depth + 1, stream);
-        fprintf(stream, ",\n");
-        break;
-
-    case LF_ONEMETHOD:
-    case LF_ONEMETHOD_ST:
-        fprintf_depth(stream, depth + 1, "method: ");
-        tpi_method_print(&symbol->method, depth + 1, stream);
-        fprintf(stream, ",\n");
-        break;
-
-    case LF_BCLASS:
-    case LF_BINTERFACE:
-        fprintf_depth(stream, depth + 1, "base_class: ");
-        tpi_base_class_print(&symbol->base_class, depth + 1, stream);
-        fprintf(stream, ",\n");
-        break;
-
-    case LF_VFUNCTAB:
-        fprintf_depth(stream, depth + 1, "vtable: ");
-        tpi_vtable_print(&symbol->vtable, depth + 1, stream);
-        fprintf(stream, ",\n");
-        break;
-
-    case LF_STMEMBER:
-    case LF_STMEMBER_ST:
-        fprintf_depth(stream, depth + 1, "static_member: ");
-        tpi_static_member_print(&symbol->static_member, depth + 1, stream);
-        fprintf(stream, ",\n");
-        break;
-
-    case LF_POINTER:
-        fprintf_depth(stream, depth + 1, "pointer: ");
-        tpi_pointer_print(&symbol->pointer, depth + 1, stream);
-        fprintf(stream, ",\n");
-        break;
-
-    case LF_PROCEDURE:
-        fprintf_depth(stream, depth + 1, "procedure: ");
-        tpi_procedure_print(&symbol->procedure, depth + 1, stream);
-        fprintf(stream, ",\n");
-        break;
-
-    case LF_MODIFIER:
-        fprintf_depth(stream, depth + 1, "modifier: ");
-        tpi_modifier_print(&symbol->modifier, depth + 1, stream);
-        fprintf(stream, ",\n");
-        break;
-
-    case LF_ENUM:
-    case LF_ENUM_ST:
-        fprintf_depth(stream, depth + 1, "enumeration: ");
-        tpi_enumeration_print(&symbol->enumeration, depth + 1, stream);
-        fprintf(stream, ",\n");
-        break;
-
-    case LF_ENUMERATE:
-    case LF_ENUMERATE_ST:
-        fprintf_depth(stream, depth + 1, "enumerate: ");
-        tpi_enumerate_print(&symbol->enumerate, depth + 1, stream);
-        fprintf(stream, ",\n");
-        break;
-
-    case LF_ARRAY:
-    case LF_ARRAY_ST:
-    case LF_STRIDED_ARRAY:
-        fprintf_depth(stream, depth + 1, "array: ");
-        tpi_array_print(&symbol->array, depth + 1, stream);
-        fprintf(stream, ",\n");
-        break;
-
-    case LF_UNION:
-    case LF_UNION_ST:
-        fprintf_depth(stream, depth + 1, "union_: ");
-        tpi_union_print(&symbol->union_, depth + 1, stream);
-        fprintf(stream, ",\n");
-        break;
-
-    case LF_BITFIELD:
-        fprintf_depth(stream, depth + 1, "bitfield: ");
-        tpi_bitfield_print(&symbol->bitfield, depth + 1, stream);
-        fprintf(stream, ",\n");
-        break;
-
-    case LF_VTSHAPE:
-        // TODO
-        break;
-
-    case LF_VFTABLE:
-        // TODO
-        break;
-
-    case LF_VBCLASS:
-    case LF_IVBCLASS:
-        fprintf_depth(stream, depth + 1, "virtual_base_class: ");
-        tpi_virtual_base_class_print(&symbol->virtual_base_class, depth + 1, stream);
-        fprintf(stream, ",\n");
-        break;
-
-    case LF_FIELDLIST:
-        fprintf_depth(stream, depth + 1, "field_list: ");
-        tpi_field_list_print(&symbol->field_list, depth + 1, stream);
-        fprintf(stream, ",\n");
-        break;
-
-    case LF_ARGLIST:
-        fprintf_depth(stream, depth + 1, "argument_list: ");
-        tpi_argument_list_print(&symbol->argument_list, depth + 1, stream);
-        fprintf(stream, ",\n");
-        break;
-
-    case LF_METHODLIST:
-        fprintf_depth(stream, depth + 1, "method_list: ");
-        tpi_method_list_print(&symbol->method_list, depth + 1, stream);
-        fprintf(stream, ",\n");
-        break;
-
-    default:
-        fprintf(stderr, "%s:%i: ERROR: Unsupported TPI symbol leaf: ", __FILE__, __LINE__);
-        tpi_leaf_print(symbol->leaf, stderr);
-        fprintf(stderr, "\n");
-        exit(EXIT_FAILURE);
-    }
-
-    fprintf_depth(stream, depth, "}");
+    TPI_SYMBOL_STRUCT
 }
 
 void tpi_symbols_read(
@@ -2375,20 +1154,10 @@ void tpi_symbols_dispose(struct tpi_symbols *symbols)
     free(symbols->symbols);
 }
 
-void tpi_symbols_print(struct tpi_symbols *symbols, uint32_t depth, FILE *stream)
+void tpi_symbols_print(struct tpi_symbols *item, uint32_t depth, FILE *stream)
 {
-    assert(symbols);
+    assert(item);
     assert(stream);
 
-    fprintf(stream, "tpi_symbols {\n");
-    fprintf_depth(stream, depth + 1, "count: %u,\n", symbols->count);
-    fprintf_depth(stream, depth + 1, "symbols: [\n");
-    for (uint32_t i = 0; i < symbols->count; i++)
-    {
-        fprintf_depth(stream, depth + 2, "[%u] = ", i);
-        tpi_symbol_print(&symbols->symbols[i], depth + 2, stream);
-        fprintf(stream, ",\n");
-    }
-    fprintf_depth(stream, depth + 1, "],\n");
-    fprintf_depth(stream, depth, "}");
+    TPI_SYMBOLS_STRUCT
 }

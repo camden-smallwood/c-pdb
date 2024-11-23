@@ -4,6 +4,8 @@
 #undef STRUCT_DECL
 #undef FIELD_PRIMITIVE
 #undef FIELD_PRIMITIVE_FMT
+#undef FIELD_PRIMITIVE_BITS
+#undef FIELD_PRIMITIVE_BITS_FMT
 #undef FIELD_PRIMITIVE_FIXED_ARRAY
 #undef FIELD_PRIMITIVE_FIXED_ARRAY_FMT
 #undef FIELD_PRIMITIVE_DYNAMIC_ARRAY
@@ -12,7 +14,9 @@
 #undef FIELD_STRUCT_FIXED_ARRAY
 #undef FIELD_STRUCT_DYNAMIC_ARRAY
 #undef FIELD_UNION_DECL
+#undef FIELD_UNION_FIELD_PRIMITIVE
 #undef FIELD_UNION_FIELD_STRUCT
+#undef FIELD_UNION_FIELD_STRUCT_MULTITAG
 #undef FIELD_UNION_END
 #undef STRUCT_END
 
@@ -20,6 +24,9 @@
 
 #define FIELD_PRIMITIVE(type, name, fmt) type name;
 #define FIELD_PRIMITIVE_FMT(type, name, fmt_fn) type name;
+
+#define FIELD_PRIMITIVE_BITS(type, name, bits, fmt) type name : bits;
+#define FIELD_PRIMITIVE_BITS_FMT(type, name, bits, fmt_fn) type name : bits;
 
 #define FIELD_PRIMITIVE_FIXED_ARRAY(type, name, count, fmt) type name[count];
 #define FIELD_PRIMITIVE_FIXED_ARRAY_FMT(type, name, count, fmt_fn) type name[count];
@@ -32,7 +39,9 @@
 #define FIELD_STRUCT_DYNAMIC_ARRAY(type, name, count_field, fmt_fn) type name;
 
 #define FIELD_UNION_DECL() union {
+#define FIELD_UNION_FIELD_PRIMITIVE(type, name, tag_field, tag, fmt) type name;
 #define FIELD_UNION_FIELD_STRUCT(type, name, tag_field, tag, fmt_fn) type name;
+#define FIELD_UNION_FIELD_STRUCT_MULTITAG(type, name, tag_field, fmt_fn, ...) type name;
 #define FIELD_UNION_END() };
 
 #define STRUCT_END(name) };

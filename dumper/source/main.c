@@ -8,7 +8,7 @@ int main(int argc, const char *argv[])
 {
     if (argc != 2)
     {
-        fprintf(stderr, "Usage: c-pdb <pdb-file>\n");
+        fprintf(stderr, "Usage: dumper <pdb-file>\n");
         exit(EXIT_FAILURE);
     }
 
