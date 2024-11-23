@@ -16,6 +16,9 @@ void tpi_slice_print(struct tpi_slice *item, uint32_t depth, FILE *stream)
 void tpi_header_read(struct msf *msf, struct tpi_header *out_header, FILE *stream)
 {
     msf_stream_read_data(msf, &msf->streams[MSF_STREAM_TPI], 0, sizeof(*out_header), out_header, stream);
+
+    assert(out_header->minimum_index >= 4096);
+    assert(out_header->maximum_index >= out_header->minimum_index);
 }
 
 void tpi_header_print(struct tpi_header *item, uint32_t depth, FILE *stream)
@@ -1160,4 +1163,18 @@ void tpi_symbols_print(struct tpi_symbols *item, uint32_t depth, FILE *stream)
     assert(stream);
 
     TPI_SYMBOLS_STRUCT
+}
+
+uint32_t tpi_symbol_index_to_absolute_index(struct tpi_header *tpi_header, struct tpi_symbols *tpi_symbols, uint32_t index)
+{
+    assert(tpi_header);
+    assert(tpi_symbols);
+    
+    if (index < tpi_header->minimum_index || index >= tpi_header->maximum_index)
+        return UINT32_MAX;
+    
+    uint32_t absolute_index = index - tpi_header->minimum_index;
+    assert(absolute_index < tpi_symbols->count);
+
+    return absolute_index;
 }

@@ -1,6 +1,8 @@
 #include <assert.h>
 #include <stdlib.h>
+#include <string.h>
 #include "cpp.h"
+#include "utils.h"
 
 /* ---------- labels */
 
@@ -320,6 +322,87 @@ void cpp_module_add_type_definition(
         default:
             break;
         }
+    }
+
+    uint32_t absolute_index = tpi_symbol_index_to_absolute_index(&pdb->tpi_header, &pdb->tpi_symbols, type_index);
+    if (absolute_index == UINT32_MAX)
+        return;
+    
+    struct tpi_symbol *symbol = &pdb->tpi_symbols.symbols[absolute_index];
+
+    switch (symbol->leaf)
+    {
+    case LF_CLASS:
+    case LF_CLASS_ST:
+    case LF_STRUCTURE:
+    case LF_STRUCTURE_ST:
+    case LF_STRUCTURE19:
+    case LF_INTERFACE:
+    {
+        struct cpp_module_member member;
+        memset(&member, 0, sizeof(member));
+
+        member.type = CPP_MODULE_MEMBER_TYPE_CLASS;
+        member.class_.type = CPP_CLASS_TYPE_CLASS;
+        member.class_.type_index = type_index;
+        member.class_.line = line;
+        member.class_.size = symbol->class_.size;
+
+        if (symbol->class_.name)
+        {
+            member.class_.name = strdup(symbol->class_.name);
+            assert(member.class_.name);
+        }
+
+        uint32_t derived_from_type_index = tpi_symbol_index_to_absolute_index(&pdb->tpi_header, &pdb->tpi_symbols, symbol->class_.derived_from_type_index);
+        if (derived_from_type_index != UINT32_MAX)
+        {
+            //
+            // TODO: add derived from?
+            //
+        }
+
+        if (symbol->class_.header.properties.fwdref)
+        {
+            //
+            // TODO: add forward reference
+            //
+        }
+        else
+        {
+            uint32_t fields_absolute_index = tpi_symbol_index_to_absolute_index(&pdb->tpi_header, &pdb->tpi_symbols, symbol->union_.header.fields_type_index);
+            if (fields_absolute_index == UINT32_MAX)
+                break;
+            
+            struct tpi_symbol *fields_symbol = &pdb->tpi_symbols.symbols[fields_absolute_index];
+            assert(fields_symbol->leaf == LF_FIELDLIST);
+
+            //
+            // TODO: add fields
+            //
+        }
+
+        DYNARRAY_PUSH(module->members, module->member_count, member);
+        break;
+    }
+
+    case LF_UNION:
+    case LF_UNION_ST:
+    {
+        // TODO: same as above
+        break;
+    }
+    
+    case LF_ENUM:
+    case LF_ENUM_ST:
+    {
+        // TODO: same as above
+        break;
+    }
+    
+    default:
+        // TODO
+        break;
     }
 
     //

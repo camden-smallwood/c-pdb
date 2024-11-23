@@ -938,33 +938,160 @@ void tpi_class_print(struct tpi_class *item, uint32_t depth, FILE *stream);
 
 /* ---------- TPI symbol */
 
-#define TPI_SYMBOL_STRUCT \
-STRUCT_DECL(tpi_symbol) \
-    FIELD_PRIMITIVE_FMT(uint16_t, leaf, tpi_leaf_print) \
-    FIELD_PRIMITIVE(uint16_t, size, "%u") \
-    FIELD_UNION_DECL() \
-        FIELD_UNION_FIELD_STRUCT_MULTITAG(struct tpi_class, class_, leaf, tpi_class_print, LF_CLASS, LF_CLASS_ST, LF_STRUCTURE, LF_STRUCTURE_ST, LF_STRUCTURE19, LF_INTERFACE) \
-        FIELD_UNION_FIELD_STRUCT_MULTITAG(struct tpi_member, member, leaf, tpi_member_print, LF_MEMBER, LF_MEMBER_ST) \
-        FIELD_UNION_FIELD_STRUCT_MULTITAG(struct tpi_nested_type, nested_type, leaf, tpi_nested_type_print, LF_NESTTYPE, LF_NESTTYPE_ST, LF_NESTTYPEEX, LF_NESTTYPEEX_ST) \
-        FIELD_UNION_FIELD_STRUCT_MULTITAG(struct tpi_member_function, member_function, leaf, tpi_member_function_print, LF_MFUNCTION) \
-        FIELD_UNION_FIELD_STRUCT_MULTITAG(struct tpi_overloaded_method, overloaded_method, leaf, tpi_overloaded_method_print, LF_METHOD, LF_METHOD_ST) \
-        FIELD_UNION_FIELD_STRUCT_MULTITAG(struct tpi_method, method, leaf, tpi_method_print, LF_ONEMETHOD, LF_ONEMETHOD_ST) \
-        FIELD_UNION_FIELD_STRUCT_MULTITAG(struct tpi_base_class, base_class, leaf, tpi_base_class_print, LF_BCLASS, LF_BINTERFACE) \
-        FIELD_UNION_FIELD_STRUCT_MULTITAG(struct tpi_vtable, vtable, leaf, tpi_vtable_print, LF_VFUNCTAB) \
-        FIELD_UNION_FIELD_STRUCT_MULTITAG(struct tpi_static_member, static_member, leaf, tpi_static_member_print, LF_STMEMBER, LF_STMEMBER_ST) \
-        FIELD_UNION_FIELD_STRUCT_MULTITAG(struct tpi_pointer, pointer, leaf, tpi_pointer_print, LF_POINTER) \
-        FIELD_UNION_FIELD_STRUCT_MULTITAG(struct tpi_procedure, procedure, leaf, tpi_procedure_print, LF_PROCEDURE) \
-        FIELD_UNION_FIELD_STRUCT_MULTITAG(struct tpi_modifier, modifier, leaf, tpi_modifier_print, LF_MODIFIER) \
-        FIELD_UNION_FIELD_STRUCT_MULTITAG(struct tpi_enumeration, enumeration, leaf, tpi_enumeration_print, LF_ENUM, LF_ENUM_ST) \
-        FIELD_UNION_FIELD_STRUCT_MULTITAG(struct tpi_enumerate, enumerate, leaf, tpi_enumerate_print, LF_ENUMERATE, LF_ENUMERATE_ST) \
-        FIELD_UNION_FIELD_STRUCT_MULTITAG(struct tpi_array, array, leaf, tpi_array_print, LF_ARRAY, LF_ARRAY_ST, LF_STRIDED_ARRAY) \
-        FIELD_UNION_FIELD_STRUCT_MULTITAG(struct tpi_union, union_, leaf, tpi_union_print, LF_UNION, LF_UNION_ST) \
-        FIELD_UNION_FIELD_STRUCT_MULTITAG(struct tpi_bitfield, bitfield, leaf, tpi_bitfield_print, LF_BITFIELD) \
-        FIELD_UNION_FIELD_STRUCT_MULTITAG(struct tpi_virtual_base_class, virtual_base_class, leaf, tpi_virtual_base_class_print, LF_VBCLASS, LF_IVBCLASS) \
-        FIELD_UNION_FIELD_STRUCT_MULTITAG(struct tpi_field_list, field_list, leaf, tpi_field_list_print, LF_FIELDLIST) \
-        FIELD_UNION_FIELD_STRUCT_MULTITAG(struct tpi_argument_list, argument_list, leaf, tpi_argument_list_print, LF_ARGLIST) \
-        FIELD_UNION_FIELD_STRUCT_MULTITAG(struct tpi_method_list, method_list, leaf, tpi_method_list_print, LF_METHODLIST) \
-    FIELD_UNION_END() \
+#define TPI_SYMBOL_STRUCT                                                                       \
+STRUCT_DECL(tpi_symbol)                                                                         \
+    FIELD_PRIMITIVE_FMT(uint16_t, leaf, tpi_leaf_print)                                         \
+    FIELD_PRIMITIVE(uint16_t, size, "%u")                                                       \
+    FIELD_UNION_DECL()                                                                          \
+                                                                                                \
+        FIELD_UNION_FIELD_STRUCT_MULTITAG(                                                      \
+            struct tpi_class,                                                                   \
+            class_,                                                                             \
+            leaf,                                                                               \
+            tpi_class_print,                                                                    \
+            LF_CLASS, LF_CLASS_ST, LF_STRUCTURE, LF_STRUCTURE_ST, LF_STRUCTURE19, LF_INTERFACE) \
+                                                                                                \
+        FIELD_UNION_FIELD_STRUCT_MULTITAG(                                                      \
+            struct tpi_member,                                                                  \
+            member,                                                                             \
+            leaf,                                                                               \
+            tpi_member_print,                                                                   \
+            LF_MEMBER, LF_MEMBER_ST)                                                            \
+                                                                                                \
+        FIELD_UNION_FIELD_STRUCT_MULTITAG(                                                      \
+            struct tpi_nested_type,                                                             \
+            nested_type,                                                                        \
+            leaf,                                                                               \
+            tpi_nested_type_print,                                                              \
+            LF_NESTTYPE, LF_NESTTYPE_ST, LF_NESTTYPEEX, LF_NESTTYPEEX_ST)                       \
+                                                                                                \
+        FIELD_UNION_FIELD_STRUCT_MULTITAG(                                                      \
+            struct tpi_member_function,                                                         \
+            member_function,                                                                    \
+            leaf,                                                                               \
+            tpi_member_function_print,                                                          \
+            LF_MFUNCTION)                                                                       \
+                                                                                                \
+        FIELD_UNION_FIELD_STRUCT_MULTITAG(                                                      \
+            struct tpi_overloaded_method,                                                       \
+            overloaded_method,                                                                  \
+            leaf,                                                                               \
+            tpi_overloaded_method_print,                                                        \
+            LF_METHOD, LF_METHOD_ST)                                                            \
+                                                                                                \
+        FIELD_UNION_FIELD_STRUCT_MULTITAG(                                                      \
+            struct tpi_method,                                                                  \
+            method,                                                                             \
+            leaf,                                                                               \
+            tpi_method_print,                                                                   \
+            LF_ONEMETHOD, LF_ONEMETHOD_ST)                                                      \
+                                                                                                \
+        FIELD_UNION_FIELD_STRUCT_MULTITAG(                                                      \
+            struct tpi_base_class,                                                              \
+            base_class,                                                                         \
+            leaf,                                                                               \
+            tpi_base_class_print,                                                               \
+            LF_BCLASS, LF_BINTERFACE)                                                           \
+                                                                                                \
+        FIELD_UNION_FIELD_STRUCT_MULTITAG(                                                      \
+            struct tpi_vtable,                                                                  \
+            vtable,                                                                             \
+            leaf,                                                                               \
+            tpi_vtable_print,                                                                   \
+            LF_VFUNCTAB)                                                                        \
+                                                                                                \
+        FIELD_UNION_FIELD_STRUCT_MULTITAG(                                                      \
+            struct tpi_static_member,                                                           \
+            static_member,                                                                      \
+            leaf,                                                                               \
+            tpi_static_member_print,                                                            \
+            LF_STMEMBER, LF_STMEMBER_ST)                                                        \
+                                                                                                \
+        FIELD_UNION_FIELD_STRUCT_MULTITAG(                                                      \
+            struct tpi_pointer,                                                                 \
+            pointer,                                                                            \
+            leaf,                                                                               \
+            tpi_pointer_print,                                                                  \
+            LF_POINTER)                                                                         \
+                                                                                                \
+        FIELD_UNION_FIELD_STRUCT_MULTITAG(                                                      \
+            struct tpi_procedure,                                                               \
+            procedure,                                                                          \
+            leaf,                                                                               \
+            tpi_procedure_print,                                                                \
+            LF_PROCEDURE)                                                                       \
+                                                                                                \
+        FIELD_UNION_FIELD_STRUCT_MULTITAG(                                                      \
+            struct tpi_modifier,                                                                \
+            modifier,                                                                           \
+            leaf,                                                                               \
+            tpi_modifier_print,                                                                 \
+            LF_MODIFIER)                                                                        \
+                                                                                                \
+        FIELD_UNION_FIELD_STRUCT_MULTITAG(                                                      \
+            struct tpi_enumeration,                                                             \
+            enumeration,                                                                        \
+            leaf,                                                                               \
+            tpi_enumeration_print,                                                              \
+            LF_ENUM, LF_ENUM_ST)                                                                \
+                                                                                                \
+        FIELD_UNION_FIELD_STRUCT_MULTITAG(                                                      \
+            struct tpi_enumerate,                                                               \
+            enumerate,                                                                          \
+            leaf,                                                                               \
+            tpi_enumerate_print,                                                                \
+            LF_ENUMERATE, LF_ENUMERATE_ST)                                                      \
+                                                                                                \
+        FIELD_UNION_FIELD_STRUCT_MULTITAG(                                                      \
+            struct tpi_array,                                                                   \
+            array,                                                                              \
+            leaf,                                                                               \
+            tpi_array_print,                                                                    \
+            LF_ARRAY, LF_ARRAY_ST, LF_STRIDED_ARRAY)                                            \
+                                                                                                \
+        FIELD_UNION_FIELD_STRUCT_MULTITAG(                                                      \
+            struct tpi_union,                                                                   \
+            union_,                                                                             \
+            leaf,                                                                               \
+            tpi_union_print,                                                                    \
+            LF_UNION, LF_UNION_ST)                                                              \
+                                                                                                \
+        FIELD_UNION_FIELD_STRUCT_MULTITAG(                                                      \
+            struct tpi_bitfield,                                                                \
+            bitfield,                                                                           \
+            leaf,                                                                               \
+            tpi_bitfield_print,                                                                 \
+            LF_BITFIELD)                                                                        \
+                                                                                                \
+        FIELD_UNION_FIELD_STRUCT_MULTITAG(                                                      \
+            struct tpi_virtual_base_class,                                                      \
+            virtual_base_class,                                                                 \
+            leaf,                                                                               \
+            tpi_virtual_base_class_print,                                                       \
+            LF_VBCLASS, LF_IVBCLASS)                                                            \
+                                                                                                \
+        FIELD_UNION_FIELD_STRUCT_MULTITAG(                                                      \
+            struct tpi_field_list,                                                              \
+            field_list,                                                                         \
+            leaf,                                                                               \
+            tpi_field_list_print,                                                               \
+            LF_FIELDLIST)                                                                       \
+                                                                                                \
+        FIELD_UNION_FIELD_STRUCT_MULTITAG(                                                      \
+            struct tpi_argument_list,                                                           \
+            argument_list,                                                                      \
+            leaf,                                                                               \
+            tpi_argument_list_print,                                                            \
+            LF_ARGLIST)                                                                         \
+                                                                                                \
+        FIELD_UNION_FIELD_STRUCT_MULTITAG(                                                      \
+            struct tpi_method_list,                                                             \
+            method_list,                                                                        \
+            leaf,                                                                               \
+            tpi_method_list_print,                                                              \
+            LF_METHODLIST)                                                                      \
+                                                                                                \
+    FIELD_UNION_END()                                                                           \
 STRUCT_END(tpi_symbol)
 
 TPI_SYMBOL_STRUCT
@@ -986,3 +1113,5 @@ TPI_SYMBOLS_STRUCT
 void tpi_symbols_read(struct tpi_symbols *symbols, struct msf *msf, struct msf_stream *msf_stream, struct tpi_header *tpi_header, FILE *file_stream);
 void tpi_symbols_dispose(struct tpi_symbols *symbols);
 void tpi_symbols_print(struct tpi_symbols *symbols, uint32_t depth, FILE *stream);
+
+uint32_t tpi_symbol_index_to_absolute_index(struct tpi_header *tpi_header, struct tpi_symbols *tpi_symbols, uint32_t index);

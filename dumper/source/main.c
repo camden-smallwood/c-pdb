@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "pdb.h"
-#include "utils.h"
+#include "cpp.h"
 
 int main(int argc, const char *argv[])
 {
@@ -26,7 +26,24 @@ int main(int argc, const char *argv[])
 
     fclose(pdb_file);
 
-    pdb_data_print(&pdb_data, 0, stdout);
+    //--------------------------------------------------------------------------------
+    // WIP: add all types to a single header module
+
+    struct cpp_module module;
+    memset(&module, 0, sizeof(module));
+
+    if (pdb_data.tpi_symbols.count)
+    {
+        for (uint32_t i = pdb_data.tpi_header.minimum_index; i < pdb_data.tpi_header.maximum_index; i++)
+        {
+            cpp_module_add_type_definition(&module, &pdb_data, i, 0);
+        }
+    }
+
+    cpp_module_dispose(&module);
+
+    //--------------------------------------------------------------------------------
+
     pdb_data_dispose(&pdb_data);
 
     exit(EXIT_SUCCESS);
