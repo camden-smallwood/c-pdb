@@ -86,6 +86,7 @@ struct cpp_typedef
 };
 
 void cpp_typedef_dispose(struct cpp_typedef *item);
+void cpp_typedef_print(struct cpp_typedef *item, uint32_t depth, FILE *stream);
 
 /* ---------- enum values */
 
@@ -138,6 +139,7 @@ struct cpp_field
 };
 
 void cpp_field_dispose(struct cpp_field *field);
+void cpp_field_print(struct cpp_field *field, uint32_t depth, FILE *stream);
 
 /* ---------- methods */
 
@@ -154,6 +156,7 @@ struct cpp_method
 };
 
 void cpp_method_dispose(struct cpp_method *method);
+void cpp_method_print(struct cpp_method *method, uint32_t depth, FILE *stream);
 
 /* ---------- base classes */
 
@@ -165,6 +168,7 @@ struct cpp_base_class
 };
 
 void cpp_base_class_dispose(struct cpp_base_class *item);
+void cpp_base_class_print(struct cpp_base_class *item, uint32_t depth, FILE *stream);
 
 /* ---------- classes */
 
@@ -189,7 +193,6 @@ struct cpp_class
 
     uint32_t flags;
     uint32_t type_index;
-    uint32_t depth;
     uint32_t line;
     uint64_t size;
 
@@ -203,7 +206,8 @@ struct cpp_class
 };
 
 void cpp_class_dispose(struct cpp_class *item);
-void cpp_class_add_members(struct cpp_class *item, struct pdb_data *pdb, uint32_t members_type_index, uint64_t *offset);
+void cpp_class_print(struct cpp_class *item, uint32_t depth, FILE *stream);
+void cpp_class_add_members(struct cpp_class *item, struct pdb_data *pdb, uint32_t members_type_index);
 
 /* ---------- class members */
 
@@ -230,6 +234,7 @@ struct cpp_class_member
 };
 
 void cpp_class_member_dispose(struct cpp_class_member *member);
+void cpp_class_member_print(struct cpp_class_member *member, uint32_t depth, FILE *stream);
 
 /* ---------- headers */
 
