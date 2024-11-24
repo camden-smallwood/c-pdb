@@ -1,7 +1,55 @@
 #include <assert.h>
 #include <stdarg.h>
 #include <stdlib.h>
+#include <string.h>
 #include "utils.h"
+
+char *string_append(char **string, char *suffix)
+{
+    assert(string);
+    assert(suffix);
+    
+    size_t suffix_length = strlen(suffix);
+
+    if (!*string)
+    {
+        *string = strdup(suffix);
+        assert(*string);
+        return *string;
+    }
+
+    size_t string_length = strlen(*string);
+
+    *string = realloc(*string, string_length + suffix_length + 1);
+    assert(*string);
+    
+    sprintf(*string + string_length, "%s", suffix);
+    return *string;
+}
+
+char *string_prepend(char **string, char *prefix)
+{
+    assert(string);
+    assert(prefix);
+    
+    size_t prefix_length = strlen(prefix);
+
+    if (!*string)
+    {
+        *string = strdup(prefix);
+        assert(*string);
+        return *string;
+    }
+
+    size_t string_length = strlen(*string);
+    
+    *string = realloc(*string, prefix_length + string_length + 1);
+    assert(*string);
+    
+    memmove(*string + prefix_length, *string, string_length + 1);
+    memcpy(*string, prefix, prefix_length);
+    return *string;
+}
 
 void fprintf_depth(FILE *stream, uint32_t depth, char *fmt, ...)
 {

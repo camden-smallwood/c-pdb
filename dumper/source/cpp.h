@@ -298,3 +298,9 @@ struct cpp_module
 
 void cpp_module_dispose(struct cpp_module *module);
 void cpp_module_add_type_definition(struct cpp_module *module, struct pdb_data *pdb, uint32_t type_index, uint32_t line);
+
+/* ---------- type information */
+
+char *cpp_primitive_name(struct pdb_data *pdb, struct tpi_primitive *primitive);
+char *cpp_type_name(struct pdb_data *pdb, uint32_t type_index, char *declaration_name, uint32_t argument_count, char **arguments, int is_pointer);
+uint64_t cpp_type_size(struct pdb_data *pdb, uint32_t type_index);

@@ -98,8 +98,7 @@ void cpp_typedef_print(struct cpp_typedef *item, uint32_t depth, FILE *stream)
     // TODO: determine if we need this
     (void)depth;
 
-    // TODO: get underlying_type_name
-    fprintf(stream, "typedef %s %s;", item->type_name, "<TODO>");
+    fprintf(stream, "typedef %s;", item->type_name);
 }
 
 /* ---------- enum values */
@@ -268,7 +267,7 @@ void cpp_field_print(struct cpp_field *field, uint32_t depth, FILE *stream)
     // TODO: determine if we need this
     (void)depth;
 
-    fprintf(stream, "%s %s;", field->type_name, field->name);
+    fprintf(stream, "%s;", field->type_name);
 }
 
 /* ---------- methods */
@@ -446,7 +445,8 @@ void cpp_class_add_members(struct cpp_class *item, struct pdb_data *pdb, uint32_
 
             member.type = CPP_CLASS_MEMBER_TYPE_FIELD;
 
-            // TODO: get type_name
+            member.field.type_name = cpp_type_name(pdb, symbol->member.header.field_type, symbol->member.name, 0, NULL, 1);
+            assert(member.field.type_name);
 
             member.field.name = strdup(symbol->member.name);
             assert(member.field.name);
@@ -467,7 +467,11 @@ void cpp_class_add_members(struct cpp_class *item, struct pdb_data *pdb, uint32_
 
             member.type = CPP_CLASS_MEMBER_TYPE_FIELD;
 
-            // TODO: get type_name, prepend `static` to it
+            char *type_name = cpp_type_name(pdb, symbol->static_member.header.field_type_index, symbol->static_member.name, 0, NULL, 1);
+            assert(type_name);
+
+            member.field.type_name = strdup("static ");
+            string_append(&member.field.type_name, type_name);
 
             member.field.name = strdup(symbol->static_member.name);
             assert(member.field.name);
@@ -486,7 +490,23 @@ void cpp_class_add_members(struct cpp_class *item, struct pdb_data *pdb, uint32_
 
             base_class.type_index = symbol->base_class.header.base_class_type_index;
             
-            // TODO: get type_name
+            base_class.type_name = cpp_type_name(pdb, symbol->base_class.header.base_class_type_index, NULL, 0, NULL, 1);
+            assert(base_class.type_name);
+
+            switch (symbol->base_class.header.attributes.access)
+            {
+            case 0:
+                string_prepend(&base_class.type_name, "private ");
+                break;
+            case 1:
+                string_prepend(&base_class.type_name, "protected ");
+                break;
+            case 2:
+                string_prepend(&base_class.type_name, "public ");
+                break;
+            default:
+                break;
+            }
 
             base_class.offset = symbol->base_class.offset;
 
@@ -501,8 +521,26 @@ void cpp_class_add_members(struct cpp_class *item, struct pdb_data *pdb, uint32_
             memset(&base_class, 0, sizeof(base_class));
 
             base_class.type_index = symbol->virtual_base_class.header.base_class_type_index;
-            
-            // TODO: get type_name, prepend `virtual` to it?
+
+            base_class.type_name = cpp_type_name(pdb, symbol->virtual_base_class.header.base_class_type_index, NULL, 0, NULL, 1);
+            assert(base_class.type_name);
+
+            string_prepend(&base_class.type_name, "virtual ");
+
+            switch (symbol->virtual_base_class.header.attributes.access)
+            {
+            case 0:
+                string_prepend(&base_class.type_name, "private ");
+                break;
+            case 1:
+                string_prepend(&base_class.type_name, "protected ");
+                break;
+            case 2:
+                string_prepend(&base_class.type_name, "public ");
+                break;
+            default:
+                break;
+            }
 
             base_class.offset = symbol->virtual_base_class.base_pointer_offset;
 
@@ -542,10 +580,33 @@ void cpp_class_add_members(struct cpp_class *item, struct pdb_data *pdb, uint32_
             {
                 assert(method_symbol->leaf == LF_MFUNCTION);
                 
-                // TODO: get return_type_name
-                // TODO: get arguments (dynamic array of type names)
-                memcpy(&member.method.field_attributes, &symbol->method.header.attributes, sizeof(member.method.field_attributes));
-                // TODO: copy procedure attributes
+                member.method.return_type_name = cpp_type_name(pdb, method_symbol->member_function.return_type_index, NULL, 0, NULL, 1);
+                assert(member.method.return_type_name);
+
+                struct tpi_symbol *argument_list_symbol = tpi_symbol_get(&pdb->tpi_header, &pdb->tpi_symbols, method_symbol->member_function.argument_list_type_index);
+                
+                if (argument_list_symbol)
+                {
+                    assert(argument_list_symbol->leaf == LF_ARGLIST);
+
+                    for (uint32_t i = 0; i < argument_list_symbol->argument_list.count; i++)
+                    {
+                        char *argument_name = cpp_type_name(pdb, argument_list_symbol->argument_list.type_indices[i], NULL, 0, NULL, 1);
+                        assert(argument_name);
+
+                        DYNARRAY_PUSH(member.method.arguments, member.method.argument_count, argument_name);
+                    }
+                }
+
+                memcpy(
+                    &member.method.field_attributes,
+                    &symbol->method.header.attributes,
+                    sizeof(member.method.field_attributes));
+
+                memcpy(
+                    &member.method.procedure_attributes,
+                    &method_symbol->member_function.attributes,
+                    sizeof(member.method.procedure_attributes));
             }
 
             DYNARRAY_PUSH(item->members, item->member_count, member);
@@ -583,10 +644,33 @@ void cpp_class_add_members(struct cpp_class *item, struct pdb_data *pdb, uint32_
                 {
                     assert(method_symbol->leaf == LF_MFUNCTION);
                     
-                    // TODO: get return_type_name
-                    // TODO: get arguments (dynamic array of type names)
-                    memcpy(&member.method.field_attributes, &entry->header.attributes, sizeof(member.method.field_attributes));
-                    // TODO: copy procedure attributes
+                    member.method.return_type_name = cpp_type_name(pdb, method_symbol->member_function.return_type_index, NULL, 0, NULL, 1);
+                    assert(member.method.return_type_name);
+
+                    struct tpi_symbol *argument_list_symbol = tpi_symbol_get(&pdb->tpi_header, &pdb->tpi_symbols, method_symbol->member_function.argument_list_type_index);
+                    
+                    if (argument_list_symbol)
+                    {
+                        assert(argument_list_symbol->leaf == LF_ARGLIST);
+
+                        for (uint32_t i = 0; i < argument_list_symbol->argument_list.count; i++)
+                        {
+                            char *argument_name = cpp_type_name(pdb, argument_list_symbol->argument_list.type_indices[i], NULL, 0, NULL, 1);
+                            assert(argument_name);
+
+                            DYNARRAY_PUSH(member.method.arguments, member.method.argument_count, argument_name);
+                        }
+                    }
+
+                    memcpy(
+                        &member.method.field_attributes,
+                        &entry->header.attributes,
+                        sizeof(member.method.field_attributes));
+                        
+                    memcpy(
+                        &member.method.procedure_attributes,
+                        &method_symbol->member_function.attributes,
+                        sizeof(member.method.procedure_attributes));
                 }
 
                 DYNARRAY_PUSH(item->members, item->member_count, member);
@@ -607,14 +691,15 @@ void cpp_class_add_members(struct cpp_class *item, struct pdb_data *pdb, uint32_
 
                 member.type = CPP_CLASS_MEMBER_TYPE_TYPEDEF;
 
-                member.typedef_.type_name = NULL; // TODO:
-                // let mut type_name = primitive_name(data.kind).to_string();
-                // if data.indirection.is_some() {
-                //     type_name.push_str(" *");
-                // } else {
-                //     type_name.push(' ');
-                // }
-                // type_name.push_str(nested_data.name.to_string().to_string().as_str());
+                member.typedef_.type_name = cpp_primitive_name(pdb, &nested_primitive);
+                assert(member.typedef_.type_name);
+
+                if (nested_primitive.indirection != TPI_PRIMITIVE_INDIRECTION_NONE)
+                    string_append(&member.typedef_.type_name, " *");
+                else
+                    string_append(&member.typedef_.type_name, " ");
+
+                string_append(&member.typedef_.type_name, symbol->nested_type.name);
                 
                 member.typedef_.underlying_type_index = symbol->nested_type.header.nested_type_index;
                 
@@ -733,9 +818,8 @@ void cpp_class_add_members(struct cpp_class *item, struct pdb_data *pdb, uint32_
 
                 member.enum_.type_index = symbol->nested_type.header.nested_type_index;
 
-                //
-                // TODO: get underlying_type_name here
-                //
+                member.enum_.underlying_type_name = cpp_type_name(pdb, nested_symbol->enumeration.header.underlying_type_index, NULL, 0, NULL, 1);
+                assert(member.enum_.underlying_type_name);
 
                 if (nested_symbol->enumeration.header.properties.fwdref)
                     member.enum_.flags |= CPP_ENUM_IS_DECLARATION;
@@ -753,8 +837,8 @@ void cpp_class_add_members(struct cpp_class *item, struct pdb_data *pdb, uint32_
 
                 member.type = CPP_CLASS_MEMBER_TYPE_TYPEDEF;
 
-                member.typedef_.type_name = NULL; // TODO:
-                // let type_name = type_name(machine_type, type_info, type_finder, data.underlying_type, Some(nested_data.name.to_string().to_string()), None, true)?;
+                member.typedef_.type_name = cpp_type_name(pdb, nested_symbol->pointer.header.underlying_type_index, symbol->nested_type.name, 0, NULL, 1);
+                assert(member.typedef_.type_name);
 
                 member.typedef_.underlying_type_index = nested_symbol->pointer.header.underlying_type_index;
 
@@ -781,16 +865,9 @@ void cpp_class_add_members(struct cpp_class *item, struct pdb_data *pdb, uint32_
 
                 member.type = CPP_CLASS_MEMBER_TYPE_TYPEDEF;
 
-                member.typedef_.type_name = NULL; // TODO:
-                // let mut type_name = String::new();
-                // if data.constant {
-                //     type_name.push_str("const ");
-                // }
-                // if data.volatile {
-                //     type_name.push_str("volatile ");
-                // }
-                // type_name.push_str(self::type_name(machine_type, type_info, type_finder, data.underlying_type, Some(nested_data.name.to_string().to_string()), None, true)?.as_str());
-
+                member.typedef_.type_name = cpp_type_name(pdb, symbol->nested_type.header.nested_type_index, symbol->nested_type.name, 0, NULL, 1);
+                assert(member.typedef_.type_name);
+                
                 member.typedef_.underlying_type_index = nested_symbol->pointer.header.underlying_type_index;
 
                 memcpy(
@@ -811,60 +888,8 @@ void cpp_class_add_members(struct cpp_class *item, struct pdb_data *pdb, uint32_
 
                 member.type = CPP_CLASS_MEMBER_TYPE_TYPEDEF;
 
-                member.typedef_.type_name = NULL; // TODO:
-                // let mut type_name = type_name(machine_type, type_info, type_finder, data.element_type, Some(nested_data.name.to_string().to_string()), None, true)?;
-                // let mut element_size = type_size(machine_type, type_info, type_finder, data.element_type)?;
-                // if element_size == 0 {
-                //     let element_type_data = type_finder.find(data.element_type)?.parse()?;
-                //     let mut type_iter = type_info.iter();
-                //     loop {
-                //         let current_type_item = match type_iter.next() {
-                //             Ok(Some(current_type_item)) => current_type_item,
-                //             Ok(None) | Err(_) => break,
-                //         };
-                //         let current_type_data = match current_type_item.parse() {
-                //             Ok(current_type_data) => current_type_data,
-                //             Err(_) => continue,
-                //         };
-                //         match &current_type_data {
-                //             pdb::TypeData::Primitive(_) if matches!(element_type_data, pdb::TypeData::Primitive(_)) => (),
-                //             pdb::TypeData::Class(_) if matches!(element_type_data, pdb::TypeData::Class(_)) => (),
-                //             pdb::TypeData::Member(_) if matches!(element_type_data, pdb::TypeData::Member(_)) => (),
-                //             pdb::TypeData::MemberFunction(_) if matches!(element_type_data, pdb::TypeData::MemberFunction(_)) => (),
-                //             pdb::TypeData::OverloadedMethod(_) if matches!(element_type_data, pdb::TypeData::OverloadedMethod(_)) => (),
-                //             pdb::TypeData::Method(_) if matches!(element_type_data, pdb::TypeData::Method(_)) => (),
-                //             pdb::TypeData::StaticMember(_) if matches!(element_type_data, pdb::TypeData::StaticMember(_)) => (),
-                //             pdb::TypeData::Nested(_) if matches!(element_type_data, pdb::TypeData::Nested(_)) => (),
-                //             pdb::TypeData::BaseClass(_) if matches!(element_type_data, pdb::TypeData::BaseClass(_)) => (),
-                //             pdb::TypeData::VirtualBaseClass(_) if matches!(element_type_data, pdb::TypeData::VirtualBaseClass(_)) => (),
-                //             pdb::TypeData::VirtualFunctionTablePointer(_) if matches!(element_type_data, pdb::TypeData::VirtualFunctionTablePointer(_)) => (),
-                //             pdb::TypeData::Procedure(_) if matches!(element_type_data, pdb::TypeData::Procedure(_)) => (),
-                //             pdb::TypeData::Pointer(_) if matches!(element_type_data, pdb::TypeData::Pointer(_)) => (),
-                //             pdb::TypeData::Modifier(_) if matches!(element_type_data, pdb::TypeData::Modifier(_)) => (),
-                //             pdb::TypeData::Enumeration(_) if matches!(element_type_data, pdb::TypeData::Enumeration(_)) => (),
-                //             pdb::TypeData::Enumerate(_) if matches!(element_type_data, pdb::TypeData::Enumerate(_)) => (),
-                //             pdb::TypeData::Array(_) if matches!(element_type_data, pdb::TypeData::Array(_)) => (),
-                //             pdb::TypeData::Union(_) if matches!(element_type_data, pdb::TypeData::Union(_)) => (),
-                //             pdb::TypeData::Bitfield(_) if matches!(element_type_data, pdb::TypeData::Bitfield(_)) => (),
-                //             pdb::TypeData::FieldList(_) if matches!(element_type_data, pdb::TypeData::FieldList(_)) => (),
-                //             pdb::TypeData::ArgumentList(_) if matches!(element_type_data, pdb::TypeData::ArgumentList(_)) => (),
-                //             pdb::TypeData::MethodList(_) if matches!(element_type_data, pdb::TypeData::MethodList(_)) => (),
-                //             _ => continue
-                //         }
-                //         if current_type_data.name() == element_type_data.name() {
-                //             if let Ok(current_type_size) = type_size(machine_type, type_info, type_finder, current_type_item.index()) {
-                //                 if current_type_size != 0 {
-                //                     element_size = current_type_size;
-                //                     break;
-                //                 }
-                //             }
-                //         }
-                //     }
-                // }
-                // for &size in data.dimensions.iter() {
-                //     type_name = format!("{}[{}]", type_name, if element_size == 0 { size } else { size / element_size as u32 });
-                //     element_size = size as usize;
-                // }
+                member.typedef_.type_name = cpp_type_name(pdb, symbol->nested_type.header.nested_type_index, symbol->nested_type.name, 0, NULL, 1);
+                assert(member.typedef_.type_name);
 
                 member.typedef_.underlying_type_index = symbol->nested_type.header.nested_type_index;
 
@@ -1185,9 +1210,8 @@ void cpp_module_add_type_definition(
         member.enum_.type_index = type_index;
         member.enum_.line = line;
 
-        //
-        // TODO: get underlying_type_name here
-        //
+        member.enum_.underlying_type_name = cpp_type_name(pdb, symbol->enumeration.header.underlying_type_index, NULL, 0, NULL, 1);
+        assert(member.enum_.underlying_type_name);
 
         if (symbol->enumeration.header.properties.fwdref)
             member.enum_.flags |= CPP_ENUM_IS_DECLARATION;
@@ -1208,5 +1232,608 @@ void cpp_module_add_type_definition(
         // tpi_leaf_print(symbol->leaf, stderr);
         // fprintf(stderr, "\n");
         // exit(EXIT_FAILURE);
+    }
+}
+
+/* ---------- type information */
+
+char *cpp_primitive_name(struct pdb_data *pdb, struct tpi_primitive *primitive)
+{
+    assert(pdb);
+    assert(primitive);
+
+    switch (primitive->type)
+    {
+    case TPI_PRIMITIVE_TYPE_NONE:
+        return strdup("...");
+    
+    case TPI_PRIMITIVE_TYPE_VOID:
+        return strdup("void");
+    
+    case TPI_PRIMITIVE_TYPE_CHAR:
+        return strdup("char");
+    
+    case TPI_PRIMITIVE_TYPE_UCHAR:
+        return strdup("unsigned char");
+    
+    case TPI_PRIMITIVE_TYPE_RCHAR:
+        return strdup("char");
+    
+    case TPI_PRIMITIVE_TYPE_WCHAR:
+        return strdup("wchar_t");
+    
+    case TPI_PRIMITIVE_TYPE_RCHAR16:
+        return strdup("char16_t");
+    
+    case TPI_PRIMITIVE_TYPE_RCHAR32:
+        return strdup("char16_t");
+    
+    case TPI_PRIMITIVE_TYPE_INT8:
+        return strdup("int8_t");
+    
+    case TPI_PRIMITIVE_TYPE_UINT8:
+        return strdup("uint8_t");
+    
+    case TPI_PRIMITIVE_TYPE_SHORT:
+        return strdup("short");
+    
+    case TPI_PRIMITIVE_TYPE_USHORT:
+        return strdup("unsigned short");
+    
+    case TPI_PRIMITIVE_TYPE_INT16:
+        return strdup("int16_t");
+    
+    case TPI_PRIMITIVE_TYPE_UINT16:
+        return strdup("uint16_t");
+    
+    case TPI_PRIMITIVE_TYPE_LONG:
+        return strdup("long");
+    
+    case TPI_PRIMITIVE_TYPE_ULONG:
+        return strdup("unsigned long");
+    
+    case TPI_PRIMITIVE_TYPE_INT32:
+        return strdup("int32_t");
+    
+    case TPI_PRIMITIVE_TYPE_UINT32:
+        return strdup("uint32_t");
+    
+    case TPI_PRIMITIVE_TYPE_QUAD:
+        return strdup("long long");
+    
+    case TPI_PRIMITIVE_TYPE_UQUAD:
+        return strdup("unsigned long long");
+    
+    case TPI_PRIMITIVE_TYPE_INT64:
+        return strdup("int64_t");
+    
+    case TPI_PRIMITIVE_TYPE_UINT64:
+        return strdup("uint64_t");
+    
+    // case TPI_PRIMITIVE_TYPE_OCTA:
+    //     // TODO
+    //     break;
+    // case TPI_PRIMITIVE_TYPE_UOCTA:
+    //     // TODO
+    //     break;
+    
+    case TPI_PRIMITIVE_TYPE_INT128:
+        return strdup("int128_t");
+    
+    case TPI_PRIMITIVE_TYPE_UINT128:
+        return strdup("uint128_t");
+    
+    // case TPI_PRIMITIVE_TYPE_FLOAT16:
+    //     // TODO
+    //     break;
+
+    case TPI_PRIMITIVE_TYPE_FLOAT32:
+        return strdup("float");
+    
+    // case TPI_PRIMITIVE_TYPE_FLOAT32_PP:
+    //     // TODO
+    //     break;
+    // case TPI_PRIMITIVE_TYPE_FLOAT48:
+    //     // TODO
+    //     break;
+    
+    case TPI_PRIMITIVE_TYPE_FLOAT64:
+        return strdup("double");
+    
+    case TPI_PRIMITIVE_TYPE_FLOAT80:
+        return strdup("long double");
+    
+    // case TPI_PRIMITIVE_TYPE_FLOAT128:
+    //     // TODO
+    //     break;
+    // case TPI_PRIMITIVE_TYPE_COMPLEX32:
+    //     // TODO
+    //     break;
+    // case TPI_PRIMITIVE_TYPE_COMPLEX64:
+    //     // TODO
+    //     break;
+    // case TPI_PRIMITIVE_TYPE_COMPLEX80:
+    //     // TODO
+    //     break;
+    // case TPI_PRIMITIVE_TYPE_COMPLEX128:
+    //     // TODO
+    //     break;
+
+    case TPI_PRIMITIVE_TYPE_BOOL8:
+        return strdup("bool");
+    
+    // case TPI_PRIMITIVE_TYPE_BOOL16:
+    //     // TODO
+    //     break;
+    // case TPI_PRIMITIVE_TYPE_BOOL32:
+    //     // TODO
+    //     break;
+    // case TPI_PRIMITIVE_TYPE_BOOL64:
+    //     // TODO
+    //     break;
+    
+    case TPI_PRIMITIVE_TYPE_HRESULT:
+        return strdup("HRESULT");
+    
+    default:
+        fprintf(stderr, "%s:%i: ERROR: Unhandled tpi_primitive_type value: ", __FILE__, __LINE__);
+        tpi_primitive_type_print(primitive->type, stderr);
+        fprintf(stderr, "\n");
+        exit(EXIT_FAILURE);
+    }
+}
+
+char *cpp_type_name(
+    struct pdb_data *pdb,
+    uint32_t type_index,
+    char *declaration_name,
+    uint32_t argument_count,
+    char **arguments,
+    int is_pointer)
+{
+    assert(pdb);
+
+    struct tpi_primitive primitive;
+    if (tpi_primitive_get(&primitive, &pdb->tpi_header, &pdb->tpi_symbols, type_index))
+    {
+        char *primitive_name = cpp_primitive_name(pdb, &primitive);
+        assert(primitive_name);
+
+        if (primitive.indirection != TPI_PRIMITIVE_INDIRECTION_NONE)
+            string_append(&primitive_name, " *");
+        
+        if (declaration_name && strcmp(primitive_name, "...") != 0)
+        {
+            if (primitive.indirection == TPI_PRIMITIVE_INDIRECTION_NONE)
+                string_append(&primitive_name, " ");
+
+            string_append(&primitive_name, declaration_name);
+        }
+        
+        return primitive_name;
+    }
+
+    struct tpi_symbol *symbol = tpi_symbol_get(&pdb->tpi_header, &pdb->tpi_symbols, type_index);
+    assert(symbol);
+
+    switch (symbol->leaf)
+    {
+    case LF_CLASS:
+    case LF_CLASS_ST:
+    case LF_STRUCTURE:
+    case LF_STRUCTURE_ST:
+    case LF_STRUCTURE19:
+    case LF_INTERFACE:
+    {
+        char *type_name = strdup(symbol->class_.name);
+        assert(type_name);
+
+        if (declaration_name)
+        {
+            string_append(&type_name, " ");
+            string_append(&type_name, declaration_name);
+        }
+
+        return type_name;
+    }
+
+    case LF_UNION:
+    case LF_UNION_ST:
+    {
+        char *type_name = strdup(symbol->union_.name);
+        assert(type_name);
+
+        if (declaration_name)
+        {
+            string_append(&type_name, " ");
+            string_append(&type_name, declaration_name);
+        }
+
+        return type_name;
+    }
+
+    case LF_ENUM:
+    case LF_ENUM_ST:
+    {
+        char *type_name = strdup(symbol->enumeration.name);
+        assert(type_name);
+
+        if (declaration_name)
+        {
+            string_append(&type_name, " ");
+            string_append(&type_name, declaration_name);
+        }
+
+        return type_name;
+    }
+
+    case LF_POINTER:
+    {
+        struct tpi_symbol *underlying_symbol = tpi_symbol_get(&pdb->tpi_header, &pdb->tpi_symbols, symbol->pointer.header.underlying_type_index);
+        
+        if (underlying_symbol && (underlying_symbol->leaf == LF_PROCEDURE || underlying_symbol->leaf == LF_MFUNCTION))
+            return cpp_type_name(pdb, symbol->pointer.header.underlying_type_index, declaration_name, 0, NULL, 1);
+        
+        char *type_name = cpp_type_name(pdb, symbol->pointer.header.underlying_type_index, NULL, 0, NULL, 1);
+        assert(type_name);
+
+        if (symbol->pointer.header.attributes.islref || symbol->pointer.header.attributes.isrref)
+            string_append(&type_name, " &");
+        else
+            string_append(&type_name, " *");
+        
+        if (declaration_name)
+            string_append(&type_name, declaration_name);
+        
+        return type_name;
+    }
+
+    case LF_MODIFIER:
+    {
+        char *type_name = cpp_type_name(pdb, symbol->modifier.underlying_type_index, declaration_name, 0, NULL, 1);
+        assert(type_name);
+
+        if (symbol->modifier.flags & TPI_MODIFIER_IS_CONSTANT)
+            string_prepend(&type_name, "const ");
+
+        if (symbol->modifier.flags & TPI_MODIFIER_IS_VOLATILE)
+            string_prepend(&type_name, "volatile ");
+
+        if (symbol->modifier.flags & TPI_MODIFIER_IS_UNALIGNED)
+            string_prepend(&type_name, "__unaligned ");
+
+        return type_name;
+    }
+
+    case LF_ARRAY:
+    case LF_ARRAY_ST:
+    case LF_STRIDED_ARRAY:
+    {
+        char *type_name = cpp_type_name(pdb, symbol->array.header.element_type_index, declaration_name, 0, NULL, 1);
+        assert(type_name);
+
+        uint64_t element_size = cpp_type_size(pdb, symbol->array.header.element_type_index);
+        // TODO:
+        // if (element_size == 0) {
+        //     find a non-zero sized version of the element type and use its size instead...
+        // }
+        // assert(element_size);
+
+        for (uint32_t i = 0; i < symbol->array.dimension_count; i++)
+        {
+            uint32_t dimension = symbol->array.dimensions[i];
+
+            if (element_size != 0)
+                dimension /= element_size;
+
+            char dimension_string[32];
+            sprintf(dimension_string, "[%u]", dimension);
+            
+            string_append(&type_name, dimension_string);
+            
+            element_size = dimension;
+        }
+        
+        return type_name;
+    }
+
+    case LF_BITFIELD:
+    {
+        char *type_name = cpp_type_name(pdb, symbol->bitfield.underlying_type_index, declaration_name, 0, NULL, 1);
+        assert(type_name);
+
+        string_append(&type_name, " : ");
+        
+        char length_string[32];
+        sprintf(length_string, "%u", symbol->bitfield.length);
+        string_append(&type_name, length_string);
+
+        return type_name;
+    }
+    
+    case LF_PROCEDURE:
+    {
+        char *type_name = NULL;
+
+        if (!(symbol->procedure.attributes.ctor || symbol->procedure.attributes.ctorvbase))
+        {
+            if (declaration_name)
+                type_name = strdup(declaration_name);
+            else
+                type_name = strdup("");
+        }
+        else
+        {
+            if (symbol->procedure.return_type_index)
+                type_name = cpp_type_name(pdb, symbol->procedure.return_type_index, NULL, 0, NULL, 1);
+            else
+                type_name = strdup("");
+            
+            if (is_pointer)
+                string_append(&type_name, "(*");
+            else
+                string_append(&type_name, " ");
+
+            if (declaration_name)
+                string_append(&type_name, declaration_name);
+            
+            if (is_pointer)
+                string_append(&type_name, ")");
+        }
+
+        string_append(&type_name, "(");
+
+        struct tpi_symbol *argument_list_symbol = tpi_symbol_get(&pdb->tpi_header, &pdb->tpi_symbols, symbol->procedure.argument_list_type_index);
+
+        if (argument_list_symbol)
+        {        
+            assert(argument_list_symbol->leaf == LF_ARGLIST);
+
+            for (uint32_t i = 0; i < argument_list_symbol->argument_list.count; i++)
+            {
+                if (i > 0)
+                    string_append(&type_name, ", ");
+                
+                char *argument_name = cpp_type_name(
+                    pdb,
+                    argument_list_symbol->argument_list.type_indices[i],
+                    i < argument_count ? arguments[i] : NULL,
+                    0, NULL,
+                    1);
+                
+                string_append(&type_name, argument_name);
+            }
+        }
+
+        string_append(&type_name, ")");
+        
+        return type_name;
+    }
+
+    case LF_MFUNCTION:
+    {
+        char *type_name = NULL;
+
+        if (!(symbol->member_function.attributes.ctor || symbol->member_function.attributes.ctorvbase))
+        {
+            if (declaration_name)
+                type_name = strdup(declaration_name);
+            else
+                type_name = strdup("");
+        }
+        else
+        {
+            if (symbol->member_function.return_type_index)
+                type_name = cpp_type_name(pdb, symbol->member_function.return_type_index, NULL, 0, NULL, 1);
+            else
+                type_name = strdup("");
+            
+            if (is_pointer)
+                string_append(&type_name, "(*");
+            else
+                string_append(&type_name, " ");
+
+            if (declaration_name)
+                string_append(&type_name, declaration_name);
+            
+            if (is_pointer)
+                string_append(&type_name, ")");
+        }
+
+        struct tpi_symbol *argument_list_symbol = tpi_symbol_get(&pdb->tpi_header, &pdb->tpi_symbols, symbol->member_function.argument_list_type_index);
+        assert(argument_list_symbol);
+        assert(argument_list_symbol->leaf == LF_ARGLIST);
+
+        string_append(&type_name, "(");
+
+        for (uint32_t i = 0; i < argument_list_symbol->argument_list.count; i++)
+        {
+            if (i > 0)
+                string_append(&type_name, ", ");
+            
+            char *argument_name = cpp_type_name(
+                pdb,
+                argument_list_symbol->argument_list.type_indices[i],
+                (i == 0) ? "this" : ((i - 1) < argument_count) ? arguments[i - 1] : NULL,
+                0, NULL,
+                1);
+            
+            string_append(&type_name, argument_name);
+        }
+
+        string_append(&type_name, ")");
+        
+        return type_name;
+    }
+
+    default:
+        fprintf(stderr, "%s:%i: ERROR: Unhandled tpi_leaf value: ", __FILE__, __LINE__);
+        tpi_leaf_print(symbol->leaf, stderr);
+        fprintf(stderr, "\n");
+        exit(EXIT_FAILURE);
+    }
+
+    return NULL;
+}
+
+uint64_t cpp_type_size(struct pdb_data *pdb, uint32_t type_index)
+{
+    assert(pdb);
+
+    struct tpi_primitive primitive;
+    if (tpi_primitive_get(&primitive, &pdb->tpi_header, &pdb->tpi_symbols, type_index))
+    {
+        if (primitive.indirection != TPI_PRIMITIVE_INDIRECTION_NONE)
+        {
+            switch (pdb->dbi_header.machine_type)
+            {
+            case DBI_MACHINE_TYPE_X86:
+            case DBI_MACHINE_TYPE_POWER_PC:
+            case DBI_MACHINE_TYPE_POWER_PC_FP:
+            case DBI_MACHINE_TYPE_POWER_PC_ALTIVEC:
+                return 4;
+            
+            case DBI_MACHINE_TYPE_AMD64:
+                return 8;
+            
+            default:
+                fprintf(stderr, "%s:%i: ERROR: Unhandled dbi_machine_type value: ", __FILE__, __LINE__);
+                dbi_machine_type_print(pdb->dbi_header.machine_type, stderr);
+                fprintf(stderr, "\n");
+                exit(EXIT_FAILURE);
+            }
+        }
+
+        //
+        // TODO: some of these are architecture-dependent,
+        //       so we should check the machine type...
+        //
+        
+        switch (primitive.type)
+        {
+        case TPI_PRIMITIVE_TYPE_NONE:
+            return 0;
+        case TPI_PRIMITIVE_TYPE_VOID:
+            return 0;
+        case TPI_PRIMITIVE_TYPE_BOOL8:
+            return 1;
+        case TPI_PRIMITIVE_TYPE_BOOL16:
+            return 2;
+        case TPI_PRIMITIVE_TYPE_BOOL32:
+            return 4;
+        case TPI_PRIMITIVE_TYPE_CHAR:
+            return 1;
+        case TPI_PRIMITIVE_TYPE_UCHAR:
+            return 1;
+        case TPI_PRIMITIVE_TYPE_WCHAR:
+            return 2;
+        case TPI_PRIMITIVE_TYPE_RCHAR:
+            return 1;
+        case TPI_PRIMITIVE_TYPE_RCHAR16:
+            return 2;
+        case TPI_PRIMITIVE_TYPE_RCHAR32:
+            return 4;
+        case TPI_PRIMITIVE_TYPE_INT8:
+            return 1;
+        case TPI_PRIMITIVE_TYPE_UINT8:
+            return 1;
+        case TPI_PRIMITIVE_TYPE_SHORT:
+            return 2;
+        case TPI_PRIMITIVE_TYPE_USHORT:
+            return 2;
+        case TPI_PRIMITIVE_TYPE_INT16:
+            return 2;
+        case TPI_PRIMITIVE_TYPE_UINT16:
+            return 2;
+        case TPI_PRIMITIVE_TYPE_LONG:
+            return 4;
+        case TPI_PRIMITIVE_TYPE_ULONG:
+            return 4;
+        case TPI_PRIMITIVE_TYPE_INT32:
+            return 4;
+        case TPI_PRIMITIVE_TYPE_UINT32:
+            return 4;
+        case TPI_PRIMITIVE_TYPE_HRESULT:
+            return 4;
+        case TPI_PRIMITIVE_TYPE_QUAD:
+            return 8;
+        case TPI_PRIMITIVE_TYPE_UQUAD:
+            return 8;
+        case TPI_PRIMITIVE_TYPE_INT64:
+            return 8;
+        case TPI_PRIMITIVE_TYPE_UINT64:
+            return 8;
+        case TPI_PRIMITIVE_TYPE_FLOAT32:
+            return 4;
+        case TPI_PRIMITIVE_TYPE_FLOAT64:
+            return 8;
+        case TPI_PRIMITIVE_TYPE_FLOAT80:
+            return 16;
+        default:
+            fprintf(stderr, "%s:%i: ERROR: Unhandled tpi_primitive_type value: ", __FILE__, __LINE__);
+            tpi_primitive_type_print(primitive.type, stderr);
+            fprintf(stderr, "\n");
+            exit(EXIT_FAILURE);
+        }
+    }
+
+    struct tpi_symbol *symbol = tpi_symbol_get(&pdb->tpi_header, &pdb->tpi_symbols, type_index);
+    assert(symbol);
+
+    switch (symbol->leaf)
+    {
+    case LF_CLASS:
+    case LF_CLASS_ST:
+    case LF_STRUCTURE:
+    case LF_STRUCTURE_ST:
+    case LF_STRUCTURE19:
+    case LF_INTERFACE:
+        return symbol->class_.size;
+
+    case LF_UNION:
+    case LF_UNION_ST:
+        return symbol->union_.size;
+    
+    case LF_ENUM:
+    case LF_ENUM_ST:
+        return cpp_type_size(pdb, symbol->enumeration.header.underlying_type_index);
+    
+    case LF_MODIFIER:
+        return cpp_type_size(pdb, symbol->modifier.underlying_type_index);
+    
+    case LF_BITFIELD:
+        return cpp_type_size(pdb, symbol->bitfield.underlying_type_index);
+    
+    case LF_ARRAY:
+    case LF_ARRAY_ST:
+    case LF_STRIDED_ARRAY:
+        assert(symbol->array.dimension_count);
+        assert(symbol->array.dimensions);
+        return symbol->array.dimensions[symbol->array.dimension_count - 1];
+
+    case LF_POINTER:
+        switch (pdb->dbi_header.machine_type)
+        {
+        case DBI_MACHINE_TYPE_X86:
+        case DBI_MACHINE_TYPE_POWER_PC:
+        case DBI_MACHINE_TYPE_POWER_PC_FP:
+        case DBI_MACHINE_TYPE_POWER_PC_ALTIVEC:
+            return 4;
+        
+        case DBI_MACHINE_TYPE_AMD64:
+            return 8;
+        
+        default:
+            fprintf(stderr, "%s:%i: ERROR: Unhandled dbi_machine_type value: ", __FILE__, __LINE__);
+            dbi_machine_type_print(pdb->dbi_header.machine_type, stderr);
+            fprintf(stderr, "\n");
+            exit(EXIT_FAILURE);
+        }
+    
+    default:
+        fprintf(stderr, "%s:%i: ERROR: Unhandled tpi_leaf value: ", __FILE__, __LINE__);
+        tpi_leaf_print(symbol->leaf, stderr);
+        fprintf(stderr, "\n");
+        exit(EXIT_FAILURE);
     }
 }

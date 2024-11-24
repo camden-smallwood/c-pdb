@@ -588,6 +588,13 @@ void tpi_procedure_print(struct tpi_procedure *item, uint32_t depth, FILE *strea
 
 /* ---------- TPI modifier */
 
+enum tpi_modifier_flags
+{
+    TPI_MODIFIER_IS_CONSTANT = 1 << 0,
+    TPI_MODIFIER_IS_VOLATILE = 1 << 1,
+    TPI_MODIFIER_IS_UNALIGNED = 1 << 2,
+};
+
 #define TPI_MODIFIER_STRUCT \
 STRUCT_DECL(tpi_modifier) \
     FIELD_PRIMITIVE(uint32_t, underlying_type_index, "%u") \
@@ -763,7 +770,8 @@ STRUCT_DECL(tpi_member_function) \
     FIELD_PRIMITIVE(uint32_t, return_type_index, "%u") \
     FIELD_PRIMITIVE(uint32_t, class_type_index, "%u") \
     FIELD_PRIMITIVE(uint32_t, this_pointer_type_index, "%u") \
-    FIELD_PRIMITIVE(uint16_t, attributes, "%u") \
+    FIELD_PRIMITIVE(uint8_t, calling_convention, "%u") \
+    FIELD_STRUCT(struct tpi_procedure_attributes, attributes, tpi_procedure_attributes_print) \
     FIELD_PRIMITIVE(uint16_t, parameter_count, "%u") \
     FIELD_PRIMITIVE(uint32_t, argument_list_type_index, "%u") \
     FIELD_PRIMITIVE(uint32_t, this_adjustment, "%u") \
