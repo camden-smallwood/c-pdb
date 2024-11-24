@@ -939,7 +939,7 @@ void tpi_symbol_read(
         assert(item->type_indices);
 
         for (uint32_t i = 0; i < item->count; i++)
-            MSF_STREAM_READ(msf, msf_stream, out_offset, item->type_indices[item->count - 1], file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, item->type_indices[i], file_stream);
         
         break;
     }
