@@ -522,15 +522,6 @@ void cpp_class_add_members(struct cpp_class *item, struct pdb_data *pdb, uint32_
         case LF_ONEMETHOD:
         case LF_ONEMETHOD_ST:
         {
-            struct tpi_symbol *method_symbol = tpi_symbol_get(&pdb->tpi_header, &pdb->tpi_symbols, symbol->method.header.method_type_index);
-
-            // HACK: need to check this...
-            if (!method_symbol)
-                break;
-            
-            assert(method_symbol);
-            assert(method_symbol->leaf == LF_MFUNCTION);
-            
             struct cpp_class_member member;
             memset(&member, 0, sizeof(member));
 
@@ -539,10 +530,23 @@ void cpp_class_add_members(struct cpp_class *item, struct pdb_data *pdb, uint32_
             member.method.name = strdup(symbol->method.name);
             assert(member.method.name);
 
-            // TODO: get return_type_name
-            // TODO: get arguments (dynamic array of type names)
+            struct tpi_symbol *method_symbol = tpi_symbol_get(&pdb->tpi_header, &pdb->tpi_symbols, symbol->method.header.method_type_index);
 
-            memcpy(&member.method.field_attributes, &symbol->method.header.attributes, sizeof(member.method.field_attributes));
+            if (!method_symbol)
+            {
+                // HACK: need to check this...
+                member.method.return_type_name = strdup("void");
+                assert(member.method.return_type_name);
+            }
+            else
+            {
+                assert(method_symbol->leaf == LF_MFUNCTION);
+                
+                // TODO: get return_type_name
+                // TODO: get arguments (dynamic array of type names)
+                memcpy(&member.method.field_attributes, &symbol->method.header.attributes, sizeof(member.method.field_attributes));
+                // TODO: copy procedure attributes
+            }
 
             DYNARRAY_PUSH(item->members, item->member_count, member);
             break;
@@ -551,7 +555,42 @@ void cpp_class_add_members(struct cpp_class *item, struct pdb_data *pdb, uint32_
         case LF_METHOD:
         case LF_METHOD_ST:
         {
-            // TODO
+            struct tpi_symbol *method_list_symbol = tpi_symbol_get(&pdb->tpi_header, &pdb->tpi_symbols, symbol->overloaded_method.header.method_list_type_index);
+            assert(method_list_symbol);
+            assert(method_list_symbol->leaf == LF_METHODLIST);
+
+            for (uint32_t i = 0; i < method_list_symbol->method_list.count; i++)
+            {
+                struct tpi_method_list_entry *entry = &method_list_symbol->method_list.entries[i];
+                
+                struct cpp_class_member member;
+                memset(&member, 0, sizeof(member));
+
+                member.type = CPP_CLASS_MEMBER_TYPE_METHOD;
+                
+                member.method.name = strdup(symbol->overloaded_method.name);
+                assert(member.method.name);
+
+                struct tpi_symbol *method_symbol = tpi_symbol_get(&pdb->tpi_header, &pdb->tpi_symbols, entry->header.method_type_index);
+
+                if (!method_symbol)
+                {
+                    // HACK: need to check this...
+                    member.method.return_type_name = strdup("void");
+                    assert(member.method.return_type_name);
+                }
+                else
+                {
+                    assert(method_symbol->leaf == LF_MFUNCTION);
+                    
+                    // TODO: get return_type_name
+                    // TODO: get arguments (dynamic array of type names)
+                    memcpy(&member.method.field_attributes, &entry->header.attributes, sizeof(member.method.field_attributes));
+                    // TODO: copy procedure attributes
+                }
+
+                DYNARRAY_PUSH(item->members, item->member_count, member);
+            }
             break;
         }
 
@@ -560,7 +599,294 @@ void cpp_class_add_members(struct cpp_class *item, struct pdb_data *pdb, uint32_
         case LF_NESTTYPEEX:
         case LF_NESTTYPEEX_ST:
         {
-            // TODO
+            struct tpi_primitive nested_primitive;
+            if (tpi_primitive_get(&nested_primitive, &pdb->tpi_header, &pdb->tpi_symbols, symbol->nested_type.header.nested_type_index))
+            {
+                struct cpp_class_member member;
+                memset(&member, 0, sizeof(member));
+
+                member.type = CPP_CLASS_MEMBER_TYPE_TYPEDEF;
+
+                member.typedef_.type_name = NULL; // TODO:
+                // let mut type_name = primitive_name(data.kind).to_string();
+                // if data.indirection.is_some() {
+                //     type_name.push_str(" *");
+                // } else {
+                //     type_name.push(' ');
+                // }
+                // type_name.push_str(nested_data.name.to_string().to_string().as_str());
+                
+                member.typedef_.underlying_type_index = symbol->nested_type.header.nested_type_index;
+                
+                memcpy(
+                    &member.typedef_.field_attributes,
+                    &symbol->nested_type.header.attributes,
+                    sizeof(member.typedef_.field_attributes));
+                
+                DYNARRAY_PUSH(item->members, item->member_count, member);
+                break;
+            }
+
+            struct tpi_symbol *nested_symbol = tpi_symbol_get(&pdb->tpi_header, &pdb->tpi_symbols, symbol->nested_type.header.nested_type_index);
+            assert(nested_symbol);
+
+            switch (nested_symbol->leaf)
+            {
+            case LF_CLASS:
+            case LF_CLASS_ST:
+            case LF_STRUCTURE:
+            case LF_STRUCTURE_ST:
+            case LF_STRUCTURE19:
+            case LF_INTERFACE:
+            {
+                struct cpp_class_member member;
+                memset(&member, 0, sizeof(member));
+
+                member.type = CPP_CLASS_MEMBER_TYPE_CLASS;
+
+                switch (nested_symbol->leaf)
+                {
+                case LF_CLASS:
+                case LF_CLASS_ST:
+                    member.class_.type = CPP_CLASS_TYPE_CLASS;
+                    break;
+                case LF_STRUCTURE:
+                case LF_STRUCTURE_ST:
+                case LF_STRUCTURE19:
+                    member.class_.type = CPP_CLASS_TYPE_STRUCT;
+                    break;
+                case LF_INTERFACE:
+                    member.class_.type = CPP_CLASS_TYPE_INTERFACE;
+                    break;
+                default:
+                    break;
+                }
+
+                if (nested_symbol->class_.name)
+                {
+                    member.class_.name = strdup(nested_symbol->class_.name);
+                    assert(member.class_.name);
+                }
+
+                member.class_.type_index = symbol->nested_type.header.nested_type_index;
+                member.class_.size = nested_symbol->class_.size;
+
+                struct tpi_symbol *derived_from_symbol = tpi_symbol_get(&pdb->tpi_header, &pdb->tpi_symbols, nested_symbol->class_.derived_from_type_index);
+
+                if (derived_from_symbol)
+                {
+                    //
+                    // TODO: add derived from?
+                    //
+                }
+
+                if (nested_symbol->class_.header.properties.fwdref)
+                    member.class_.flags |= CPP_CLASS_IS_DECLARATION;
+                else
+                    cpp_class_add_members(&member.class_, pdb, nested_symbol->class_.header.fields_type_index);
+
+                DYNARRAY_PUSH(item->members, item->member_count, member);
+                break;
+            }
+
+            case LF_UNION:
+            case LF_UNION_ST:
+            {
+                struct cpp_class_member member;
+                memset(&member, 0, sizeof(member));
+
+                member.type = CPP_CLASS_MEMBER_TYPE_CLASS;
+                member.class_.type = CPP_CLASS_TYPE_STRUCT;
+                member.class_.flags |= CPP_CLASS_IS_UNION;
+
+                if (nested_symbol->union_.name)
+                {
+                    member.class_.name = strdup(nested_symbol->union_.name);
+                    assert(member.class_.name);
+                }
+
+                member.class_.type_index = symbol->nested_type.header.nested_type_index;
+                member.class_.size = nested_symbol->union_.size;
+
+                if (nested_symbol->union_.header.properties.fwdref)
+                    member.class_.flags |= CPP_CLASS_IS_DECLARATION;
+                else
+                    cpp_class_add_members(&member.class_, pdb, nested_symbol->union_.header.fields_type_index);
+
+                DYNARRAY_PUSH(item->members, item->member_count, member);
+                break;
+            }
+
+            case LF_ENUM:
+            case LF_ENUM_ST:
+            {
+                struct cpp_class_member member;
+                memset(&member, 0, sizeof(member));
+
+                member.type = CPP_CLASS_MEMBER_TYPE_ENUM;
+
+                if (nested_symbol->enumeration.name)
+                {
+                    member.enum_.name = strdup(nested_symbol->enumeration.name);
+                    assert(member.enum_.name);
+                }
+
+                member.enum_.type_index = symbol->nested_type.header.nested_type_index;
+
+                //
+                // TODO: get underlying_type_name here
+                //
+
+                if (nested_symbol->enumeration.header.properties.fwdref)
+                    member.enum_.flags |= CPP_ENUM_IS_DECLARATION;
+                else
+                    cpp_enum_add_members(&member.enum_, pdb, nested_symbol->enumeration.header.fields_type_index);
+
+                DYNARRAY_PUSH(item->members, item->member_count, member);
+                break;
+            }
+
+            case LF_POINTER:
+            {
+                struct cpp_class_member member;
+                memset(&member, 0, sizeof(member));
+
+                member.type = CPP_CLASS_MEMBER_TYPE_TYPEDEF;
+
+                member.typedef_.type_name = NULL; // TODO:
+                // let type_name = type_name(machine_type, type_info, type_finder, data.underlying_type, Some(nested_data.name.to_string().to_string()), None, true)?;
+
+                member.typedef_.underlying_type_index = nested_symbol->pointer.header.underlying_type_index;
+
+                memcpy(
+                    &member.typedef_.field_attributes,
+                    &symbol->nested_type.header.attributes,
+                    sizeof(member.typedef_.field_attributes));
+
+                memcpy(
+                    &member.typedef_.pointer_attributes,
+                    &nested_symbol->pointer.header.attributes,
+                    sizeof(member.typedef_.pointer_attributes));
+                
+                member.typedef_.containing_class_type_index = nested_symbol->pointer.containing_class_type_index;
+
+                DYNARRAY_PUSH(item->members, item->member_count, member);
+                break;
+            }
+            
+            case LF_MODIFIER:
+            {
+                struct cpp_class_member member;
+                memset(&member, 0, sizeof(member));
+
+                member.type = CPP_CLASS_MEMBER_TYPE_TYPEDEF;
+
+                member.typedef_.type_name = NULL; // TODO:
+                // let mut type_name = String::new();
+                // if data.constant {
+                //     type_name.push_str("const ");
+                // }
+                // if data.volatile {
+                //     type_name.push_str("volatile ");
+                // }
+                // type_name.push_str(self::type_name(machine_type, type_info, type_finder, data.underlying_type, Some(nested_data.name.to_string().to_string()), None, true)?.as_str());
+
+                member.typedef_.underlying_type_index = nested_symbol->pointer.header.underlying_type_index;
+
+                memcpy(
+                    &member.typedef_.field_attributes,
+                    &symbol->nested_type.header.attributes,
+                    sizeof(member.typedef_.field_attributes));
+
+                DYNARRAY_PUSH(item->members, item->member_count, member);
+                break;
+            }
+            
+            case LF_ARRAY:
+            case LF_ARRAY_ST:
+            case LF_STRIDED_ARRAY:
+            {
+                struct cpp_class_member member;
+                memset(&member, 0, sizeof(member));
+
+                member.type = CPP_CLASS_MEMBER_TYPE_TYPEDEF;
+
+                member.typedef_.type_name = NULL; // TODO:
+                // let mut type_name = type_name(machine_type, type_info, type_finder, data.element_type, Some(nested_data.name.to_string().to_string()), None, true)?;
+                // let mut element_size = type_size(machine_type, type_info, type_finder, data.element_type)?;
+                // if element_size == 0 {
+                //     let element_type_data = type_finder.find(data.element_type)?.parse()?;
+                //     let mut type_iter = type_info.iter();
+                //     loop {
+                //         let current_type_item = match type_iter.next() {
+                //             Ok(Some(current_type_item)) => current_type_item,
+                //             Ok(None) | Err(_) => break,
+                //         };
+                //         let current_type_data = match current_type_item.parse() {
+                //             Ok(current_type_data) => current_type_data,
+                //             Err(_) => continue,
+                //         };
+                //         match &current_type_data {
+                //             pdb::TypeData::Primitive(_) if matches!(element_type_data, pdb::TypeData::Primitive(_)) => (),
+                //             pdb::TypeData::Class(_) if matches!(element_type_data, pdb::TypeData::Class(_)) => (),
+                //             pdb::TypeData::Member(_) if matches!(element_type_data, pdb::TypeData::Member(_)) => (),
+                //             pdb::TypeData::MemberFunction(_) if matches!(element_type_data, pdb::TypeData::MemberFunction(_)) => (),
+                //             pdb::TypeData::OverloadedMethod(_) if matches!(element_type_data, pdb::TypeData::OverloadedMethod(_)) => (),
+                //             pdb::TypeData::Method(_) if matches!(element_type_data, pdb::TypeData::Method(_)) => (),
+                //             pdb::TypeData::StaticMember(_) if matches!(element_type_data, pdb::TypeData::StaticMember(_)) => (),
+                //             pdb::TypeData::Nested(_) if matches!(element_type_data, pdb::TypeData::Nested(_)) => (),
+                //             pdb::TypeData::BaseClass(_) if matches!(element_type_data, pdb::TypeData::BaseClass(_)) => (),
+                //             pdb::TypeData::VirtualBaseClass(_) if matches!(element_type_data, pdb::TypeData::VirtualBaseClass(_)) => (),
+                //             pdb::TypeData::VirtualFunctionTablePointer(_) if matches!(element_type_data, pdb::TypeData::VirtualFunctionTablePointer(_)) => (),
+                //             pdb::TypeData::Procedure(_) if matches!(element_type_data, pdb::TypeData::Procedure(_)) => (),
+                //             pdb::TypeData::Pointer(_) if matches!(element_type_data, pdb::TypeData::Pointer(_)) => (),
+                //             pdb::TypeData::Modifier(_) if matches!(element_type_data, pdb::TypeData::Modifier(_)) => (),
+                //             pdb::TypeData::Enumeration(_) if matches!(element_type_data, pdb::TypeData::Enumeration(_)) => (),
+                //             pdb::TypeData::Enumerate(_) if matches!(element_type_data, pdb::TypeData::Enumerate(_)) => (),
+                //             pdb::TypeData::Array(_) if matches!(element_type_data, pdb::TypeData::Array(_)) => (),
+                //             pdb::TypeData::Union(_) if matches!(element_type_data, pdb::TypeData::Union(_)) => (),
+                //             pdb::TypeData::Bitfield(_) if matches!(element_type_data, pdb::TypeData::Bitfield(_)) => (),
+                //             pdb::TypeData::FieldList(_) if matches!(element_type_data, pdb::TypeData::FieldList(_)) => (),
+                //             pdb::TypeData::ArgumentList(_) if matches!(element_type_data, pdb::TypeData::ArgumentList(_)) => (),
+                //             pdb::TypeData::MethodList(_) if matches!(element_type_data, pdb::TypeData::MethodList(_)) => (),
+                //             _ => continue
+                //         }
+                //         if current_type_data.name() == element_type_data.name() {
+                //             if let Ok(current_type_size) = type_size(machine_type, type_info, type_finder, current_type_item.index()) {
+                //                 if current_type_size != 0 {
+                //                     element_size = current_type_size;
+                //                     break;
+                //                 }
+                //             }
+                //         }
+                //     }
+                // }
+                // for &size in data.dimensions.iter() {
+                //     type_name = format!("{}[{}]", type_name, if element_size == 0 { size } else { size / element_size as u32 });
+                //     element_size = size as usize;
+                // }
+
+                member.typedef_.underlying_type_index = symbol->nested_type.header.nested_type_index;
+
+                memcpy(
+                    &member.typedef_.field_attributes,
+                    &symbol->nested_type.header.attributes,
+                    sizeof(member.typedef_.field_attributes));
+
+                DYNARRAY_PUSH(item->members, item->member_count, member);
+                break;
+            }
+            
+            case LF_PROCEDURE:
+                // TODO
+                break;
+            
+            default:
+                fprintf(stderr, "%s:%i: ERROR: Unhandled tpi_leaf value: ", __FILE__, __LINE__);
+                tpi_leaf_print(nested_symbol->leaf, stderr);
+                fprintf(stderr, "\n");
+                exit(EXIT_FAILURE);
+            }
             break;
         }
 
@@ -660,8 +986,8 @@ void cpp_module_member_dispose(struct cpp_module_member *member)
         cpp_enum_dispose(&member->enum_);
         break;
 
-    case CPP_MODULE_MEMBER_TYPE_USER_DEFINED_TYPE:
-        free(member->user_defined_type);
+    case CPP_MODULE_MEMBER_TYPE_TYPEDEF:
+        cpp_typedef_dispose(&member->typedef_);
         break;
 
     case CPP_MODULE_MEMBER_TYPE_USING_NAMESPACE:

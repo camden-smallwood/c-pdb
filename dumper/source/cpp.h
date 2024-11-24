@@ -257,7 +257,7 @@ enum cpp_module_member_type
 {
     CPP_MODULE_MEMBER_TYPE_CLASS,
     CPP_MODULE_MEMBER_TYPE_ENUM,
-    CPP_MODULE_MEMBER_TYPE_USER_DEFINED_TYPE,
+    CPP_MODULE_MEMBER_TYPE_TYPEDEF,
     CPP_MODULE_MEMBER_TYPE_USING_NAMESPACE,
     CPP_MODULE_MEMBER_TYPE_CONSTANT,
     CPP_MODULE_MEMBER_TYPE_DATA,
@@ -272,7 +272,7 @@ struct cpp_module_member
     {
         struct cpp_class class_;
         struct cpp_enum enum_;
-        char *user_defined_type;
+        struct cpp_typedef typedef_;
         char *using_namespace;
         char *constant;
         char *data;

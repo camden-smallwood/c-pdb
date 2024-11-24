@@ -905,7 +905,7 @@ void tpi_vtable_print(struct tpi_vtable *item, uint32_t depth, FILE *stream);
 
 #define TPI_NESTED_TYPE_HEADER_STRUCT \
 STRUCT_DECL(tpi_nested_type_header) \
-    FIELD_PRIMITIVE(uint16_t, attributes, "%u") \
+    FIELD_STRUCT(struct tpi_field_attributes, attributes, tpi_field_attributes_print) \
     FIELD_PRIMITIVE(uint32_t, nested_type_index, "%u") \
 STRUCT_END(tpi_nested_type_header)
 
