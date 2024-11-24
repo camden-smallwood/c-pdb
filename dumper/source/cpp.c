@@ -1555,7 +1555,7 @@ char *cpp_type_name(
     {
         char *type_name = NULL;
 
-        if (!(symbol->procedure.attributes.ctor || symbol->procedure.attributes.ctorvbase))
+        if (symbol->procedure.attributes.ctor || symbol->procedure.attributes.ctorvbase)
         {
             if (declaration_name)
                 type_name = strdup(declaration_name);
@@ -1614,7 +1614,7 @@ char *cpp_type_name(
     {
         char *type_name = NULL;
 
-        if (!(symbol->member_function.attributes.ctor || symbol->member_function.attributes.ctorvbase))
+        if (symbol->member_function.attributes.ctor || symbol->member_function.attributes.ctorvbase)
         {
             if (declaration_name)
                 type_name = strdup(declaration_name);
