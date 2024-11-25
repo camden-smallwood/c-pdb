@@ -323,39 +323,26 @@ char *ipi_string_id_to_string(struct tpi_header *ipi_header, struct ipi_symbols 
 
     struct ipi_symbol *argument_symbol = ipi_symbol_get(ipi_header, ipi_symbols, index);
 
-    if (!argument_symbol)
-    {
-        fprintf(stderr, "%s:%i: FUCK: %u - min: %u, max: %u\n", __FILE__, __LINE__, index, ipi_header->minimum_index, ipi_header->maximum_index);
-        exit(EXIT_FAILURE);
-    }
     assert(argument_symbol);
     assert(argument_symbol->type == LF_STRING_ID);
 
-    fprintf(stderr, "argument_symbol: ");
-    ipi_symbol_print(argument_symbol, 0, stderr);
-    fprintf(stderr, "\n");
-
-    char *string = strdup(argument_symbol->string_id.string);
+    char *string = calloc(1, sizeof(char));
     assert(string);
 
     struct ipi_symbol *substrings_symbol = ipi_symbol_get(ipi_header, ipi_symbols, argument_symbol->string_id.substrings_index);
     
-    if (!substrings_symbol)
+    if (substrings_symbol)
     {
-        fprintf(stderr, "no substrings, returning string\n");
-        return string;
-    }
-    
-    assert(substrings_symbol->type = LF_SUBSTR_LIST);
+        assert(substrings_symbol->type = LF_SUBSTR_LIST);
 
-    for (uint32_t i = 0; i < substrings_symbol->substr_list.count; i++)
-    {
-        fprintf(stderr, "appending substring %u\n", substrings_symbol->substr_list.substring_indices[i]);
-        char *substring = ipi_string_id_to_string(ipi_header, ipi_symbols, substrings_symbol->substr_list.substring_indices[i]);
-        string_append(&string, substring);
+        for (uint32_t i = 0; i < substrings_symbol->substr_list.count; i++)
+        {
+            char *substring = ipi_string_id_to_string(ipi_header, ipi_symbols, substrings_symbol->substr_list.substring_indices[i]);
+            string_append(&string, substring);
+        }
     }
 
-    fprintf(stderr, "returning string\n");
+    string_append(&string, argument_symbol->string_id.string);
 
     return string;
 }

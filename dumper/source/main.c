@@ -68,21 +68,30 @@ int main(int argc, const char *argv[])
             char *build_info = calloc(0, sizeof(char));
             assert(build_info);
 
-            for (uint32_t i = 0; i < symbol->build_info.count; i++)
-            {
-                char *argument = ipi_string_id_to_string(&pdb_data.ipi_header, &pdb_data.ipi_symbols, symbol->build_info.argument_indices[i]);
-                string_append(&build_info, argument);
-            }
+            char **arguments = malloc(symbol->build_info.count * sizeof(char *));
 
-            fprintf(stderr, "build_info: %s\n", build_info);
-            free(build_info);
+            for (uint32_t i = 0; i < symbol->build_info.count; i++)
+                arguments[i] = ipi_string_id_to_string(&pdb_data.ipi_header, &pdb_data.ipi_symbols, symbol->build_info.argument_indices[i]);
+            
+            //
+            // TODO: do something with these
+            //
+
+            for (uint32_t i = 0; i < symbol->build_info.count; i++)
+                free(arguments[i]);
+            
+            free(arguments);
             break;
         }
         
         case LF_UDT_SRC_LINE:
         case LF_UDT_MOD_SRC_LINE:
+        {
+            //
             // TODO
+            //
             break;
+        }
         
         default:
             break;
