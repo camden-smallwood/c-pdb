@@ -1151,11 +1151,7 @@ void cpp_module_add_type_definition(
             member.class_.flags |= CPP_CLASS_IS_DECLARATION;
         else
             cpp_class_add_members(&member.class_, pdb, symbol->class_.header.fields_type_index);
-
-        // TODO: remove this VVV
-        cpp_class_print(&member.class_, 0, stdout);
-        printf("\n");
-
+        
         DYNARRAY_PUSH(module->members, module->member_count, member);
         break;
     }
@@ -1184,11 +1180,7 @@ void cpp_module_add_type_definition(
             member.class_.flags |= CPP_CLASS_IS_DECLARATION;
         else
             cpp_class_add_members(&member.class_, pdb, symbol->union_.header.fields_type_index);
-
-        // TODO: remove this VVV
-        cpp_class_print(&member.class_, 0, stdout);
-        printf("\n");
-
+        
         DYNARRAY_PUSH(module->members, module->member_count, member);
         break;
     }
@@ -1217,11 +1209,7 @@ void cpp_module_add_type_definition(
             member.enum_.flags |= CPP_ENUM_IS_DECLARATION;
         else
             cpp_enum_add_members(&member.enum_, pdb, symbol->enumeration.header.fields_type_index);
-
-        // TODO: remove this VVV
-        cpp_enum_print(&member.enum_, 0, stdout);
-        printf("\n");
-
+        
         DYNARRAY_PUSH(module->members, module->member_count, member);
         break;
     }

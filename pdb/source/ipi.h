@@ -109,7 +109,7 @@ void tpi_mfunc_id_print(struct tpi_mfunc_id *item, uint32_t depth, FILE *stream)
 
 #define IPI_SYMBOL_STRUCT \
 STRUCT_DECL(ipi_symbol) \
-    FIELD_PRIMITIVE(uint16_t, type, "%u") \
+    FIELD_PRIMITIVE_FMT(uint16_t, type, tpi_leaf_print) \
     FIELD_UNION_DECL() \
         FIELD_UNION_FIELD_STRUCT(struct tpi_udt_src_line, udt_src_line, type, LF_UDT_SRC_LINE, tpi_udt_src_line_print) \
         FIELD_UNION_FIELD_STRUCT(struct tpi_udt_mod_src_line, udt_mod_src_line, type, LF_UDT_MOD_SRC_LINE, tpi_udt_mod_src_line_print) \
@@ -139,3 +139,7 @@ void ipi_header_read(struct tpi_header *header, struct msf *msf, FILE *stream);
 void ipi_symbols_read(struct ipi_symbols *symbols, struct msf *msf, struct msf_stream *msf_stream, struct tpi_header *ipi_header, FILE *file_stream);
 void ipi_symbols_dispose(struct ipi_symbols *symbols);
 void ipi_symbols_print(struct ipi_symbols *symbols, uint32_t depth, FILE *stream);
+
+uint32_t ipi_index_to_absolute_index(struct tpi_header *ipi_header, struct ipi_symbols *ipi_symbols, uint32_t index);
+struct ipi_symbol *ipi_symbol_get(struct tpi_header *ipi_header, struct ipi_symbols *ipi_symbols, uint32_t index);
+char *ipi_string_id_to_string(struct tpi_header *ipi_header, struct ipi_symbols *ipi_symbols, uint32_t index);

@@ -186,17 +186,9 @@ uint32_t msf_get_page_offset(struct msf *msf, uint32_t page_index)
     return page_index * msf_get_page_size(msf);
 }
 
-uint32_t msf_get_page_index_for_offset(struct msf *msf, uint32_t offset)
-{
-    uint32_t page_size = msf_get_page_size(msf);
-
-    return offset / page_size;
-}
-
 uint32_t msf_get_page_count_for_size(struct msf *msf, uint32_t size)
 {
     uint32_t page_size = msf_get_page_size(msf);
-
     return (size + (page_size - 1)) / page_size;
 }
 
@@ -244,27 +236,22 @@ void msf_stream_read_data(
     assert(file_stream);
     assert(size <= stream->size);
 
-    uint32_t start_page_index = msf_get_page_index_for_offset(msf, offset);
-    
-    uint32_t page_count = msf_get_page_count_for_size(msf, size);
-    assert(start_page_index + page_count <= stream->page_count);
-
     uint32_t page_size = msf_get_page_size(msf);
+    uint32_t start_page_index = offset / page_size;
+    uint32_t inset_offset = offset % page_size;
     
     uint32_t write_offset = 0;
     uint32_t data_remaining = size;
 
-    for (uint32_t i = 0; i < page_count && data_remaining; i++)
+    for (uint32_t i = 0; data_remaining; i++)
     {
         uint32_t read_offset = msf_get_page_offset(msf, stream->page_indices[start_page_index + i]);
-        uint32_t read_size = data_remaining > page_size ? page_size : data_remaining;
+        uint32_t read_size = data_remaining > (page_size - inset_offset) ? (page_size - inset_offset) : data_remaining;
 
-        if (i == 0)
+        if (inset_offset)
         {
-            uint32_t inset_size = offset - (start_page_index * page_size);
-
-            read_offset += inset_size;
-            read_size = data_remaining > read_size ? read_size - inset_size : data_remaining;
+            read_offset += inset_offset;
+            inset_offset = 0;
         }
         
         fseek(file_stream, read_offset, SEEK_SET);

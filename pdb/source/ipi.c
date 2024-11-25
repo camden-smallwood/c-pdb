@@ -194,9 +194,7 @@ void ipi_symbols_read(
         {
             uint32_t temp_offset = offset;
 
-            msf_stream_read_data(msf, msf_stream, temp_offset, sizeof(symbol->string_id.substrings_index), &symbol->string_id.substrings_index, file_stream);
-            temp_offset += sizeof(symbol->string_id.substrings_index);
-
+            MSF_STREAM_READ(msf, msf_stream, &temp_offset, symbol->string_id.substrings_index, file_stream);
             symbol->string_id.string = msf_read_tpi_lf_string(msf, msf_stream, &temp_offset, symbol->type, file_stream);
             break;
         }
@@ -218,12 +216,16 @@ void ipi_symbols_read(
         {
             uint32_t temp_offset = offset;
 
-            msf_stream_read_data(msf, msf_stream, temp_offset, sizeof(symbol->build_info.count), &symbol->build_info.count, file_stream);
-            temp_offset += sizeof(symbol->build_info.count);
+            MSF_STREAM_READ(msf, msf_stream, &temp_offset, symbol->build_info.count, file_stream);
 
             symbol->build_info.argument_indices = malloc(symbol->build_info.count * sizeof(*symbol->build_info.argument_indices));
             assert(symbol->build_info.argument_indices);
-            msf_stream_read_data(msf, msf_stream, temp_offset, symbol->build_info.count * sizeof(*symbol->build_info.argument_indices), symbol->build_info.argument_indices, file_stream);
+
+            for (uint32_t i = 0; i < symbol->build_info.count; i++)
+            {
+                MSF_STREAM_READ(msf, msf_stream, &temp_offset, symbol->build_info.argument_indices[i], file_stream);
+                assert(symbol->build_info.argument_indices[i] <= ipi_header->maximum_index);
+            }
             break;
         }
 
@@ -285,4 +287,75 @@ void ipi_symbols_print(struct ipi_symbols *item, uint32_t depth, FILE *stream)
     assert(stream);
 
     IPI_SYMBOLS_STRUCT
+}
+
+uint32_t ipi_index_to_absolute_index(struct tpi_header *ipi_header, struct ipi_symbols *ipi_symbols, uint32_t index)
+{
+    assert(ipi_header);
+    assert(ipi_symbols);
+    
+    if (index < ipi_header->minimum_index || index >= ipi_header->maximum_index)
+        return UINT32_MAX;
+    
+    uint32_t absolute_index = index - ipi_header->minimum_index;
+    assert(absolute_index < ipi_symbols->count);
+
+    return absolute_index;
+}
+
+struct ipi_symbol *ipi_symbol_get(struct tpi_header *ipi_header, struct ipi_symbols *ipi_symbols, uint32_t index)
+{
+    assert(ipi_header);
+    assert(ipi_symbols);
+
+    uint32_t absolute_index = ipi_index_to_absolute_index(ipi_header, ipi_symbols, index);
+
+    if (absolute_index == UINT32_MAX)
+        return NULL;
+    
+    return &ipi_symbols->symbols[absolute_index];
+}
+
+char *ipi_string_id_to_string(struct tpi_header *ipi_header, struct ipi_symbols *ipi_symbols, uint32_t index)
+{
+    assert(ipi_header);
+    assert(ipi_symbols);
+
+    struct ipi_symbol *argument_symbol = ipi_symbol_get(ipi_header, ipi_symbols, index);
+
+    if (!argument_symbol)
+    {
+        fprintf(stderr, "%s:%i: FUCK: %u - min: %u, max: %u\n", __FILE__, __LINE__, index, ipi_header->minimum_index, ipi_header->maximum_index);
+        exit(EXIT_FAILURE);
+    }
+    assert(argument_symbol);
+    assert(argument_symbol->type == LF_STRING_ID);
+
+    fprintf(stderr, "argument_symbol: ");
+    ipi_symbol_print(argument_symbol, 0, stderr);
+    fprintf(stderr, "\n");
+
+    char *string = strdup(argument_symbol->string_id.string);
+    assert(string);
+
+    struct ipi_symbol *substrings_symbol = ipi_symbol_get(ipi_header, ipi_symbols, argument_symbol->string_id.substrings_index);
+    
+    if (!substrings_symbol)
+    {
+        fprintf(stderr, "no substrings, returning string\n");
+        return string;
+    }
+    
+    assert(substrings_symbol->type = LF_SUBSTR_LIST);
+
+    for (uint32_t i = 0; i < substrings_symbol->substr_list.count; i++)
+    {
+        fprintf(stderr, "appending substring %u\n", substrings_symbol->substr_list.substring_indices[i]);
+        char *substring = ipi_string_id_to_string(ipi_header, ipi_symbols, substrings_symbol->substr_list.substring_indices[i]);
+        string_append(&string, substring);
+    }
+
+    fprintf(stderr, "returning string\n");
+
+    return string;
 }

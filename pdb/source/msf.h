@@ -124,7 +124,6 @@ void msf_verify_page_index(struct msf *msf, uint32_t page_index);
 
 uint32_t msf_get_page_size(struct msf *msf);
 uint32_t msf_get_page_offset(struct msf *msf, uint32_t page_index);
-uint32_t msf_get_page_index_for_offset(struct msf *msf, uint32_t offset);
 uint32_t msf_get_page_count_for_size(struct msf *msf, uint32_t size);
 
 uint32_t msf_get_root_stream_size(struct msf *msf);
