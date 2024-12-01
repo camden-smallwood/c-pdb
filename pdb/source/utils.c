@@ -8,8 +8,6 @@ char *string_append(char **string, char *suffix)
 {
     assert(string);
     assert(suffix);
-    
-    size_t suffix_length = strlen(suffix);
 
     if (!*string)
     {
@@ -19,6 +17,7 @@ char *string_append(char **string, char *suffix)
     }
 
     size_t string_length = strlen(*string);
+    size_t suffix_length = strlen(suffix);
 
     *string = realloc(*string, string_length + suffix_length + 1);
     assert(*string);
@@ -31,8 +30,6 @@ char *string_prepend(char **string, char *prefix)
 {
     assert(string);
     assert(prefix);
-    
-    size_t prefix_length = strlen(prefix);
 
     if (!*string)
     {
@@ -41,6 +38,7 @@ char *string_prepend(char **string, char *prefix)
         return *string;
     }
 
+    size_t prefix_length = strlen(prefix);
     size_t string_length = strlen(*string);
     
     *string = realloc(*string, prefix_length + string_length + 1);

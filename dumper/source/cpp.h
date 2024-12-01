@@ -288,6 +288,9 @@ void cpp_module_member_dispose(struct cpp_module_member *member);
 struct cpp_module
 {
     char *path;
+    char *compiler_path;
+    char *pdb_path;
+    char *args_string;
 
     uint32_t header_count;
     struct cpp_header *headers;

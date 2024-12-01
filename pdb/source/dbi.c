@@ -5,6 +5,13 @@
 
 #include "macros_print.h"
 
+void dbi_cv_signature_print(enum dbi_cv_signature item, FILE *stream)
+{
+    assert(stream);
+
+    DBI_CV_SIGNATURE_ENUM
+}
+
 void dbi_machine_type_print(enum dbi_machine_type item, FILE *stream)
 {
     assert(stream);
@@ -106,6 +113,14 @@ void dbi_section_contributions_print(struct dbi_section_contributions *item, uin
     DBI_SECTION_CONTRIBUTIONS_STRUCT
 }
 
+void dbi_module_flags_print(struct dbi_module_flags *item, uint32_t depth, FILE *stream)
+{
+    assert(item);
+    assert(stream);
+
+    DBI_MODULE_FLAGS_STRUCT
+}
+
 void dbi_module_header_print(struct dbi_module_header *item, uint32_t depth, FILE *stream)
 {
     assert(item);
@@ -153,6 +168,7 @@ void dbi_modules_read(
         assert(modules->modules);
 
         struct dbi_module *module = &modules->modules[modules->count - 1];
+        memset(module, 0, sizeof(*module));
 
         msf_stream_read_data(
             msf,
@@ -185,6 +201,19 @@ void dbi_modules_read(
         
         if (padding < 4)
             current_offset += padding;
+    }
+
+    for (uint32_t module_index = 0; module_index < modules->count; module_index++)
+    {
+        struct dbi_module *module = &modules->modules[module_index];
+        
+        // TODO:
+        // module->header.symbols_size
+        // module->header.lines_size
+        // module->header.c13_lines_size
+        // module->header.file_count
+        // module->header.filename_offsets
+        // module->header.source_file_index
     }
 }
 

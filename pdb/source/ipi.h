@@ -11,8 +11,8 @@
 
 #define TPI_UDT_SRC_LINE_STRUCT \
 STRUCT_DECL(tpi_udt_src_line) \
-    FIELD_PRIMITIVE(uint32_t, udt_index, "%u") \
-    FIELD_PRIMITIVE(uint32_t, file_id, "%u") \
+    FIELD_PRIMITIVE(uint32_t, udt_type_index, "%u") \
+    FIELD_PRIMITIVE(uint32_t, file_id_index, "%u") \
     FIELD_PRIMITIVE(uint32_t, line, "%u") \
 STRUCT_END(tpi_udt_src_line)
 
@@ -25,8 +25,8 @@ void tpi_udt_src_line_print(struct tpi_udt_src_line *item, uint32_t depth, FILE 
 
 #define TPI_UDT_MOD_SRC_LINE_STRUCT \
 STRUCT_DECL(tpi_udt_mod_src_line) \
-    FIELD_PRIMITIVE(uint32_t, udt_index, "%u") \
-    FIELD_PRIMITIVE(uint32_t, file_id, "%u") \
+    FIELD_PRIMITIVE(uint32_t, udt_type_index, "%u") \
+    FIELD_PRIMITIVE(uint32_t, file_string_offset, "%u") \
     FIELD_PRIMITIVE(uint32_t, line, "%u") \
     FIELD_PRIMITIVE(uint16_t, mod, "%u") \
 STRUCT_END(tpi_udt_mod_src_line)

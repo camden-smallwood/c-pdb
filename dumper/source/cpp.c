@@ -1048,6 +1048,9 @@ void cpp_module_dispose(struct cpp_module *module)
     assert(module);
 
     free(module->path);
+    free(module->compiler_path);
+    free(module->pdb_path);
+    free(module->args_string);
 
     for (uint32_t i = 0; i < module->header_count; i++)
         cpp_header_dispose(&module->headers[i]);

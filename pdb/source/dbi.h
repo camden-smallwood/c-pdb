@@ -3,8 +3,24 @@
 #include <stdint.h>
 #include <stdio.h>
 #include "msf.h"
+#include "tpi.h"
 
 #include "macros_decl.h"
+
+/* ---------- CodeView signatures */
+
+#define DBI_CV_SIGNATURE_ENUM \
+ENUM_DECL(dbi_cv_signature) \
+    ENUM_VALUE(CV_SIGNATURE_C6, 0) \
+    ENUM_VALUE(CV_SIGNATURE_C7, 1) \
+    ENUM_VALUE(CV_SIGNATURE_C11, 2) \
+    ENUM_VALUE(CV_SIGNATURE_C13, 4) \
+    ENUM_VALUE(CV_SIGNATURE_RESERVED, 5) \
+ENUM_END(dbi_cv_signature)
+
+DBI_CV_SIGNATURE_ENUM
+
+void dbi_cv_signature_print(enum dbi_cv_signature signature, FILE *stream);
 
 /* ---------- machine types */
 
@@ -110,21 +126,35 @@ void dbi_section_contributions_read(struct dbi_section_contributions *contributi
 void dbi_section_contributions_dispose(struct dbi_section_contributions *contributions);
 void dbi_section_contributions_print(struct dbi_section_contributions *contributions, uint32_t depth, FILE *stream);
 
+/* ---------- DBI module flags */
+
+#define DBI_MODULE_FLAGS_STRUCT \
+STRUCT_DECL(dbi_module_flags) \
+    FIELD_PRIMITIVE_BITS(uint16_t, written, 1, "%u") \
+    FIELD_PRIMITIVE_BITS(uint16_t, ec_enabled, 1, "%u") \
+    FIELD_PRIMITIVE_BITS(uint16_t, unused, 6, "%u") \
+    FIELD_PRIMITIVE_BITS(uint16_t, tsm_index, 8, "%u") \
+STRUCT_END(dbi_module_flags)
+
+DBI_MODULE_FLAGS_STRUCT
+
+void dbi_module_flags_print(struct dbi_module_flags *flags, uint32_t depth, FILE *stream);
+
 /* ---------- DBI module header */
 
 #define DBI_MODULE_HEADER_STRUCT \
 STRUCT_DECL(dbi_module_header) \
     FIELD_PRIMITIVE(uint32_t, opened, "%u") \
     FIELD_STRUCT(struct dbi_section_contribution, section, dbi_section_contribution_print) \
-    FIELD_PRIMITIVE(uint16_t, flags, "%u") \
-    FIELD_PRIMITIVE(uint16_t, stream, "%u") \
+    FIELD_STRUCT(struct dbi_module_flags, flags, dbi_module_flags_print) \
+    FIELD_PRIMITIVE(uint16_t, stream_index, "%u") \
     FIELD_PRIMITIVE(uint32_t, symbols_size, "%u") \
     FIELD_PRIMITIVE(uint32_t, lines_size, "%u") \
     FIELD_PRIMITIVE(uint32_t, c13_lines_size, "%u") \
-    FIELD_PRIMITIVE(uint16_t, files, "%u") \
+    FIELD_PRIMITIVE(uint16_t, file_count, "%u") \
     FIELD_PRIMITIVE(uint16_t, padding, "%u") \
     FIELD_PRIMITIVE(uint32_t, filename_offsets, "%u") \
-    FIELD_PRIMITIVE(uint32_t, source, "%u") \
+    FIELD_PRIMITIVE(uint32_t, source_file_index, "%u") \
     FIELD_PRIMITIVE(uint32_t, compiler, "%u") \
 STRUCT_END(dbi_module_header)
 

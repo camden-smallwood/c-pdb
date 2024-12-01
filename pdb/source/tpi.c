@@ -104,7 +104,7 @@ void tpi_member_read(
 
     MSF_STREAM_READ(msf, msf_stream, out_offset, item->header, file_stream);
 
-    item->offset = msf_read_tpi_lf_unsigned(msf, msf_stream, out_offset, file_stream);
+    item->offset = msf_read_tpi_unsigned(msf, msf_stream, out_offset, file_stream);
     item->name = msf_read_tpi_lf_string(msf, msf_stream, out_offset, leaf, file_stream);
 }
 
@@ -653,13 +653,13 @@ void tpi_class_read(
         MSF_STREAM_READ(msf, msf_stream, out_offset, item->vtable_shape_type_index, file_stream);
     }
 
-    item->size = msf_read_tpi_lf_unsigned(msf, msf_stream, out_offset, file_stream);
+    item->size = msf_read_tpi_unsigned(msf, msf_stream, out_offset, file_stream);
     item->name = msf_read_tpi_lf_string(msf, msf_stream, out_offset, leaf, file_stream);
 
     if (item->header.properties.hasuniquename)
         item->unique_name = msf_read_tpi_lf_string(msf, msf_stream, out_offset, leaf, file_stream);
 
-    msf_read_padding(msf, msf_stream, end_offset, out_offset, file_stream);
+    msf_stream_read_padding(msf, msf_stream, end_offset, out_offset, file_stream);
 }
 
 void tpi_class_dispose(struct tpi_class *item)
@@ -752,7 +752,7 @@ void tpi_symbol_read(
     {
         struct tpi_base_class *item = &symbol->base_class;
         MSF_STREAM_READ(msf, msf_stream, out_offset, item->header, file_stream);
-        item->offset = (uint32_t)msf_read_tpi_lf_unsigned(msf, msf_stream, out_offset, file_stream);
+        item->offset = (uint32_t)msf_read_tpi_unsigned(msf, msf_stream, out_offset, file_stream);
         break;
     }
 
@@ -787,7 +787,7 @@ void tpi_symbol_read(
 
     case LF_MODIFIER:
         MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->modifier, file_stream);
-        msf_read_padding(msf, msf_stream, end_offset, out_offset, file_stream);
+        msf_stream_read_padding(msf, msf_stream, end_offset, out_offset, file_stream);
         break;
 
     case LF_ENUM:
@@ -801,7 +801,7 @@ void tpi_symbol_read(
             item->unique_name = msf_read_tpi_lf_string(msf, msf_stream, out_offset, symbol->leaf, file_stream);
 
         // TODO: is this correct?
-        msf_read_padding(msf, msf_stream, end_offset, out_offset, file_stream);
+        msf_stream_read_padding(msf, msf_stream, end_offset, out_offset, file_stream);
         break;
     }
 
@@ -829,7 +829,7 @@ void tpi_symbol_read(
 
         while (*out_offset < end_offset)
         {
-            uint64_t dimension = msf_read_tpi_lf_unsigned(msf, msf_stream, out_offset, file_stream);
+            uint64_t dimension = msf_read_tpi_unsigned(msf, msf_stream, out_offset, file_stream);
             assert(dimension <= UINT32_MAX);
             assert(*out_offset < msf_stream->size);
 
@@ -848,7 +848,7 @@ void tpi_symbol_read(
             }
         }
 
-        msf_read_padding(msf, msf_stream, end_offset, out_offset, file_stream);
+        msf_stream_read_padding(msf, msf_stream, end_offset, out_offset, file_stream);
         assert(*out_offset < msf_stream->size);
         break;
     }
@@ -859,13 +859,13 @@ void tpi_symbol_read(
         struct tpi_union *item = &symbol->union_;
         MSF_STREAM_READ(msf, msf_stream, out_offset, item->header, file_stream);
 
-        item->size = msf_read_tpi_lf_unsigned(msf, msf_stream, out_offset, file_stream);
+        item->size = msf_read_tpi_unsigned(msf, msf_stream, out_offset, file_stream);
         item->name = msf_read_tpi_lf_string(msf, msf_stream, out_offset, symbol->leaf, file_stream);
 
         if (item->header.properties.hasuniquename)
             item->unique_name = msf_read_tpi_lf_string(msf, msf_stream, out_offset, symbol->leaf, file_stream);
 
-        msf_read_padding(msf, msf_stream, end_offset, out_offset, file_stream);
+        msf_stream_read_padding(msf, msf_stream, end_offset, out_offset, file_stream);
         break;
     }
 
@@ -889,8 +889,8 @@ void tpi_symbol_read(
         struct tpi_virtual_base_class *item = &symbol->virtual_base_class;
         MSF_STREAM_READ(msf, msf_stream, out_offset, item->header, file_stream);
 
-        item->base_pointer_offset = (uint32_t)msf_read_tpi_lf_unsigned(msf, msf_stream, out_offset, file_stream);
-        item->virtual_base_offset = (uint32_t)msf_read_tpi_lf_unsigned(msf, msf_stream, out_offset, file_stream);
+        item->base_pointer_offset = (uint32_t)msf_read_tpi_unsigned(msf, msf_stream, out_offset, file_stream);
+        item->virtual_base_offset = (uint32_t)msf_read_tpi_unsigned(msf, msf_stream, out_offset, file_stream);
         break;
     }
 
@@ -925,7 +925,7 @@ void tpi_symbol_read(
                 tpi_symbol_read(&item->fields[item->count - 1], msf, msf_stream, tpi_header, out_offset, file_stream);
             }
 
-            msf_read_padding(msf, msf_stream, end_offset, out_offset, file_stream);
+            msf_stream_read_padding(msf, msf_stream, end_offset, out_offset, file_stream);
         }
         break;
     }

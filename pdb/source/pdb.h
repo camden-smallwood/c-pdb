@@ -10,6 +10,8 @@
 
 #include "macros_decl.h"
 
+/* ---------- PDB data */
+
 #define PDB_DATA_STRUCT \
 STRUCT_DECL(pdb_data) \
     FIELD_STRUCT(struct msf, msf, msf_print) \
