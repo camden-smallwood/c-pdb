@@ -147,3 +147,5 @@ void msf_stream_read_padding(struct msf *msf, struct msf_stream *msf_stream, uin
 
 uint64_t msf_read_tpi_unsigned(struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, FILE *file_stream);
 char *msf_read_tpi_lf_string(struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, uint16_t leaf, FILE *file_stream);
+
+char *msf_read_cv_symbol_string(struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, uint16_t symbol_type, FILE *file_stream);

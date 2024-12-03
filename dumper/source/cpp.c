@@ -589,9 +589,9 @@ void cpp_class_add_members(struct cpp_class *item, struct pdb_data *pdb, uint32_
                 {
                     assert(argument_list_symbol->leaf == LF_ARGLIST);
 
-                    for (uint32_t i = 0; i < argument_list_symbol->argument_list.count; i++)
+                    for (uint32_t j = 0; j < argument_list_symbol->argument_list.count; j++)
                     {
-                        char *argument_name = cpp_type_name(pdb, argument_list_symbol->argument_list.type_indices[i], NULL, 0, NULL, 1);
+                        char *argument_name = cpp_type_name(pdb, argument_list_symbol->argument_list.type_indices[j], NULL, 0, NULL, 1);
                         assert(argument_name);
 
                         DYNARRAY_PUSH(member.method.arguments, member.method.argument_count, argument_name);
@@ -620,9 +620,9 @@ void cpp_class_add_members(struct cpp_class *item, struct pdb_data *pdb, uint32_
             assert(method_list_symbol);
             assert(method_list_symbol->leaf == LF_METHODLIST);
 
-            for (uint32_t i = 0; i < method_list_symbol->method_list.count; i++)
+            for (uint32_t j = 0; j < method_list_symbol->method_list.count; j++)
             {
-                struct tpi_method_list_entry *entry = &method_list_symbol->method_list.entries[i];
+                struct tpi_method_list_entry *entry = &method_list_symbol->method_list.entries[j];
                 
                 struct cpp_class_member member;
                 memset(&member, 0, sizeof(member));
@@ -653,9 +653,9 @@ void cpp_class_add_members(struct cpp_class *item, struct pdb_data *pdb, uint32_
                     {
                         assert(argument_list_symbol->leaf == LF_ARGLIST);
 
-                        for (uint32_t i = 0; i < argument_list_symbol->argument_list.count; i++)
+                        for (uint32_t k = 0; k < argument_list_symbol->argument_list.count; k++)
                         {
-                            char *argument_name = cpp_type_name(pdb, argument_list_symbol->argument_list.type_indices[i], NULL, 0, NULL, 1);
+                            char *argument_name = cpp_type_name(pdb, argument_list_symbol->argument_list.type_indices[k], NULL, 0, NULL, 1);
                             assert(argument_name);
 
                             DYNARRAY_PUSH(member.method.arguments, member.method.argument_count, argument_name);

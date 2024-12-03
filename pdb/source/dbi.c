@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "dbi.h"
+#include "cv.h"
 #include "utils.h"
 
 #include "macros_print.h"
@@ -206,14 +207,27 @@ void dbi_modules_read(
     for (uint32_t module_index = 0; module_index < modules->count; module_index++)
     {
         struct dbi_module *module = &modules->modules[module_index];
+
+        if (module->header.stream_index == UINT16_MAX)
+            continue;
         
+        assert(module->header.stream_index < msf->stream_count);
+        struct msf_stream *module_stream = &msf->streams[module->header.stream_index];
+
+        current_offset = 0;
+
+        struct cv_symbols symbols;
+        cv_symbols_read(&symbols, msf, module_stream, module->header.symbols_size, &current_offset, stream);
+
         // TODO:
-        // module->header.symbols_size
         // module->header.lines_size
         // module->header.c13_lines_size
         // module->header.file_count
         // module->header.filename_offsets
         // module->header.source_file_index
+
+        // TODO: remove this VVV
+        cv_symbols_dispose(&symbols);
     }
 }
 

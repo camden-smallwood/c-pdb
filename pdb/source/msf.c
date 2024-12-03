@@ -5,6 +5,7 @@
 #include "ipi.h"
 #include "utils.h"
 #include "tpi.h"
+#include "cv.h"
 
 #include "macros_print.h"
 
@@ -576,10 +577,44 @@ char *msf_read_tpi_lf_string(
     uint16_t leaf,
     FILE *file_stream)
 {
+    assert(msf);
+    assert(msf_stream);
+    assert(out_offset);
+    assert(file_stream);
+    
     uint32_t length;
     char *result;
 
     if (leaf < LF_ST_MAX)
+    {
+        result = msf_stream_read_u8_pascal_string(msf, msf_stream, *out_offset, &length, file_stream);
+        *out_offset += length + 1;
+    }
+    else
+    {
+        result = msf_stream_read_cstring(msf, msf_stream, *out_offset, &length, file_stream);
+        *out_offset += length;
+    }
+
+    return result;
+}
+
+char *msf_read_cv_symbol_string(
+    struct msf *msf,
+    struct msf_stream *msf_stream,
+    uint32_t *out_offset,
+    uint16_t symbol_type,
+    FILE *file_stream)
+{
+    assert(msf);
+    assert(msf_stream);
+    assert(out_offset);
+    assert(file_stream);
+
+    uint32_t length;
+    char *result;
+
+    if (symbol_type < S_ST_MAX)
     {
         result = msf_stream_read_u8_pascal_string(msf, msf_stream, *out_offset, &length, file_stream);
         *out_offset += length + 1;

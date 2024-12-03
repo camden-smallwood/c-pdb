@@ -763,7 +763,8 @@ void cv_separated_code_symbol_print(struct cv_separated_code_symbol *item, uint3
 
 #define CV_SYMBOL_STRUCT \
 STRUCT_DECL(cv_symbol) \
-    FIELD_PRIMITIVE_FMT(enum cv_symbol_type, type, cv_symbol_type_print) \
+    FIELD_PRIMITIVE_FMT(uint16_t, type, cv_symbol_type_print) \
+    FIELD_PRIMITIVE(uint16_t, size, "%u") \
     FIELD_UNION_DECL() \
         FIELD_UNION_FIELD_STRUCT_MULTITAG(struct cv_obj_name_symbol, obj_name_symbol, type, cv_obj_name_symbol_print, S_OBJNAME, S_OBJNAME_ST) \
         FIELD_UNION_FIELD_STRUCT_MULTITAG(struct cv_register_variable_symbol, register_variable_symbol, type, cv_register_variable_symbol_print, S_REGISTER, S_REGISTER_ST) \
@@ -796,3 +797,17 @@ CV_SYMBOL_STRUCT
 
 void cv_symbol_dispose(struct cv_symbol *item);
 void cv_symbol_print(struct cv_symbol *item, uint32_t depth, FILE *stream);
+
+/* ---------- CV symbols */
+
+#define CV_SYMBOLS_STRUCT \
+STRUCT_DECL(cv_symbols) \
+    FIELD_PRIMITIVE(uint32_t, count, "%u") \
+    FIELD_STRUCT_DYNAMIC_ARRAY(struct cv_symbol *, symbols, count, cv_symbol_print) \
+STRUCT_END(cv_symbols)
+
+CV_SYMBOLS_STRUCT
+
+void cv_symbols_dispose(struct cv_symbols *item);
+void cv_symbols_print(struct cv_symbols *item, uint32_t depth, FILE *stream);
+void cv_symbols_read(struct cv_symbols *item, struct msf *msf, struct msf_stream *msf_stream, uint32_t size, uint32_t *out_offset, FILE *file_stream);

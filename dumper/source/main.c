@@ -72,7 +72,7 @@ int main(int argc, const char *argv[])
         // char *root_path = NULL;
         char *compiler_path = NULL;
         char *module_path = NULL;
-        char *pdb_path = NULL;
+        char *module_pdb_path = NULL;
         char *args_string = NULL;
         
         switch (symbol->build_info.count)
@@ -86,7 +86,7 @@ int main(int argc, const char *argv[])
             // root_path = arguments[0];
             compiler_path = arguments[1];
             module_path = arguments[2];
-            pdb_path = arguments[3];
+            module_pdb_path = arguments[3];
             args_string = arguments[4];
             break;
         
@@ -123,7 +123,7 @@ int main(int argc, const char *argv[])
             struct cpp_module new_module;
             memset(&new_module, 0, sizeof(new_module));
 
-            new_module.path = module_path;
+            new_module.path = strdup(module_path);
             assert(new_module.path);
 
             DYNARRAY_PUSH(modules, module_count, new_module);
@@ -137,9 +137,9 @@ int main(int argc, const char *argv[])
             assert(module->compiler_path);
         }
 
-        if (pdb_path)
+        if (module_pdb_path)
         {
-            module->pdb_path = strdup(pdb_path);
+            module->pdb_path = strdup(module_pdb_path);
             assert(module->pdb_path);
         }
 
@@ -148,7 +148,7 @@ int main(int argc, const char *argv[])
             module->args_string = strdup(args_string);
             assert(module->args_string);
         }
-        
+
         for (uint32_t i = 0; i < symbol->build_info.count; i++)
             free(arguments[i]);
         
@@ -164,7 +164,7 @@ int main(int argc, const char *argv[])
         struct ipi_symbol *symbol = ipi_symbol_get(&pdb_data.ipi_header, &pdb_data.ipi_symbols, id_index);
         assert(symbol);
 
-        if (symbol->type != LF_BUILDINFO && symbol->type != LF_UDT_MOD_SRC_LINE)
+        if (symbol->type != LF_UDT_SRC_LINE && symbol->type != LF_UDT_MOD_SRC_LINE)
             continue;
 
         char *module_path = NULL;
