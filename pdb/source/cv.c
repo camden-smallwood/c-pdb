@@ -1,9 +1,15 @@
 #include <stdlib.h>
 #include <string.h>
 #include "cv.h"
-#include "dbi.h"
 #include "utils.h"
 #include "macros_print.h"
+
+void cv_cpu_type_print(enum cv_cpu_type item, FILE *stream)
+{
+    assert(stream);
+
+    CV_CPU_TYPE_ENUM
+}
 
 void cv_symbol_type_print(enum cv_symbol_type item, FILE *stream)
 {
@@ -193,12 +199,34 @@ void cv_compiler_version_print(struct cv_compiler_version *item, uint32_t depth,
     CV_COMPILER_VERSION_STRUCT
 }
 
-void cv_compile_flags_print(struct cv_compile_flags *item, uint32_t depth, FILE *stream)
+void cv_compiler_version_read(
+    struct cv_compiler_version *item,
+    struct msf *msf,
+    struct msf_stream *msf_stream,
+    uint32_t *out_offset,
+    uint32_t symbol_type,
+    FILE *file_stream)
 {
     assert(item);
+    assert(msf);
+    assert(msf_stream);
+    assert(out_offset);
+    assert(symbol_type);
+    assert(file_stream);
+
+    MSF_STREAM_READ(msf, msf_stream, out_offset, item->major, file_stream);
+    MSF_STREAM_READ(msf, msf_stream, out_offset, item->minor, file_stream);
+    MSF_STREAM_READ(msf, msf_stream, out_offset, item->build, file_stream);
+
+    if (symbol_type == S_COMPILE3)
+        MSF_STREAM_READ(msf, msf_stream, out_offset, item->qfe, file_stream);
+}
+
+void cv_compile_flags_print(enum cv_compile_flags item, FILE *stream)
+{
     assert(stream);
 
-    CV_COMPILE_FLAGS_STRUCT
+    CV_COMPILE_FLAGS_ENUM
 }
 
 void cv_compile_flags_symbol_dispose(struct cv_compile_flags_symbol *item)
@@ -661,21 +689,43 @@ void cv_symbols_read(
         case S_CONSTANT:
         case S_CONSTANT_ST:
         case S_MANCONSTANT:
-            // TODO: struct cv_constant_symbol, constant_symbol, type, cv_constant_symbol_print
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.constant_symbol.type_index, file_stream);
+            tpi_enumerate_variant_read(&symbol.constant_symbol.value, msf, msf_stream, out_offset, file_stream);
+            symbol.constant_symbol.name = msf_read_cv_symbol_string(msf, msf_stream, out_offset, symbol.type, file_stream);
             break;
 
         case S_UDT:
         case S_UDT_ST:
         case S_COBOLUDT:
         case S_COBOLUDT_ST:
-            // TODO: struct cv_user_defined_type_symbol, user_defined_type_symbol, type, cv_user_defined_type_symbol_print
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.user_defined_type_symbol.type_index, file_stream);
+            symbol.user_defined_type_symbol.name = msf_read_cv_symbol_string(msf, msf_stream, out_offset, symbol.type, file_stream);
             break;
 
         case S_MANYREG:
         case S_MANYREG_ST:
         case S_MANYREG2:
         case S_MANYREG2_ST:
-            // TODO: struct cv_multi_register_variable_symbol, multi_register_variable_symbol, type, cv_multi_register_variable_symbol_print
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.multi_register_variable_symbol.type_index, file_stream);
+            if (symbol.type == S_MANYREG2 || symbol.type == S_MANYREG2_ST)
+            {
+                uint16_t count = 0;
+                MSF_STREAM_READ(msf, msf_stream, out_offset, count, file_stream);
+                symbol.multi_register_variable_symbol.register_count = count;
+            }
+            else
+            {
+                uint8_t count = 0;
+                MSF_STREAM_READ(msf, msf_stream, out_offset, count, file_stream);
+                symbol.multi_register_variable_symbol.register_count = count;
+            }
+            for (uint32_t i = 0; i < symbol.multi_register_variable_symbol.register_count; i++)
+            {
+                struct cv_multi_register_entry entry;
+                MSF_STREAM_READ(msf, msf_stream, out_offset, entry.register_index, file_stream);
+                entry.register_name = msf_read_cv_symbol_string(msf, msf_stream, out_offset, symbol.type, file_stream);
+                DYNARRAY_PUSH(symbol.multi_register_variable_symbol.registers, symbol.multi_register_variable_symbol.register_count, entry);
+            }
             break;
 
         case S_LDATA32:
@@ -686,12 +736,16 @@ void cv_symbols_read(
         case S_LMANDATA_ST:
         case S_GMANDATA:
         case S_GMANDATA_ST:
-            // TODO: struct cv_data_symbol, data_symbol, type, cv_data_symbol_print
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.data_symbol.type_index, file_stream);
+            cv_pe_section_offset_read(&symbol.data_symbol.code_offset, msf, msf_stream, out_offset, file_stream);
+            symbol.data_symbol.name = msf_read_cv_symbol_string(msf, msf_stream, out_offset, symbol.type, file_stream);
             break;
 
         case S_PUB32:
         case S_PUB32_ST:
-            // TODO: struct cv_public_symbol, public_symbol, type, cv_public_symbol_print
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.public_symbol.flags, file_stream);
+            cv_pe_section_offset_read(&symbol.public_symbol.code_offset, msf, msf_stream, out_offset, file_stream);
+            symbol.public_symbol.name = msf_read_cv_symbol_string(msf, msf_stream, out_offset, symbol.type, file_stream);
             break;
 
         case S_LPROC32:
@@ -702,62 +756,185 @@ void cv_symbols_read(
         case S_GPROC32_ID:
         case S_LPROC32_DPC:
         case S_LPROC32_DPC_ID:
-            // TODO: struct cv_procedure_symbol, procedure_symbol, type, cv_procedure_symbol_print
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.procedure_symbol.parent_symbol_index, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.procedure_symbol.end_symbol_index, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.procedure_symbol.next_symbol_index, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.procedure_symbol.code_block_length, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.procedure_symbol.debug_start_offset, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.procedure_symbol.debug_end_offset, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.procedure_symbol.type_index, file_stream);
+            cv_pe_section_offset_read(&symbol.procedure_symbol.code_offset, msf, msf_stream, out_offset, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.procedure_symbol.flags, file_stream);
+            symbol.procedure_symbol.name = msf_read_cv_symbol_string(msf, msf_stream, out_offset, symbol.type, file_stream);
             break;
 
         case S_LTHREAD32:
         case S_LTHREAD32_ST:
         case S_GTHREAD32:
         case S_GTHREAD32_ST:
-            // TODO: struct cv_thread_storage_symbol, thread_storage_symbol, type, cv_thread_storage_symbol_print
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.thread_storage_symbol.type_index, file_stream);
+            cv_pe_section_offset_read(&symbol.thread_storage_symbol.code_offset, msf, msf_stream, out_offset, file_stream);
+            symbol.thread_storage_symbol.name = msf_read_cv_symbol_string(msf, msf_stream, out_offset, symbol.type, file_stream);
             break;
 
         case S_COMPILE2:
         case S_COMPILE2_ST:
         case S_COMPILE3:
-            // TODO: struct cv_compile_flags_symbol, compile_flags_symbol, type, cv_compile_flags_symbol_print
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.compile_flags_symbol.language, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.compile_flags_symbol.flags, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.compile_flags_symbol.padding, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.compile_flags_symbol.cpu_type, file_stream);
+            cv_compiler_version_read(&symbol.compile_flags_symbol.frontend_version, msf, msf_stream, out_offset, symbol.type, file_stream);
+            cv_compiler_version_read(&symbol.compile_flags_symbol.backend_version, msf, msf_stream, out_offset, symbol.type, file_stream);
+            symbol.compile_flags_symbol.version_string = msf_read_cv_symbol_string(msf, msf_stream, out_offset, symbol.type, file_stream);
             break;
 
         case S_UNAMESPACE:
         case S_UNAMESPACE_ST:
-            // TODO: struct cv_using_namespace_symbol, using_namespace_symbol, type, cv_using_namespace_symbol_print
+            symbol.using_namespace_symbol.name = msf_read_cv_symbol_string(msf, msf_stream, out_offset, symbol.type, file_stream);
             break;
 
         case S_PROCREF:
         case S_PROCREF_ST:
         case S_LPROCREF:
         case S_LPROCREF_ST:
-            // TODO: struct cv_procedure_reference_symbol, procedure_reference_symbol, type, cv_procedure_reference_symbol_print
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.procedure_reference_symbol.sum_name, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.procedure_reference_symbol.symbol_index, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.procedure_reference_symbol.module_index, file_stream);
+            symbol.procedure_reference_symbol.name = msf_read_cv_symbol_string(msf, msf_stream, out_offset, symbol.type, file_stream);
             break;
 
         case S_DATAREF:
         case S_DATAREF_ST:
-            // TODO: struct cv_data_reference_symbol, data_reference_symbol, type, cv_data_reference_symbol_print
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.data_reference_symbol.sum_name, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.data_reference_symbol.symbol_index, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.data_reference_symbol.module_index, file_stream);
+            symbol.data_reference_symbol.name = msf_read_cv_symbol_string(msf, msf_stream, out_offset, symbol.type, file_stream);
             break;
 
         case S_ANNOTATIONREF:
-            // TODO: struct cv_annotation_reference_symbol, annotation_reference_symbol, type, cv_annotation_reference_symbol_print
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.annotation_reference_symbol.sum_name, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.annotation_reference_symbol.symbol_index, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.annotation_reference_symbol.module_index, file_stream);
+            symbol.annotation_reference_symbol.name = msf_read_cv_symbol_string(msf, msf_stream, out_offset, symbol.type, file_stream);
             break;
 
         case S_TRAMPOLINE:
-            // TODO: struct cv_trampoline_symbol, trampoline_symbol, type, cv_trampoline_symbol_print
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.trampoline_symbol.type, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.trampoline_symbol.size, file_stream);
+            cv_pe_section_offset_read(&symbol.trampoline_symbol.thunk_offset, msf, msf_stream, out_offset, file_stream);
+            cv_pe_section_offset_read(&symbol.trampoline_symbol.target_offset, msf, msf_stream, out_offset, file_stream);
             break;
 
         case S_EXPORT:
-            // TODO: struct cv_export_symbol, export_symbol, type, cv_export_symbol_print
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.export_symbol.ordinal, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.export_symbol.flags, file_stream);
+            symbol.export_symbol.name = msf_read_cv_symbol_string(msf, msf_stream, out_offset, symbol.type, file_stream);
             break;
 
         case S_LOCAL:
-            // TODO: struct cv_local_symbol, local_symbol, type, cv_local_symbol_print
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.local_symbol.type_index, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.local_symbol.flags, file_stream);
+            symbol.local_symbol.name = msf_read_cv_symbol_string(msf, msf_stream, out_offset, symbol.type, file_stream);
             break;
 
         case S_BUILDINFO:
-            // TODO: struct cv_build_info_symbol, build_info_symbol, type, cv_build_info_symbol_print
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.build_info_symbol.id_index, file_stream);
             break;
 
         case S_INLINESITE:
         case S_INLINESITE2:
-            // TODO: struct cv_inline_site_symbol, inline_site_symbol, type, cv_inline_site_symbol_print
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.inline_site_symbol.parent_symbol_index, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.inline_site_symbol.end_symbol_index, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.inline_site_symbol.inlinee_id_index, file_stream);
+            if (symbol.type == S_INLINESITE2)
+                MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.inline_site_symbol.invocation_count, file_stream);
+            while (*out_offset < start_offset + symbol.size)
+            {
+                struct cv_annotation annotation;
+                annotation.type = msf_stream_read_compressed_unsigned(msf, msf_stream, out_offset, file_stream);
+
+                if (annotation.type == CV_ANNOTATION_TYPE_EOF)
+                    break;
+
+                switch (annotation.type)
+                {
+                case CV_ANNOTATION_TYPE_CODE_OFFSET:
+                    annotation.code_offset = msf_stream_read_compressed_unsigned(msf, msf_stream, out_offset, file_stream);
+                    break;
+
+                case CV_ANNOTATION_TYPE_CHANGE_CODE_OFFSET_BASE:
+                    annotation.change_code_offset_base = msf_stream_read_compressed_unsigned(msf, msf_stream, out_offset, file_stream);
+                    break;
+
+                case CV_ANNOTATION_TYPE_CHANGE_CODE_OFFSET:
+                    annotation.change_code_offset = msf_stream_read_compressed_unsigned(msf, msf_stream, out_offset, file_stream);
+                    break;
+
+                case CV_ANNOTATION_TYPE_CHANGE_CODE_LENGTH:
+                    annotation.change_code_length = msf_stream_read_compressed_unsigned(msf, msf_stream, out_offset, file_stream);
+                    break;
+
+                case CV_ANNOTATION_TYPE_CHANGE_FILE:
+                    annotation.change_file = msf_stream_read_compressed_unsigned(msf, msf_stream, out_offset, file_stream);
+                    break;
+
+                case CV_ANNOTATION_TYPE_CHANGE_LINE_OFFSET:
+                {
+                    uint32_t value = msf_stream_read_compressed_unsigned(msf, msf_stream, out_offset, file_stream);
+                    annotation.change_line_offset = ((value & 1) != 0) ? -(int32_t)(value >> 1) : (int32_t)(value >> 1);
+                    break;
+                }
+
+                case CV_ANNOTATION_TYPE_CHANGE_LINE_END_DELTA:
+                    annotation.change_line_end_delta = msf_stream_read_compressed_unsigned(msf, msf_stream, out_offset, file_stream);
+                    break;
+
+                case CV_ANNOTATION_TYPE_CHANGE_RANGE_KIND:
+                    annotation.change_range_kind = msf_stream_read_compressed_unsigned(msf, msf_stream, out_offset, file_stream);
+                    break;
+
+                case CV_ANNOTATION_TYPE_CHANGE_COLUMN_START:
+                    annotation.change_column_start = msf_stream_read_compressed_unsigned(msf, msf_stream, out_offset, file_stream);
+                    break;
+
+                case CV_ANNOTATION_TYPE_CHANGE_COLUMN_END_DELTA:
+                {
+                    uint32_t value = msf_stream_read_compressed_unsigned(msf, msf_stream, out_offset, file_stream);
+                    annotation.change_column_end_delta = ((value & 1) != 0) ? -(int32_t)(value >> 1) : (int32_t)(value >> 1);
+                    break;
+                }
+
+                case CV_ANNOTATION_TYPE_CHANGE_CODE_AND_LINE_OFFSETS:
+                {
+                    uint32_t value = msf_stream_read_compressed_unsigned(msf, msf_stream, out_offset, file_stream);
+                    annotation.change_code_and_line_offsets.code_offset = value & 0xf;
+                    value >>= 4;
+                    annotation.change_code_and_line_offsets.line_offset = ((value & 1) != 0) ? -(int32_t)(value >> 1) : (int32_t)(value >> 1);
+                    break;
+                }
+
+                case CV_ANNOTATION_TYPE_CHANGE_CODE_LENGTH_AND_CODE_OFFSET:
+                    annotation.change_code_length_and_code_offset.code_length = msf_stream_read_compressed_unsigned(msf, msf_stream, out_offset, file_stream);
+                    annotation.change_code_length_and_code_offset.code_offset = msf_stream_read_compressed_unsigned(msf, msf_stream, out_offset, file_stream);
+                    break;
+
+                case CV_ANNOTATION_TYPE_CHANGE_COLUMN_END:
+                    annotation.change_column_end = msf_stream_read_compressed_unsigned(msf, msf_stream, out_offset, file_stream);
+                    break;
+                
+                default:
+                    fprintf(stderr, "%s:%i: ERROR: unhandled cv_annotation_type value: ", __FILE__, __LINE__);
+                    cv_annotation_type_print(annotation.type, stderr);
+                    fprintf(stderr, "\n");
+                    exit(EXIT_FAILURE);
+                }
+
+                DYNARRAY_PUSH(
+                    symbol.inline_site_symbol.annotations.annotations,
+                    symbol.inline_site_symbol.annotations.count,
+                    annotation);
+            }
             break;
 
         case S_INLINESITE_END:
@@ -768,25 +945,45 @@ void cv_symbols_read(
 
         case S_LABEL32:
         case S_LABEL32_ST:
-            // TODO: struct cv_label_symbol, label_symbol, type, cv_label_symbol_print
+            cv_pe_section_offset_read(&symbol.label_symbol.section_offset, msf, msf_stream, out_offset, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.label_symbol.flags, file_stream);
+            symbol.label_symbol.name = msf_read_cv_symbol_string(msf, msf_stream, out_offset, symbol.type, file_stream);
             break;
 
         case S_BLOCK32:
         case S_BLOCK32_ST:
-            // TODO: struct cv_block_symbol, block_symbol, type, cv_block_symbol_print
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.block_symbol.parent_symbol_index, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.block_symbol.end_symbol_index, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.block_symbol.length, file_stream);
+            cv_pe_section_offset_read(&symbol.block_symbol.section_offset, msf, msf_stream, out_offset, file_stream);
+            symbol.block_symbol.name = msf_read_cv_symbol_string(msf, msf_stream, out_offset, symbol.type, file_stream);
             break;
 
         case S_REGREL32:
-            // TODO: struct cv_register_relative_symbol, register_relative_symbol, type, cv_register_relative_symbol_print
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.register_relative_symbol.offset, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.register_relative_symbol.type_index, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.register_relative_symbol.register_index, file_stream);
+            symbol.register_relative_symbol.name = msf_read_cv_symbol_string(msf, msf_stream, out_offset, symbol.type, file_stream);
             break;
 
         case S_THUNK32:
         case S_THUNK32_ST:
-            // TODO: struct cv_thunk_symbol, thunk_symbol, type, cv_thunk_symbol_print
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.thunk_symbol.parent_symbol_index, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.thunk_symbol.end_symbol_index, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.thunk_symbol.next_symbol_index, file_stream);
+            cv_pe_section_offset_read(&symbol.thunk_symbol.section_offset, msf, msf_stream, out_offset, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.thunk_symbol.length, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.thunk_symbol.ordinal, file_stream);
+            symbol.thunk_symbol.name = msf_read_cv_symbol_string(msf, msf_stream, out_offset, symbol.type, file_stream);
             break;
 
         case S_SEPCODE:
-            // TODO: struct cv_separated_code_symbol, separated_code_symbol, type, cv_separated_code_symbol_print
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.separated_code_symbol.parent_symbol_index, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.separated_code_symbol.end_symbol_index, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.separated_code_symbol.length, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.separated_code_symbol.flags, file_stream);
+            cv_pe_section_offset_read(&symbol.separated_code_symbol.section_offset, msf, msf_stream, out_offset, file_stream);
+            cv_pe_section_offset_read(&symbol.separated_code_symbol.parent_section_offset, msf, msf_stream, out_offset, file_stream);
             break;
         
         //
@@ -806,6 +1003,7 @@ void cv_symbols_read(
         case S_CALLEES:
         case S_SECTION:
         case S_COFFGROUP:
+        case S_ANNOTATION:
             break;
 
         default:
@@ -814,14 +1012,6 @@ void cv_symbols_read(
             fprintf(stderr, "\n");
             exit(EXIT_FAILURE);
         }
-
-        //
-        // TODO
-        //
-
-        // TODO: remove this VVV
-        // cv_symbol_print(&symbol, 0, stdout);
-        // printf("\n");
 
         DYNARRAY_PUSH(symbols, symbol_count, symbol);
 

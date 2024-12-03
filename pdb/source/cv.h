@@ -3,7 +3,79 @@
 #include <stdint.h>
 #include <stdio.h>
 #include "msf.h"
+#include "dbi.h"
+#include "tpi.h"
 #include "macros_decl.h"
+
+/* ---------- CV CPU types */
+
+#define CV_CPU_TYPE_ENUM \
+ENUM_DECL(cv_cpu_type) \
+    ENUM_VALUE(CV_CPU_TYPE_INTEL8080, 0x0) \
+    ENUM_VALUE(CV_CPU_TYPE_INTEL8086, 0x1) \
+    ENUM_VALUE(CV_CPU_TYPE_INTEL80286, 0x2) \
+    ENUM_VALUE(CV_CPU_TYPE_INTEL80386, 0x3) \
+    ENUM_VALUE(CV_CPU_TYPE_INTEL80486, 0x4) \
+    ENUM_VALUE(CV_CPU_TYPE_PENTIUM, 0x5) \
+    ENUM_VALUE(CV_CPU_TYPE_PENTIUM_PRO, 0x6) \
+    ENUM_VALUE(CV_CPU_TYPE_PENTIUM3, 0x7) \
+    ENUM_VALUE(CV_CPU_TYPE_MIPS, 0x10) \
+    ENUM_VALUE(CV_CPU_TYPE_MIPS16, 0x11) \
+    ENUM_VALUE(CV_CPU_TYPE_MIPS32, 0x12) \
+    ENUM_VALUE(CV_CPU_TYPE_MIPS64, 0x13) \
+    ENUM_VALUE(CV_CPU_TYPE_MIPSI, 0x14) \
+    ENUM_VALUE(CV_CPU_TYPE_MIPSII, 0x15) \
+    ENUM_VALUE(CV_CPU_TYPE_MIPSIII, 0x16) \
+    ENUM_VALUE(CV_CPU_TYPE_MIPSIV, 0x17) \
+    ENUM_VALUE(CV_CPU_TYPE_MIPSV, 0x18) \
+    ENUM_VALUE(CV_CPU_TYPE_M68000, 0x20) \
+    ENUM_VALUE(CV_CPU_TYPE_M68010, 0x21) \
+    ENUM_VALUE(CV_CPU_TYPE_M68020, 0x22) \
+    ENUM_VALUE(CV_CPU_TYPE_M68030, 0x23) \
+    ENUM_VALUE(CV_CPU_TYPE_M68040, 0x24) \
+    ENUM_VALUE(CV_CPU_TYPE_ALPHA, 0x30) \
+    ENUM_VALUE(CV_CPU_TYPE_ALPHA21164, 0x31) \
+    ENUM_VALUE(CV_CPU_TYPE_ALPHA21164_A, 0x32) \
+    ENUM_VALUE(CV_CPU_TYPE_ALPHA21264, 0x33) \
+    ENUM_VALUE(CV_CPU_TYPE_ALPHA21364, 0x34) \
+    ENUM_VALUE(CV_CPU_TYPE_PPC601, 0x40) \
+    ENUM_VALUE(CV_CPU_TYPE_PPC603, 0x41) \
+    ENUM_VALUE(CV_CPU_TYPE_PPC604, 0x42) \
+    ENUM_VALUE(CV_CPU_TYPE_PPC620, 0x43) \
+    ENUM_VALUE(CV_CPU_TYPE_PPCFP, 0x44) \
+    ENUM_VALUE(CV_CPU_TYPE_PPCBE, 0x45) \
+    ENUM_VALUE(CV_CPU_TYPE_SH3, 0x50) \
+    ENUM_VALUE(CV_CPU_TYPE_SH3_E, 0x51) \
+    ENUM_VALUE(CV_CPU_TYPE_SH3_DSP, 0x52) \
+    ENUM_VALUE(CV_CPU_TYPE_SH4, 0x53) \
+    ENUM_VALUE(CV_CPU_TYPE_SH_MEDIA, 0x54) \
+    ENUM_VALUE(CV_CPU_TYPE_ARM3, 0x60) \
+    ENUM_VALUE(CV_CPU_TYPE_ARM4, 0x61) \
+    ENUM_VALUE(CV_CPU_TYPE_ARM4_T, 0x62) \
+    ENUM_VALUE(CV_CPU_TYPE_ARM5, 0x63) \
+    ENUM_VALUE(CV_CPU_TYPE_ARM5_T, 0x64) \
+    ENUM_VALUE(CV_CPU_TYPE_ARM6, 0x65) \
+    ENUM_VALUE(CV_CPU_TYPE_ARM_XMAC, 0x66) \
+    ENUM_VALUE(CV_CPU_TYPE_ARM_WMMX, 0x67) \
+    ENUM_VALUE(CV_CPU_TYPE_ARM7, 0x68) \
+    ENUM_VALUE(CV_CPU_TYPE_ARM64, 0x69) \
+    ENUM_VALUE(CV_CPU_TYPE_OMNI, 0x70) \
+    ENUM_VALUE(CV_CPU_TYPE_IA64, 0x80) \
+    ENUM_VALUE(CV_CPU_TYPE_IA64_2, 0x81) \
+    ENUM_VALUE(CV_CPU_TYPE_CEE, 0x90) \
+    ENUM_VALUE(CV_CPU_TYPE_AM33, 0xa0) \
+    ENUM_VALUE(CV_CPU_TYPE_M32_R, 0xb0) \
+    ENUM_VALUE(CV_CPU_TYPE_TRI_CORE, 0xc0) \
+    ENUM_VALUE(CV_CPU_TYPE_X64, 0xd0) \
+    ENUM_VALUE(CV_CPU_TYPE_EBC, 0xe0) \
+    ENUM_VALUE(CV_CPU_TYPE_THUMB, 0xf0) \
+    ENUM_VALUE(CV_CPU_TYPE_ARMNT, 0xf4) \
+    ENUM_VALUE(CV_CPU_TYPE_D3_D11_SHADER, 0x100) \
+ENUM_END(cv_cpu_type)
+
+CV_CPU_TYPE_ENUM
+
+void cv_cpu_type_print(enum cv_cpu_type type, FILE *stream);
 
 /* ---------- CV symbol types */
 
@@ -254,7 +326,7 @@ void cv_register_variable_symbol_print(struct cv_register_variable_symbol *item,
 #define CV_CONSTANT_SYMBOL_STRUCT \
 STRUCT_DECL(cv_constant_symbol) \
     FIELD_PRIMITIVE(uint32_t, type_index, "%u") \
-    FIELD_PRIMITIVE(uint64_t, value, "%llu") \
+    FIELD_STRUCT(struct tpi_enumerate_variant, value, tpi_enumerate_variant_print) \
     FIELD_PRIMITIVE(char *, name, "\"%s\"") \
 STRUCT_END(cv_constant_symbol)
 
@@ -366,7 +438,7 @@ STRUCT_DECL(cv_procedure_symbol) \
     FIELD_PRIMITIVE(uint32_t, debug_start_offset, "%u") \
     FIELD_PRIMITIVE(uint32_t, debug_end_offset, "%u") \
     FIELD_PRIMITIVE(uint32_t, type_index, "%u") \
-    FIELD_STRUCT(struct cv_pe_section_offset, section_offset, cv_pe_section_offset_print) \
+    FIELD_STRUCT(struct cv_pe_section_offset, code_offset, cv_pe_section_offset_print) \
     FIELD_PRIMITIVE(uint8_t, flags, "%u") \
     FIELD_PRIMITIVE(char *, name, "\"%s\"") \
 STRUCT_END(cv_procedure_symbol)
@@ -381,7 +453,7 @@ void cv_procedure_symbol_print(struct cv_procedure_symbol *item, uint32_t depth,
 #define CV_THREAD_STORAGE_SYMBOL_STRUCT \
 STRUCT_DECL(cv_thread_storage_symbol) \
     FIELD_PRIMITIVE(uint32_t, type_index, "%u") \
-    FIELD_STRUCT(struct cv_pe_section_offset, section_offset, cv_pe_section_offset_print) \
+    FIELD_STRUCT(struct cv_pe_section_offset, code_offset, cv_pe_section_offset_print) \
     FIELD_PRIMITIVE(char *, name, "\"%s\"") \
 STRUCT_END(cv_thread_storage_symbol)
 
@@ -430,32 +502,38 @@ STRUCT_END(cv_compiler_version)
 CV_COMPILER_VERSION_STRUCT
 
 void cv_compiler_version_print(struct cv_compiler_version *item, uint32_t depth, FILE *stream);
+void cv_compiler_version_read(struct cv_compiler_version *item, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, uint32_t symbol_type, FILE *file_stream);
 
 /* ---------- CV compile flags */
 
-#define CV_COMPILE_FLAGS_STRUCT \
-STRUCT_DECL(cv_compile_flags) \
-    FIELD_PRIMITIVE_BITS(uint8_t, pcode, 1, "%u") \
-    FIELD_PRIMITIVE_BITS(uint8_t, floatprec, 2, "%u") \
-    FIELD_PRIMITIVE_BITS(uint8_t, floatpkg, 2, "%u") \
-    FIELD_PRIMITIVE_BITS(uint8_t, ambdata, 3, "%u") \
-    FIELD_PRIMITIVE_BITS(uint8_t, ambcode, 3, "%u") \
-    FIELD_PRIMITIVE_BITS(uint8_t, mode32, 1, "%u") \
-    FIELD_PRIMITIVE_BITS(uint8_t, pad, 4, "%u") \
-STRUCT_END(cv_compile_flags)
+#define CV_COMPILE_FLAGS_ENUM \
+ENUM_DECL(cv_compile_flags) \
+    ENUM_VALUE(CV_COMPILE_FLAG_EDIT_AND_CONTINUE, 1 << 0) \
+    ENUM_VALUE(CV_COMPILE_FLAG_NO_DEBUG_INFO, 1 << 1) \
+    ENUM_VALUE(CV_COMPILE_FLAG_LINK_TIME_CODEGEN, 1 << 2) \
+    ENUM_VALUE(CV_COMPILE_FLAG_NO_DATA_ALIGN, 1 << 3) \
+    ENUM_VALUE(CV_COMPILE_FLAG_MANAGED, 1 << 4) \
+    ENUM_VALUE(CV_COMPILE_FLAG_SECURITY_CHECKS, 1 << 5) \
+    ENUM_VALUE(CV_COMPILE_FLAG_HOT_PATCH, 1 << 6) \
+    ENUM_VALUE(CV_COMPILE_FLAG_CVTCIL, 1 << 7) \
+    ENUM_VALUE(CV_COMPILE_FLAG_MSIL_MODULE, 1 << 8) \
+    ENUM_VALUE(CV_COMPILE_FLAG_SDL, 1 << 9) \
+    ENUM_VALUE(CV_COMPILE_FLAG_PGO, 1 << 10) \
+    ENUM_VALUE(CV_COMPILE_FLAG_EXP_MODULE, 1 << 11) \
+ENUM_END(cv_compile_flags)
 
-CV_COMPILE_FLAGS_STRUCT
-static_assert(sizeof(struct cv_compile_flags) == 2);
+CV_COMPILE_FLAGS_ENUM
 
-void cv_compile_flags_print(struct cv_compile_flags *item, uint32_t depth, FILE *stream);
+void cv_compile_flags_print(enum cv_compile_flags flags, FILE *stream);
 
 /* ---------- CV compile flags symbol */
 
 #define CV_COMPILE_FLAGS_SYMBOL_STRUCT \
 STRUCT_DECL(cv_compile_flags_symbol) \
-    FIELD_PRIMITIVE(uint8_t, language, "%u") \
-    FIELD_STRUCT(struct cv_compile_flags, flags, cv_compile_flags_print) \
-    FIELD_PRIMITIVE(uint16_t, cpu_type, "%u") \
+    FIELD_PRIMITIVE_FMT(uint8_t, language, cv_source_language_print) \
+    FIELD_PRIMITIVE(uint16_t, flags, "%u") \
+    FIELD_PRIMITIVE(uint8_t, padding, "%u") \
+    FIELD_PRIMITIVE_FMT(uint16_t, cpu_type, cv_cpu_type_print) \
     FIELD_STRUCT(struct cv_compiler_version, frontend_version, cv_compiler_version_print) \
     FIELD_STRUCT(struct cv_compiler_version, backend_version, cv_compiler_version_print) \
     FIELD_PRIMITIVE(char *, version_string, "\"%s\"") \
@@ -590,6 +668,7 @@ void cv_build_info_symbol_print(struct cv_build_info_symbol *item, uint32_t dept
 
 #define CV_ANNOTATION_TYPE_ENUM \
 ENUM_DECL(cv_annotation_type) \
+    ENUM_VALUE(CV_ANNOTATION_TYPE_EOF) \
     ENUM_VALUE(CV_ANNOTATION_TYPE_CODE_OFFSET) \
     ENUM_VALUE(CV_ANNOTATION_TYPE_CHANGE_CODE_OFFSET_BASE) \
     ENUM_VALUE(CV_ANNOTATION_TYPE_CHANGE_CODE_OFFSET) \
