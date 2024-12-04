@@ -927,6 +927,127 @@ CV_CALL_SITE_INFO_SYMBOL_STRUCT
 
 void cv_call_site_info_symbol_print(struct cv_call_site_info_symbol *item, uint32_t depth, FILE *stream);
 
+/* ---------- CV env block symbol */
+
+#define CV_ENV_BLOCK_FLAGS_STRUCT \
+STRUCT_DECL(cv_env_block_flags) \
+    FIELD_PRIMITIVE_BITS(uint8_t, rev, 1, "%u") \
+    FIELD_PRIMITIVE_BITS(uint8_t, pad, 7, "%u") \
+STRUCT_END(cv_env_block_flags)
+
+CV_ENV_BLOCK_FLAGS_STRUCT
+static_assert(sizeof(struct cv_env_block_flags) == sizeof(uint8_t));
+
+void cv_env_block_flags_print(struct cv_env_block_flags *item, uint32_t depth, FILE *stream);
+
+#define CV_ENV_BLOCK_SYMBOL_STRUCT \
+STRUCT_DECL(cv_env_block_symbol) \
+    FIELD_STRUCT(struct cv_env_block_flags, flags, cv_env_block_flags_print) \
+    FIELD_PRIMITIVE(uint32_t, string_count, "%u") \
+    FIELD_PRIMITIVE_DYNAMIC_ARRAY(char **, strings, string_count, "\"%s\"") \
+STRUCT_END(cv_env_block_symbol)
+
+CV_ENV_BLOCK_SYMBOL_STRUCT
+
+void cv_env_block_symbol_dispose(struct cv_env_block_symbol *item);
+void cv_env_block_symbol_print(struct cv_env_block_symbol *item, uint32_t depth, FILE *stream);
+
+/* ---------- CV local variable flags */
+
+#define CV_LOCAL_VARIABLE_FLAGS_STRUCT \
+STRUCT_DECL(cv_local_variable_flags) \
+    FIELD_PRIMITIVE_BITS(uint16_t, fIsParam, 1, "%u") /* variable is a parameter */ \
+    FIELD_PRIMITIVE_BITS(uint16_t, fAddrTaken, 1, "%u") /* address is taken */ \
+    FIELD_PRIMITIVE_BITS(uint16_t, fCompGenx, 1, "%u") /* variable is compiler generated */ \
+    FIELD_PRIMITIVE_BITS(uint16_t, fIsAggregate, 1, "%u") /* the symbol is splitted in temporaries, which are treated by compiler as  independent entities */ \
+    FIELD_PRIMITIVE_BITS(uint16_t, fIsAggregated, 1, "%u") /* Counterpart of fIsAggregate - tells that it is a part of a fIsAggregate symbol */ \
+    FIELD_PRIMITIVE_BITS(uint16_t, fIsAliased, 1, "%u") /* variable has multiple simultaneous lifetimes */ \
+    FIELD_PRIMITIVE_BITS(uint16_t, fIsAlias, 1, "%u") /* represents one of the multiple simultaneous lifetimes */ \
+    FIELD_PRIMITIVE_BITS(uint16_t, fIsRetValue, 1, "%u") /* represents a function return value */ \
+    FIELD_PRIMITIVE_BITS(uint16_t, fIsOptimizedOut, 1, "%u") /* variable has no lifetimes */ \
+    FIELD_PRIMITIVE_BITS(uint16_t, fIsEnregGlob, 1, "%u") /* variable is an enregistered global */ \
+    FIELD_PRIMITIVE_BITS(uint16_t, fIsEnregStat, 1, "%u") /* variable is an enregistered static */ \
+    FIELD_PRIMITIVE_BITS(uint16_t, unused, 5, "%u") /* must be zero */ \
+STRUCT_END(cv_local_variable_flags)
+
+CV_LOCAL_VARIABLE_FLAGS_STRUCT
+
+void cv_local_variable_flags_print(struct cv_local_variable_flags *item, uint32_t depth, FILE *stream);
+
+/* ---------- CV file static symbol */
+
+#define CV_FILE_STATIC_SYMBOL_STRUCT \
+STRUCT_DECL(cv_file_static_symbol) \
+    FIELD_PRIMITIVE(uint32_t, type_index, "%u") \
+    FIELD_PRIMITIVE(uint32_t, module_filename_string_index, "%u") \
+    FIELD_STRUCT(struct cv_local_variable_flags, flags, cv_local_variable_flags_print) \
+    FIELD_PRIMITIVE(char *, name, "\"%s\"") \
+STRUCT_END(cv_file_static_symbol)
+
+CV_FILE_STATIC_SYMBOL_STRUCT
+
+void cv_file_static_symbol_print(struct cv_file_static_symbol *item, uint32_t depth, FILE *stream);
+
+/* ---------- CV function list symbol */
+
+#define CV_FUNCTION_LIST_SYMBOL_STRUCT \
+STRUCT_DECL(cv_function_list_symbol) \
+    FIELD_PRIMITIVE(uint32_t, count, "%u") \
+    FIELD_PRIMITIVE_DYNAMIC_ARRAY(uint32_t *, type_indices, count, "%u") \
+STRUCT_END(cv_function_list_symbol)
+
+CV_FUNCTION_LIST_SYMBOL_STRUCT
+
+void cv_function_list_symbol_dispose(struct cv_function_list_symbol *item);
+void cv_function_list_symbol_print(struct cv_function_list_symbol *item, uint32_t depth, FILE *stream);
+
+/* ---------- CV section symbol */
+
+#define CV_SECTION_SYMBOL_STRUCT \
+STRUCT_DECL(cv_section_symbol) \
+    FIELD_PRIMITIVE(uint16_t, isec, "%u") \
+    FIELD_PRIMITIVE(uint8_t, align, "%u") \
+    FIELD_PRIMITIVE(uint8_t, bReserved, "%u") \
+    FIELD_PRIMITIVE(uint32_t, rva, "%u") \
+    FIELD_PRIMITIVE(uint32_t, cb, "%u") \
+    FIELD_PRIMITIVE(uint32_t, characteristics, "%u") \
+    FIELD_PRIMITIVE(char *, name, "\"%s\"") \
+STRUCT_END(cv_section_symbol)
+
+CV_SECTION_SYMBOL_STRUCT
+
+void cv_section_symbol_dispose(struct cv_section_symbol *item);
+void cv_section_symbol_print(struct cv_section_symbol *item, uint32_t depth, FILE *stream);
+
+/* ---------- CV coff group symbol */
+
+#define CV_COFF_GROUP_SYMBOL_STRUCT \
+STRUCT_DECL(cv_coff_group_symbol) \
+    FIELD_PRIMITIVE(uint32_t, cb, "%u") \
+    FIELD_PRIMITIVE(uint32_t, characteristics, "%u") \
+    FIELD_STRUCT(struct cv_pe_section_offset, code_offset, cv_pe_section_offset_print) \
+    FIELD_PRIMITIVE(char *, name, "\"%s\"") \
+STRUCT_END(cv_coff_group_symbol)
+
+CV_COFF_GROUP_SYMBOL_STRUCT
+
+void cv_coff_group_symbol_dispose(struct cv_coff_group_symbol *item);
+void cv_coff_group_symbol_print(struct cv_coff_group_symbol *item, uint32_t depth, FILE *stream);
+
+/* ---------- CV annotation symbol */
+
+#define CV_ANNOTATION_SYMBOL_STRUCT \
+STRUCT_DECL(cv_annotation_symbol) \
+    FIELD_STRUCT(struct cv_pe_section_offset, code_offset, cv_pe_section_offset_print) \
+    FIELD_PRIMITIVE(uint16_t, string_count, "%u") \
+    FIELD_PRIMITIVE_DYNAMIC_ARRAY(char **, strings, string_count, "\"%s\"") \
+STRUCT_END(cv_annotation_symbol)
+
+CV_ANNOTATION_SYMBOL_STRUCT
+
+void cv_annotation_symbol_dispose(struct cv_annotation_symbol *item);
+void cv_annotation_symbol_print(struct cv_annotation_symbol *item, uint32_t depth, FILE *stream);
+
 /* ---------- CV symbol */
 
 #define CV_SYMBOL_STRUCT \
@@ -961,6 +1082,12 @@ STRUCT_DECL(cv_symbol) \
         FIELD_UNION_FIELD_STRUCT_MULTITAG(struct cv_frame_cookie_symbol, frame_cookie_symbol, type, cv_frame_cookie_symbol_print, S_FRAMECOOKIE) \
         FIELD_UNION_FIELD_STRUCT_MULTITAG(struct cv_frame_proc_symbol, frame_proc_symbol, type, cv_frame_proc_symbol_print, S_FRAMEPROC) \
         FIELD_UNION_FIELD_STRUCT_MULTITAG(struct cv_call_site_info_symbol, call_site_info_symbol, type, cv_call_site_info_symbol_print, S_CALLSITEINFO) \
+        FIELD_UNION_FIELD_STRUCT_MULTITAG(struct cv_env_block_symbol, env_block_symbol, type, cv_env_block_symbol_print, S_ENVBLOCK) \
+        FIELD_UNION_FIELD_STRUCT_MULTITAG(struct cv_file_static_symbol, file_static_symbol, type, cv_file_static_symbol_print, S_FILESTATIC) \
+        FIELD_UNION_FIELD_STRUCT_MULTITAG(struct cv_function_list_symbol, function_list_symbol, type, cv_function_list_symbol_print, S_CALLERS, S_CALLEES) \
+        FIELD_UNION_FIELD_STRUCT_MULTITAG(struct cv_section_symbol, section_symbol, type, cv_section_symbol_print, S_SECTION) \
+        FIELD_UNION_FIELD_STRUCT_MULTITAG(struct cv_coff_group_symbol, coff_group_symbol, type, cv_coff_group_symbol_print, S_COFFGROUP) \
+        FIELD_UNION_FIELD_STRUCT_MULTITAG(struct cv_annotation_symbol, annotation_symbol, type, cv_annotation_symbol_print, S_ANNOTATION) \
     FIELD_UNION_END() \
 STRUCT_END(cv_symbol)
 
