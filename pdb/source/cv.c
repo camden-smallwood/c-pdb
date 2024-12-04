@@ -386,6 +386,100 @@ void cv_annotation_print(struct cv_annotation *item, uint32_t depth, FILE *strea
     CV_ANNOTATION_STRUCT
 }
 
+void cv_annotation_read(
+    struct cv_annotation *item,
+    struct msf *msf,
+    struct msf_stream *msf_stream,
+    uint32_t *out_offset,
+    FILE *file_stream)
+{
+    assert(item);
+    assert(msf);
+    assert(msf_stream);
+    assert(out_offset);
+    assert(file_stream);
+
+    memset(item, 0, sizeof(*item));
+
+    item->type = msf_stream_read_compressed_unsigned(msf, msf_stream, out_offset, file_stream);
+
+    if (item->type == CV_ANNOTATION_TYPE_EOF)
+        return;
+
+    switch (item->type)
+    {
+    case CV_ANNOTATION_TYPE_CODE_OFFSET:
+        item->code_offset = msf_stream_read_compressed_unsigned(msf, msf_stream, out_offset, file_stream);
+        break;
+
+    case CV_ANNOTATION_TYPE_CHANGE_CODE_OFFSET_BASE:
+        item->change_code_offset_base = msf_stream_read_compressed_unsigned(msf, msf_stream, out_offset, file_stream);
+        break;
+
+    case CV_ANNOTATION_TYPE_CHANGE_CODE_OFFSET:
+        item->change_code_offset = msf_stream_read_compressed_unsigned(msf, msf_stream, out_offset, file_stream);
+        break;
+
+    case CV_ANNOTATION_TYPE_CHANGE_CODE_LENGTH:
+        item->change_code_length = msf_stream_read_compressed_unsigned(msf, msf_stream, out_offset, file_stream);
+        break;
+
+    case CV_ANNOTATION_TYPE_CHANGE_FILE:
+        item->change_file = msf_stream_read_compressed_unsigned(msf, msf_stream, out_offset, file_stream);
+        break;
+
+    case CV_ANNOTATION_TYPE_CHANGE_LINE_OFFSET:
+    {
+        uint32_t value = msf_stream_read_compressed_unsigned(msf, msf_stream, out_offset, file_stream);
+        item->change_line_offset = ((value & 1) != 0) ? -(int32_t)(value >> 1) : (int32_t)(value >> 1);
+        break;
+    }
+
+    case CV_ANNOTATION_TYPE_CHANGE_LINE_END_DELTA:
+        item->change_line_end_delta = msf_stream_read_compressed_unsigned(msf, msf_stream, out_offset, file_stream);
+        break;
+
+    case CV_ANNOTATION_TYPE_CHANGE_RANGE_KIND:
+        item->change_range_kind = msf_stream_read_compressed_unsigned(msf, msf_stream, out_offset, file_stream);
+        break;
+
+    case CV_ANNOTATION_TYPE_CHANGE_COLUMN_START:
+        item->change_column_start = msf_stream_read_compressed_unsigned(msf, msf_stream, out_offset, file_stream);
+        break;
+
+    case CV_ANNOTATION_TYPE_CHANGE_COLUMN_END_DELTA:
+    {
+        uint32_t value = msf_stream_read_compressed_unsigned(msf, msf_stream, out_offset, file_stream);
+        item->change_column_end_delta = ((value & 1) != 0) ? -(int32_t)(value >> 1) : (int32_t)(value >> 1);
+        break;
+    }
+
+    case CV_ANNOTATION_TYPE_CHANGE_CODE_AND_LINE_OFFSETS:
+    {
+        uint32_t value = msf_stream_read_compressed_unsigned(msf, msf_stream, out_offset, file_stream);
+        item->change_code_and_line_offsets.code_offset = value & 0xf;
+        value >>= 4;
+        item->change_code_and_line_offsets.line_offset = ((value & 1) != 0) ? -(int32_t)(value >> 1) : (int32_t)(value >> 1);
+        break;
+    }
+
+    case CV_ANNOTATION_TYPE_CHANGE_CODE_LENGTH_AND_CODE_OFFSET:
+        item->change_code_length_and_code_offset.code_length = msf_stream_read_compressed_unsigned(msf, msf_stream, out_offset, file_stream);
+        item->change_code_length_and_code_offset.code_offset = msf_stream_read_compressed_unsigned(msf, msf_stream, out_offset, file_stream);
+        break;
+
+    case CV_ANNOTATION_TYPE_CHANGE_COLUMN_END:
+        item->change_column_end = msf_stream_read_compressed_unsigned(msf, msf_stream, out_offset, file_stream);
+        break;
+    
+    default:
+        fprintf(stderr, "%s:%i: ERROR: unhandled cv_annotation_type value: ", __FILE__, __LINE__);
+        cv_annotation_type_print(item->type, stderr);
+        fprintf(stderr, "\n");
+        exit(EXIT_FAILURE);
+    }
+}
+
 void cv_annotations_dispose(struct cv_annotations *item)
 {
     assert(item);
@@ -482,6 +576,46 @@ void cv_separated_code_symbol_print(struct cv_separated_code_symbol *item, uint3
     assert(stream);
 
     CV_SEPARATED_CODE_SYMBOL_STRUCT
+}
+
+void cv_cookie_type_print(enum cv_cookie_type item, FILE *stream)
+{
+    assert(item);
+    assert(stream);
+
+    CV_COOKIE_TYPE_ENUM
+}
+
+void cv_frame_cookie_symbol_print(struct cv_frame_cookie_symbol *item, uint32_t depth, FILE *stream)
+{
+    assert(item);
+    assert(stream);
+
+    CV_FRAME_COOKIE_SYMBOL_STRUCT
+}
+
+void cv_frame_proc_flags_print(struct cv_frame_proc_flags *item, uint32_t depth, FILE *stream)
+{
+    assert(item);
+    assert(stream);
+
+    CV_FRAME_PROC_FLAGS_STRUCT
+}
+
+void cv_frame_proc_symbol_print(struct cv_frame_proc_symbol *item, uint32_t depth, FILE *stream)
+{
+    assert(item);
+    assert(stream);
+
+    CV_FRAME_PROC_SYMBOL_STRUCT
+}
+
+void cv_call_site_info_symbol_print(struct cv_call_site_info_symbol *item, uint32_t depth, FILE *stream)
+{
+    assert(item);
+    assert(stream);
+
+    CV_CALL_SITE_INFO_SYMBOL_STRUCT
 }
 
 void cv_symbol_dispose(struct cv_symbol *item)
@@ -603,6 +737,12 @@ void cv_symbol_dispose(struct cv_symbol *item)
         break;
     case S_SEPCODE:
         break;
+    case S_FRAMECOOKIE:
+        break;
+    case S_FRAMEPROC:
+        break;
+    case S_CALLSITEINFO:
+        break;
     default:
         fprintf(stderr, "%s:%i: ERROR: unhandled cv_symbol_type value: ", __FILE__, __LINE__);
         cv_symbol_type_print(item->type, stderr);
@@ -622,6 +762,14 @@ void cv_symbol_print(struct cv_symbol *item, uint32_t depth, FILE *stream)
 void cv_symbols_dispose(struct cv_symbols *item)
 {
     assert(item);
+
+    //
+    // TODO: fix the `free` bug before uncommenting these
+    //
+    // for (uint32_t i = 0; i < item->count; i++)
+    //     cv_symbol_dispose(&item->symbols[i]);
+    //    
+    // free(item->symbols);
 }
 
 void cv_symbols_print(struct cv_symbols *item, uint32_t depth, FILE *stream)
@@ -852,84 +1000,7 @@ void cv_symbols_read(
             while (*out_offset < start_offset + symbol.size)
             {
                 struct cv_annotation annotation;
-                annotation.type = msf_stream_read_compressed_unsigned(msf, msf_stream, out_offset, file_stream);
-
-                if (annotation.type == CV_ANNOTATION_TYPE_EOF)
-                    break;
-
-                switch (annotation.type)
-                {
-                case CV_ANNOTATION_TYPE_CODE_OFFSET:
-                    annotation.code_offset = msf_stream_read_compressed_unsigned(msf, msf_stream, out_offset, file_stream);
-                    break;
-
-                case CV_ANNOTATION_TYPE_CHANGE_CODE_OFFSET_BASE:
-                    annotation.change_code_offset_base = msf_stream_read_compressed_unsigned(msf, msf_stream, out_offset, file_stream);
-                    break;
-
-                case CV_ANNOTATION_TYPE_CHANGE_CODE_OFFSET:
-                    annotation.change_code_offset = msf_stream_read_compressed_unsigned(msf, msf_stream, out_offset, file_stream);
-                    break;
-
-                case CV_ANNOTATION_TYPE_CHANGE_CODE_LENGTH:
-                    annotation.change_code_length = msf_stream_read_compressed_unsigned(msf, msf_stream, out_offset, file_stream);
-                    break;
-
-                case CV_ANNOTATION_TYPE_CHANGE_FILE:
-                    annotation.change_file = msf_stream_read_compressed_unsigned(msf, msf_stream, out_offset, file_stream);
-                    break;
-
-                case CV_ANNOTATION_TYPE_CHANGE_LINE_OFFSET:
-                {
-                    uint32_t value = msf_stream_read_compressed_unsigned(msf, msf_stream, out_offset, file_stream);
-                    annotation.change_line_offset = ((value & 1) != 0) ? -(int32_t)(value >> 1) : (int32_t)(value >> 1);
-                    break;
-                }
-
-                case CV_ANNOTATION_TYPE_CHANGE_LINE_END_DELTA:
-                    annotation.change_line_end_delta = msf_stream_read_compressed_unsigned(msf, msf_stream, out_offset, file_stream);
-                    break;
-
-                case CV_ANNOTATION_TYPE_CHANGE_RANGE_KIND:
-                    annotation.change_range_kind = msf_stream_read_compressed_unsigned(msf, msf_stream, out_offset, file_stream);
-                    break;
-
-                case CV_ANNOTATION_TYPE_CHANGE_COLUMN_START:
-                    annotation.change_column_start = msf_stream_read_compressed_unsigned(msf, msf_stream, out_offset, file_stream);
-                    break;
-
-                case CV_ANNOTATION_TYPE_CHANGE_COLUMN_END_DELTA:
-                {
-                    uint32_t value = msf_stream_read_compressed_unsigned(msf, msf_stream, out_offset, file_stream);
-                    annotation.change_column_end_delta = ((value & 1) != 0) ? -(int32_t)(value >> 1) : (int32_t)(value >> 1);
-                    break;
-                }
-
-                case CV_ANNOTATION_TYPE_CHANGE_CODE_AND_LINE_OFFSETS:
-                {
-                    uint32_t value = msf_stream_read_compressed_unsigned(msf, msf_stream, out_offset, file_stream);
-                    annotation.change_code_and_line_offsets.code_offset = value & 0xf;
-                    value >>= 4;
-                    annotation.change_code_and_line_offsets.line_offset = ((value & 1) != 0) ? -(int32_t)(value >> 1) : (int32_t)(value >> 1);
-                    break;
-                }
-
-                case CV_ANNOTATION_TYPE_CHANGE_CODE_LENGTH_AND_CODE_OFFSET:
-                    annotation.change_code_length_and_code_offset.code_length = msf_stream_read_compressed_unsigned(msf, msf_stream, out_offset, file_stream);
-                    annotation.change_code_length_and_code_offset.code_offset = msf_stream_read_compressed_unsigned(msf, msf_stream, out_offset, file_stream);
-                    break;
-
-                case CV_ANNOTATION_TYPE_CHANGE_COLUMN_END:
-                    annotation.change_column_end = msf_stream_read_compressed_unsigned(msf, msf_stream, out_offset, file_stream);
-                    break;
-                
-                default:
-                    fprintf(stderr, "%s:%i: ERROR: unhandled cv_annotation_type value: ", __FILE__, __LINE__);
-                    cv_annotation_type_print(annotation.type, stderr);
-                    fprintf(stderr, "\n");
-                    exit(EXIT_FAILURE);
-                }
-
+                cv_annotation_read(&annotation, msf, msf_stream, out_offset, file_stream);
                 DYNARRAY_PUSH(
                     symbol.inline_site_symbol.annotations.annotations,
                     symbol.inline_site_symbol.annotations.count,
@@ -986,6 +1057,31 @@ void cv_symbols_read(
             cv_pe_section_offset_read(&symbol.separated_code_symbol.parent_section_offset, msf, msf_stream, out_offset, file_stream);
             break;
         
+        case S_FRAMECOOKIE:
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.frame_cookie_symbol.frame_relative_offset, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.frame_cookie_symbol.register_index, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.frame_cookie_symbol.cookie_type, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.frame_cookie_symbol.flags, file_stream);
+            break;
+        
+        case S_FRAMEPROC:
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.frame_proc_symbol.frame_size, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.frame_proc_symbol.padding_size, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.frame_proc_symbol.padding_offset, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.frame_proc_symbol.callee_save_registers_size, file_stream);
+            cv_pe_section_offset_read(&symbol.frame_proc_symbol.exception_handler_offset, msf, msf_stream, out_offset, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.frame_proc_symbol.flags, file_stream);
+            break;
+        
+        case S_CALLSITEINFO:
+            cv_pe_section_offset_read(&symbol.call_site_info_symbol.code_offset, msf, msf_stream, out_offset, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.call_site_info_symbol.padding, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.call_site_info_symbol.type_index, file_stream);
+            // TODO: remove this VVV
+            cv_symbol_print(&symbol, 0, stdout);
+            printf("\n");
+            break;
+        
         //
         // TODO: investigate these:
         //
@@ -995,9 +1091,6 @@ void cv_symbols_read(
         case S_DEFRANGE_FRAMEPOINTER_REL:
         case S_DEFRANGE_FRAMEPOINTER_REL_FULL_SCOPE:
         case S_DEFRANGE_SUBFIELD_REGISTER:
-        case S_FRAMECOOKIE:
-        case S_FRAMEPROC:
-        case S_CALLSITEINFO:
         case S_ENVBLOCK:
         case S_FILESTATIC:
         case S_CALLEES:

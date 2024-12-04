@@ -731,6 +731,7 @@ STRUCT_END(cv_annotation)
 CV_ANNOTATION_STRUCT
 
 void cv_annotation_print(struct cv_annotation *item, uint32_t depth, FILE *stream);
+void cv_annotation_read(struct cv_annotation *item, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, FILE *file_stream);
 
 #define CV_ANNOTATIONS_STRUCT \
 STRUCT_DECL(cv_annotations) \
@@ -838,6 +839,94 @@ CV_SEPARATED_CODE_SYMBOL_STRUCT
 
 void cv_separated_code_symbol_print(struct cv_separated_code_symbol *item, uint32_t depth, FILE *stream);
 
+/* ---------- CV cookie type */
+
+#define CV_COOKIE_TYPE_ENUM \
+ENUM_DECL(cv_cookie_type) \
+    ENUM_VALUE(CV_COOKIETYPE_COPY) \
+    ENUM_VALUE(CV_COOKIETYPE_XOR_SP) \
+    ENUM_VALUE(CV_COOKIETYPE_XOR_BP) \
+    ENUM_VALUE(CV_COOKIETYPE_XOR_R13) \
+ENUM_END(cv_cookie_type)
+
+CV_COOKIE_TYPE_ENUM
+
+void cv_cookie_type_print(enum cv_cookie_type item, FILE *stream);
+
+/* ---------- CV frame cookie symbol */
+
+#define CV_FRAME_COOKIE_SYMBOL_STRUCT \
+STRUCT_DECL(cv_frame_cookie_symbol) \
+    FIELD_PRIMITIVE(int32_t, frame_relative_offset, "%i") \
+    FIELD_PRIMITIVE(uint16_t, register_index, "%u") \
+    FIELD_PRIMITIVE_FMT(uint16_t, cookie_type, cv_cookie_type_print) \
+    FIELD_PRIMITIVE(uint8_t, flags, "%u") \
+STRUCT_END(cv_frame_cookie_symbol)
+
+CV_FRAME_COOKIE_SYMBOL_STRUCT
+
+void cv_frame_cookie_symbol_print(struct cv_frame_cookie_symbol *item, uint32_t depth, FILE *stream);
+
+/* ---------- CV frame proc symbol */
+
+#define CV_FRAME_PROC_FLAGS_STRUCT \
+STRUCT_DECL(cv_frame_proc_flags) \
+    FIELD_PRIMITIVE_BITS(uint32_t, fHasAlloca, 1, "%u")              /* function uses _alloca() */ \
+    FIELD_PRIMITIVE_BITS(uint32_t, fHasSetJmp, 1, "%u")              /* function uses setjmp() */ \
+    FIELD_PRIMITIVE_BITS(uint32_t, fHasLongJmp, 1, "%u")             /* function uses longjmp() */ \
+    FIELD_PRIMITIVE_BITS(uint32_t, fHasInlAsm, 1, "%u")              /* function uses inline asm */ \
+    FIELD_PRIMITIVE_BITS(uint32_t, fHasEH, 1, "%u")                  /* function has EH states */ \
+    FIELD_PRIMITIVE_BITS(uint32_t, fInlSpec, 1, "%u")                /* function was speced as inline */ \
+    FIELD_PRIMITIVE_BITS(uint32_t, fHasSEH, 1, "%u")                 /* function has SEH */ \
+    FIELD_PRIMITIVE_BITS(uint32_t, fNaked, 1, "%u")                  /* function is __declspec(naked) */ \
+    FIELD_PRIMITIVE_BITS(uint32_t, fSecurityChecks, 1, "%u")         /* function has buffer security check introduced by /GS. */ \
+    FIELD_PRIMITIVE_BITS(uint32_t, fAsyncEH, 1, "%u")                /* function compiled with /EHa */ \
+    FIELD_PRIMITIVE_BITS(uint32_t, fGSNoStackOrdering, 1, "%u")      /* function has /GS buffer checks, but stack ordering couldn't be done */ \
+    FIELD_PRIMITIVE_BITS(uint32_t, fWasInlined, 1, "%u")             /* function was inlined within another function */ \
+    FIELD_PRIMITIVE_BITS(uint32_t, fGSCheck, 1, "%u")                /* function is __declspec(strict_gs_check) */ \
+    FIELD_PRIMITIVE_BITS(uint32_t, fSafeBuffers, 1, "%u")            /* function is __declspec(safebuffers) */ \
+    FIELD_PRIMITIVE_BITS(uint32_t, encodedLocalBasePointer, 2, "%u") /* record function's local pointer explicitly. */ \
+    FIELD_PRIMITIVE_BITS(uint32_t, encodedParamBasePointer, 2, "%u") /* record function's parameter pointer explicitly. */ \
+    FIELD_PRIMITIVE_BITS(uint32_t, fPogoOn, 1, "%u")                 /* function was compiled with PGO/PGU */ \
+    FIELD_PRIMITIVE_BITS(uint32_t, fValidCounts, 1, "%u")            /* Do we have valid Pogo counts? */ \
+    FIELD_PRIMITIVE_BITS(uint32_t, fOptSpeed, 1, "%u")               /* Did we optimize for speed? */ \
+    FIELD_PRIMITIVE_BITS(uint32_t, fGuardCF, 1, "%u")                /* function contains CFG checks (and no write checks) */ \
+    FIELD_PRIMITIVE_BITS(uint32_t, fGuardCFW, 1, "%u")               /* function contains CFW checks and/or instrumentation */ \
+    FIELD_PRIMITIVE_BITS(uint32_t, pad, 9, "%u")                     /* must be zero */ \
+STRUCT_END(cv_frame_proc_flags)
+
+CV_FRAME_PROC_FLAGS_STRUCT
+static_assert(sizeof(struct cv_frame_proc_flags) == sizeof(uint32_t));
+
+void cv_frame_proc_flags_print(struct cv_frame_proc_flags *item, uint32_t depth, FILE *stream);
+
+#define CV_FRAME_PROC_SYMBOL_STRUCT \
+STRUCT_DECL(cv_frame_proc_symbol) \
+    FIELD_PRIMITIVE(uint32_t, frame_size, "%u") \
+    FIELD_PRIMITIVE(uint32_t, padding_size, "%u") \
+    FIELD_PRIMITIVE(uint32_t, padding_offset, "%u") \
+    FIELD_PRIMITIVE(uint32_t, callee_save_registers_size, "%u") \
+    FIELD_STRUCT(struct cv_pe_section_offset, exception_handler_offset, cv_pe_section_offset_print) \
+    FIELD_STRUCT(struct cv_frame_proc_flags, flags, cv_frame_proc_flags_print) \
+STRUCT_END(cv_frame_proc_symbol)
+
+CV_FRAME_PROC_SYMBOL_STRUCT
+
+void cv_frame_proc_symbol_print(struct cv_frame_proc_symbol *item, uint32_t depth, FILE *stream);
+
+/* ---------- CV call site info symbol */
+
+#define CV_CALL_SITE_INFO_SYMBOL_STRUCT \
+STRUCT_DECL(cv_call_site_info_symbol) \
+    FIELD_STRUCT(struct cv_pe_section_offset, code_offset, cv_pe_section_offset_print) \
+    FIELD_PRIMITIVE(uint16_t, padding, "%u") \
+    FIELD_PRIMITIVE(uint32_t, type_index, "%u") \
+STRUCT_END(cv_call_site_info_symbol)
+
+CV_CALL_SITE_INFO_SYMBOL_STRUCT
+
+void cv_call_site_info_symbol_print(struct cv_call_site_info_symbol *item, uint32_t depth, FILE *stream);
+
 /* ---------- CV symbol */
 
 #define CV_SYMBOL_STRUCT \
@@ -869,6 +958,9 @@ STRUCT_DECL(cv_symbol) \
         FIELD_UNION_FIELD_STRUCT_MULTITAG(struct cv_register_relative_symbol, register_relative_symbol, type, cv_register_relative_symbol_print, S_REGREL32) \
         FIELD_UNION_FIELD_STRUCT_MULTITAG(struct cv_thunk_symbol, thunk_symbol, type, cv_thunk_symbol_print, S_THUNK32, S_THUNK32_ST) \
         FIELD_UNION_FIELD_STRUCT_MULTITAG(struct cv_separated_code_symbol, separated_code_symbol, type, cv_separated_code_symbol_print, S_SEPCODE) \
+        FIELD_UNION_FIELD_STRUCT_MULTITAG(struct cv_frame_cookie_symbol, frame_cookie_symbol, type, cv_frame_cookie_symbol_print, S_FRAMECOOKIE) \
+        FIELD_UNION_FIELD_STRUCT_MULTITAG(struct cv_frame_proc_symbol, frame_proc_symbol, type, cv_frame_proc_symbol_print, S_FRAMEPROC) \
+        FIELD_UNION_FIELD_STRUCT_MULTITAG(struct cv_call_site_info_symbol, call_site_info_symbol, type, cv_call_site_info_symbol_print, S_CALLSITEINFO) \
     FIELD_UNION_END() \
 STRUCT_END(cv_symbol)
 
