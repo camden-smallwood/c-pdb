@@ -13,6 +13,17 @@ void cpp_label_dispose(struct cpp_label *label)
     free(label->name);
 }
 
+void cpp_label_print(struct cpp_label *item, uint32_t depth, FILE *stream)
+{
+    assert(item);
+    assert(stream);
+
+    // TODO: determine if we need this later:
+    (void)depth;
+
+    fprintf(stream, "%s:", item->name);
+}
+
 /* ---------- variables */
 
 void cpp_variable_dispose(struct cpp_variable *variable)
@@ -22,6 +33,25 @@ void cpp_variable_dispose(struct cpp_variable *variable)
     free(variable->signature);
     free(variable->value);
     free(variable->comment);
+}
+
+void cpp_variable_print(struct cpp_variable *item, uint32_t depth, FILE *stream)
+{
+    assert(item);
+    assert(stream);
+
+    // TODO: determine if we need this later:
+    (void)depth;
+
+    fprintf(stream, "%s", item->signature);
+
+    if (item->value)
+        fprintf(stream, " = %s", item->value);
+    
+    fprintf(stream, ";");
+
+    if (item->comment)
+        fprintf(stream, " // %s", item->comment);
 }
 
 /* ---------- code blocks */
@@ -34,6 +64,40 @@ void cpp_block_dispose(struct cpp_block *block)
         cpp_statement_dispose(&block->statements[i]);
 
     free(block->statements);
+}
+
+void cpp_block_print(struct cpp_block *item, uint32_t depth, FILE *stream)
+{
+    assert(item);
+    assert(stream);
+
+    fprintf(stream, "{");
+
+    if (item->address)
+        fprintf(stream, " // %llu", item->address);
+    
+    fprintf(stream, "\n");
+
+    for (uint32_t i = 0; i < item->statement_count; i++)
+    {
+        struct cpp_statement *statement = &item->statements[i];
+
+        switch (statement->type)
+        {
+        case CPP_STATEMENT_TYPE_LABEL:
+            fprintf_depth(stream, depth, "");
+            break;
+
+        default:
+            fprintf_depth(stream, depth + 1, "");
+            break;
+        }
+
+        cpp_statement_print(statement, depth + 1, stream);
+        fprintf(stream, "\n");
+    }
+
+    fprintf_depth(stream, depth, "}");
 }
 
 /* ---------- statements */
@@ -66,6 +130,35 @@ void cpp_statement_dispose(struct cpp_statement *statement)
     }
 }
 
+void cpp_statement_print(struct cpp_statement *item, uint32_t depth, FILE *stream)
+{
+    assert(item);
+    assert(stream);
+
+    switch (item->type)
+    {
+    case CPP_STATEMENT_TYPE_COMMENT:
+        fprintf(stream, "// %s", item->comment);
+        break;
+
+    case CPP_STATEMENT_TYPE_LABEL:
+        cpp_label_print(&item->label, depth, stream);
+        break;
+
+    case CPP_STATEMENT_TYPE_VARIABLE:
+        cpp_variable_print(&item->variable, depth, stream);
+        break;
+
+    case CPP_STATEMENT_TYPE_BLOCK:
+        cpp_block_print(&item->block, depth, stream);
+        break;
+
+    default:
+        fprintf(stderr, "%s:%i: ERROR: unhandled cpp_statement_type value: %i\n", __FILE__, __LINE__, item->type);
+        exit(EXIT_FAILURE);
+    }
+}
+
 /* ---------- procedures */
 
 void cpp_procedure_dispose(struct cpp_procedure *procedure)
@@ -78,6 +171,25 @@ void cpp_procedure_dispose(struct cpp_procedure *procedure)
     {
         cpp_block_dispose(procedure->body);
         free(procedure->body);
+    }
+}
+
+void cpp_procedure_print(struct cpp_procedure *item, uint32_t depth, FILE *stream)
+{
+    assert(item);
+    assert(stream);
+
+    fprintf(stream, "%s", item->signature);
+
+    if (item->body)
+    {
+        fprintf(stream, " // 0x%llu\n", item->address);
+        fprintf_depth(stream, depth, "");
+        cpp_block_print(item->body, depth, stream);
+    }
+    else
+    {
+        fprintf(stream, "; // 0x%llu", item->address);
     }
 }
 
@@ -1041,6 +1153,51 @@ void cpp_module_member_dispose(struct cpp_module_member *member)
     }
 }
 
+void cpp_module_member_print(struct cpp_module_member *item, FILE *stream)
+{
+    assert(item);
+    assert(stream);
+
+    switch (item->type)
+    {
+    case CPP_MODULE_MEMBER_TYPE_CLASS:
+        cpp_class_print(&item->class_, 0, stream);
+        break;
+
+    case CPP_MODULE_MEMBER_TYPE_ENUM:
+        cpp_enum_print(&item->enum_, 0, stream);
+        break;
+
+    case CPP_MODULE_MEMBER_TYPE_TYPEDEF:
+        cpp_typedef_print(&item->typedef_, 0, stream);
+        break;
+
+    case CPP_MODULE_MEMBER_TYPE_USING_NAMESPACE:
+        fprintf(stream, "using namespace %s;", item->using_namespace);
+        break;
+
+    case CPP_MODULE_MEMBER_TYPE_CONSTANT:
+        fprintf(stream, "%s", item->constant);
+        break;
+
+    case CPP_MODULE_MEMBER_TYPE_DATA:
+        fprintf(stream, "%s", item->data);
+        break;
+
+    case CPP_MODULE_MEMBER_TYPE_THREAD_STORAGE:
+        fprintf(stream, "%s", item->thread_storage);
+        break;
+
+    case CPP_MODULE_MEMBER_TYPE_PROCEDURE:
+        cpp_procedure_print(&item->procedure, 0, stream);
+        break;
+
+    default:
+        fprintf(stderr, "%s:%i: ERROR: Unhandled cpp_module_member_type value: %i\n", __FILE__, __LINE__, item->type);
+        exit(EXIT_FAILURE);
+    }
+}
+
 /* ---------- modules */
 
 void cpp_module_dispose(struct cpp_module *module)
@@ -1061,6 +1218,28 @@ void cpp_module_dispose(struct cpp_module *module)
         cpp_module_member_dispose(&module->members[i]);
 
     free(module->members);
+}
+
+void cpp_module_print(struct cpp_module *module, FILE *stream)
+{
+    assert(module);
+    assert(stream);
+
+    for (uint32_t i = 0; i < module->header_count; i++)
+    {
+        struct cpp_header *header = &module->headers[i];
+
+        if (header->flags & CPP_HEADER_IS_LOCAL)
+            fprintf(stream, "#include \"%s\"\n", header->path);
+        else
+            fprintf(stream, "#include <%s>\n", header->path);
+    }
+
+    for (uint32_t i = 0; i < module->member_count; i++)
+    {
+        fprintf(stream, "\n");
+        cpp_module_member_print(&module->members[i], stream);
+    }
 }
 
 void cpp_module_add_type_definition(

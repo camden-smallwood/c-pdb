@@ -12,6 +12,7 @@ struct cpp_label
 };
 
 void cpp_label_dispose(struct cpp_label *label);
+void cpp_label_print(struct cpp_label *item, uint32_t depth, FILE *stream);
 
 /* ---------- variables */
 
@@ -23,6 +24,7 @@ struct cpp_variable
 };
 
 void cpp_variable_dispose(struct cpp_variable *variable);
+void cpp_variable_print(struct cpp_variable *item, uint32_t depth, FILE *stream);
 
 /* ---------- code blocks */
 
@@ -34,6 +36,7 @@ struct cpp_block
 };
 
 void cpp_block_dispose(struct cpp_block *block);
+void cpp_block_print(struct cpp_block *item, uint32_t depth, FILE *stream);
 
 /* ---------- statements */
 
@@ -58,6 +61,7 @@ struct cpp_statement
 };
 
 void cpp_statement_dispose(struct cpp_statement *statement);
+void cpp_statement_print(struct cpp_statement *item, uint32_t depth, FILE *stream);
 
 /* ---------- procedures */
 
@@ -71,6 +75,7 @@ struct cpp_procedure
 };
 
 void cpp_procedure_dispose(struct cpp_procedure *procedure);
+void cpp_procedure_print(struct cpp_procedure *item, uint32_t depth, FILE *stream);
 
 /* ---------- typedefs */
 
@@ -282,6 +287,7 @@ struct cpp_module_member
 };
 
 void cpp_module_member_dispose(struct cpp_module_member *member);
+void cpp_module_member_print(struct cpp_module_member *item, FILE *stream);
 
 /* ---------- modules */
 
@@ -300,6 +306,7 @@ struct cpp_module
 };
 
 void cpp_module_dispose(struct cpp_module *module);
+void cpp_module_print(struct cpp_module *module, FILE *stream);
 void cpp_module_add_type_definition(struct cpp_module *module, struct pdb_data *pdb, uint32_t type_index, uint32_t line);
 
 /* ---------- type information */

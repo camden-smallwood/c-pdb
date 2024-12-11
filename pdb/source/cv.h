@@ -3,9 +3,23 @@
 #include <stdint.h>
 #include <stdio.h>
 #include "msf.h"
-#include "dbi.h"
 #include "tpi.h"
 #include "macros_decl.h"
+
+/* ---------- CV signatures */
+
+#define DBI_CV_SIGNATURE_ENUM \
+ENUM_DECL(cv_signature_type) \
+    ENUM_VALUE(CV_SIGNATURE_C6, 0) \
+    ENUM_VALUE(CV_SIGNATURE_C7, 1) \
+    ENUM_VALUE(CV_SIGNATURE_C11, 2) \
+    ENUM_VALUE(CV_SIGNATURE_C13, 4) \
+    ENUM_VALUE(CV_SIGNATURE_RESERVED, 5) \
+ENUM_END(cv_signature_type)
+
+DBI_CV_SIGNATURE_ENUM
+
+void cv_signature_type_print(enum cv_signature_type signature, FILE *stream);
 
 /* ---------- CV CPU types */
 

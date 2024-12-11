@@ -1,17 +1,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include "dbi.h"
-#include "cv.h"
 #include "utils.h"
-
 #include "macros_print.h"
-
-void dbi_cv_signature_print(enum dbi_cv_signature item, FILE *stream)
-{
-    assert(stream);
-
-    DBI_CV_SIGNATURE_ENUM
-}
 
 void dbi_machine_type_print(enum dbi_machine_type item, FILE *stream)
 {
@@ -136,6 +127,8 @@ void dbi_module_dispose(struct dbi_module *module)
 
     free(module->module_name);
     free(module->object_file_name);
+
+    cv_symbols_dispose(&module->symbols);
 }
 
 void dbi_module_print(struct dbi_module *item, uint32_t depth, FILE *stream)
@@ -216,8 +209,7 @@ void dbi_modules_read(
 
         current_offset = 0;
 
-        struct cv_symbols symbols;
-        cv_symbols_read(&symbols, msf, module_stream, module->header.symbols_size, &current_offset, stream);
+        cv_symbols_read(&module->symbols, msf, module_stream, module->header.symbols_size, &current_offset, stream);
 
         // TODO:
         // module->header.lines_size
@@ -225,9 +217,6 @@ void dbi_modules_read(
         // module->header.file_count
         // module->header.filename_offsets
         // module->header.source_file_index
-
-        // TODO: remove this VVV
-        cv_symbols_dispose(&symbols);
     }
 }
 

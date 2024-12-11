@@ -4,23 +4,8 @@
 #include <stdio.h>
 #include "msf.h"
 #include "tpi.h"
-
+#include "cv.h"
 #include "macros_decl.h"
-
-/* ---------- CodeView signatures */
-
-#define DBI_CV_SIGNATURE_ENUM \
-ENUM_DECL(dbi_cv_signature) \
-    ENUM_VALUE(CV_SIGNATURE_C6, 0) \
-    ENUM_VALUE(CV_SIGNATURE_C7, 1) \
-    ENUM_VALUE(CV_SIGNATURE_C11, 2) \
-    ENUM_VALUE(CV_SIGNATURE_C13, 4) \
-    ENUM_VALUE(CV_SIGNATURE_RESERVED, 5) \
-ENUM_END(dbi_cv_signature)
-
-DBI_CV_SIGNATURE_ENUM
-
-void dbi_cv_signature_print(enum dbi_cv_signature signature, FILE *stream);
 
 /* ---------- machine types */
 
@@ -168,6 +153,7 @@ STRUCT_DECL(dbi_module) \
     FIELD_STRUCT(struct dbi_module_header, header, dbi_module_header_print) \
     FIELD_PRIMITIVE(char *, module_name, "\"%s\"") \
     FIELD_PRIMITIVE(char *, object_file_name, "\"%s\"") \
+    FIELD_STRUCT(struct cv_symbols, symbols, cv_symbols_print) \
 STRUCT_END(dbi_module)
 
 DBI_MODULE_STRUCT

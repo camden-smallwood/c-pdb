@@ -4,6 +4,13 @@
 #include "utils.h"
 #include "macros_print.h"
 
+void cv_signature_type_print(enum cv_signature_type item, FILE *stream)
+{
+    assert(stream);
+
+    DBI_CV_SIGNATURE_ENUM
+}
+
 void cv_cpu_type_print(enum cv_cpu_type item, FILE *stream)
 {
     assert(stream);
@@ -901,6 +908,14 @@ void cv_symbol_dispose(struct cv_symbol *item)
         cv_annotation_symbol_dispose(&item->annotation_symbol);
         break;
     
+    case S_DEFRANGE_REGISTER:
+    case S_DEFRANGE_REGISTER_REL:
+    case S_DEFRANGE_FRAMEPOINTER_REL:
+    case S_DEFRANGE_FRAMEPOINTER_REL_FULL_SCOPE:
+    case S_DEFRANGE_SUBFIELD_REGISTER:
+        // TODO
+        break;
+    
     default:
         fprintf(stderr, "%s:%i: ERROR: unhandled cv_symbol_type value: ", __FILE__, __LINE__);
         cv_symbol_type_print(item->type, stderr);
@@ -920,14 +935,11 @@ void cv_symbol_print(struct cv_symbol *item, uint32_t depth, FILE *stream)
 void cv_symbols_dispose(struct cv_symbols *item)
 {
     assert(item);
-
-    //
-    // TODO: fix the `free` bug before uncommenting these
-    //
-    // for (uint32_t i = 0; i < item->count; i++)
-    //     cv_symbol_dispose(&item->symbols[i]);
-    //    
-    // free(item->symbols);
+    
+    for (uint32_t i = 0; i < item->count; i++)
+        cv_symbol_dispose(&item->symbols[i]);
+       
+    free(item->symbols);
 }
 
 void cv_symbols_print(struct cv_symbols *item, uint32_t depth, FILE *stream)
@@ -953,14 +965,13 @@ void cv_symbols_read(
     assert(out_offset);
     assert(file_stream);
 
+    memset(item, 0, sizeof(*item));
+
     uint32_t signature = 0;
     MSF_STREAM_READ(msf, msf_stream, out_offset, signature, file_stream);
 
     // TODO: support other versions
     assert(signature == CV_SIGNATURE_C13);
-
-    uint32_t symbol_count = 0;
-    struct cv_symbol *symbols = NULL;
 
     while (*out_offset < symbols_size)
     {
@@ -1317,7 +1328,7 @@ void cv_symbols_read(
             exit(EXIT_FAILURE);
         }
         
-        DYNARRAY_PUSH(symbols, symbol_count, symbol);
+        DYNARRAY_PUSH(item->symbols, item->count, symbol);
 
         *out_offset = start_offset + symbol.size;
     }
