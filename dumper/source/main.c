@@ -78,6 +78,10 @@ char *canonizalize_path(const char *out_path, char *root_path, char *path, int i
 
     char *result = NULL;
 
+    //
+    // Add the out path to the result path
+    //
+
     size_t out_path_length = strlen(out_path);
 
     if (out_path_length)
@@ -87,6 +91,10 @@ char *canonizalize_path(const char *out_path, char *root_path, char *path, int i
         if (out_path[out_path_length - 1] != '/' && out_path[out_path_length - 1] != '\\')
             string_append(&result, "/");
     }
+
+    //
+    // Skip the disk root prefix if found, or append the root path
+    //
 
     char *prefix = strchr(path, ':');
 
@@ -132,6 +140,60 @@ char *canonizalize_path(const char *out_path, char *root_path, char *path, int i
     string_append(&result, path);
 
     free(sanitized_path);
+
+    //
+    // Split the path into components and canonicalize it
+    //
+
+    size_t result_length = strlen(result);
+
+    size_t component_count = 0;
+    char **components = NULL;
+
+    char *current = result;
+
+    while (current)
+    {
+        current = strchr(current, '/');
+        if (!current) break;
+        current++;
+
+        char *next = strchr(current, '/');
+        size_t length = next ? (next - current) : (result_length - (current - result));
+
+        char *component = calloc(length + 1, sizeof(char));
+        assert(component);
+        
+        strncpy(component, current, length);
+
+        if (strcmp(component, ".") == 0)
+        {
+            free(component);
+        }
+        else if (strcmp(component, "..") == 0)
+        {
+            free(component);
+            DYNARRAY_POP(components, component_count, sizeof(component));
+        }
+        else
+        {
+            DYNARRAY_PUSH(components, component_count, component);
+        }
+
+        current = next;
+    }
+
+    free(result);
+    result = NULL;
+
+    for (size_t i = 0; i < component_count; i++)
+    {
+        string_append(&result, "/");
+        string_append(&result, components[i]);
+        free(components[i]);
+    }
+    
+    free(components);
 
     if (is_dir)
         string_append(&result, "/");
