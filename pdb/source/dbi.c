@@ -209,6 +209,16 @@ void dbi_modules_read(
 
         current_offset = 0;
 
+        uint32_t signature = 0;
+        MSF_STREAM_READ(msf, module_stream, &current_offset, signature, stream);
+
+        // TODO: support other versions
+        if (signature != CV_SIGNATURE_C13)
+        {
+            fprintf(stderr, "%s:%i: ERROR: Unsupported CV signature: %u; Expected %u\n", __FILE__, __LINE__, signature, CV_SIGNATURE_C13);
+            exit(EXIT_FAILURE);
+        }
+
         cv_symbols_read(&module->symbols, msf, module_stream, module->header.symbols_size, &current_offset, stream);
 
         // TODO:

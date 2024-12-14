@@ -26,6 +26,7 @@ STRUCT_DECL(pdb_data) \
     FIELD_STRUCT(struct dbi_section_contributions, section_contributions, dbi_section_contributions_print) \
     FIELD_STRUCT(struct dbi_extra_streams, extra_streams, dbi_extra_streams_print) \
     FIELD_STRUCT(struct dbi_address_map, address_map, dbi_address_map_print) \
+    FIELD_STRUCT(struct cv_symbols, symbol_records, cv_symbols_print) \
 STRUCT_END()
 
 PDB_DATA_STRUCT

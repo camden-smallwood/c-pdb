@@ -32,8 +32,29 @@ void pdb_data_read(struct pdb_data *pdb_data, FILE *stream)
     dbi_header_read(&pdb_data->dbi_header, &pdb_data->msf, stream);
     dbi_modules_read(&pdb_data->modules, &pdb_data->msf, &pdb_data->dbi_header, stream);
     dbi_section_contributions_read(&pdb_data->section_contributions, &pdb_data->msf, &pdb_data->dbi_header, stream);
+    //
+    // TODO: read these:
+    // pdb_data->dbi_header.section_map_size
+    // pdb_data->dbi_header.file_info_size
+    // pdb_data->dbi_header.type_server_map_size
+    // pdb_data->dbi_header.debug_header_size
+    // pdb_data->dbi_header.ec_substream_size
+    //
     dbi_extra_streams_read(&pdb_data->extra_streams, &pdb_data->msf, &pdb_data->dbi_header, stream);
     dbi_address_map_read(&pdb_data->address_map, &pdb_data->msf, &pdb_data->extra_streams, stream);
+
+    if (pdb_data->msf.streams[pdb_data->dbi_header.symbol_records_stream].size)
+    {
+        uint32_t dbi_symbols_offset = 0;
+        
+        cv_symbols_read(
+            &pdb_data->symbol_records,
+            &pdb_data->msf,
+            &pdb_data->msf.streams[pdb_data->dbi_header.symbol_records_stream],
+            pdb_data->msf.streams[pdb_data->dbi_header.symbol_records_stream].size,
+            &dbi_symbols_offset,
+            stream);
+    }
 }
 
 void pdb_data_dispose(struct pdb_data *pdb_data)

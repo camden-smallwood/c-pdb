@@ -80,12 +80,12 @@ void dbi_header_print(struct dbi_header *header, uint32_t depth, FILE *stream);
 
 #define DBI_SECTION_CONTRIBUTION_STRUCT \
 STRUCT_DECL(dbi_section_contribution) \
-    FIELD_PRIMITIVE(uint16_t, section, "%u") \
+    FIELD_PRIMITIVE(uint16_t, section_index, "%u") \
     FIELD_PRIMITIVE(uint16_t, padding1, "%u") \
     FIELD_PRIMITIVE(uint32_t, offset, "%u") \
     FIELD_PRIMITIVE(uint32_t, size, "%u") \
     FIELD_PRIMITIVE(uint32_t, characteristics, "%u") \
-    FIELD_PRIMITIVE(uint16_t, module, "%u") \
+    FIELD_PRIMITIVE(uint16_t, module_index, "%u") \
     FIELD_PRIMITIVE(uint16_t, padding2, "%u") \
     FIELD_PRIMITIVE(uint32_t, data_crc, "%u") \
     FIELD_PRIMITIVE(uint32_t, reloc_crc, "%u") \

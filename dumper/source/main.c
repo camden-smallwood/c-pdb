@@ -192,13 +192,53 @@ char *canonizalize_path(const char *out_path, char *root_path, char *path, int i
         string_append(&result, components[i]);
         free(components[i]);
     }
-    
+
     free(components);
 
     if (is_dir)
         string_append(&result, "/");
 
     return result;
+}
+
+struct cpp_module *cpp_module_find_or_create(uint32_t *out_module_count, struct cpp_module **out_modules, char *module_path)
+{
+    assert(out_module_count);
+    assert(out_modules);
+    assert(module_path);
+
+    //
+    // Attempt to find an existing module with the same path
+    //
+
+    struct cpp_module *module = NULL;
+
+    for (uint32_t i = 0; i < *out_module_count; i++)
+    {
+        if (strcmp(module_path, (*out_modules)[i].path) == 0)
+        {
+            module = &(*out_modules)[i];
+            break;
+        }
+    }
+
+    //
+    // Create a new module if an existing one was not found
+    //
+
+    if (!module)
+    {
+        struct cpp_module new_module;
+        memset(&new_module, 0, sizeof(new_module));
+
+        new_module.path = module_path;
+
+        DYNARRAY_PUSH((*out_modules), *out_module_count, new_module);
+
+        module = &(*out_modules)[*out_module_count - 1];
+    }
+
+    return module;
 }
 
 int main(int argc, const char *argv[])
@@ -305,36 +345,7 @@ int main(int argc, const char *argv[])
         module_path = canonizalize_path(output_path, root_path, module_path, 0);
         assert(module_path);
 
-        //
-        // Attempt to find an existing module with the same path
-        //
-
-        struct cpp_module *module = NULL;
-
-        for (uint32_t i = 0; i < module_count; i++)
-        {
-            if (strcmp(module_path, modules[i].path) == 0)
-            {
-                module = &modules[i];
-                break;
-            }
-        }
-
-        //
-        // Create a new module if an existing one was not found
-        //
-
-        if (!module)
-        {
-            struct cpp_module new_module;
-            memset(&new_module, 0, sizeof(new_module));
-
-            new_module.path = module_path;
-
-            DYNARRAY_PUSH(modules, module_count, new_module);
-
-            module = &modules[module_count - 1];
-        }
+        struct cpp_module *module = cpp_module_find_or_create(&module_count, &modules, module_path);
 
         if (compiler_path)
         {
@@ -404,57 +415,147 @@ int main(int argc, const char *argv[])
         assert(module_path);
         free(old_module_path);
 
-        //
-        // Attempt to find an existing module with the same path
-        //
+        struct cpp_module *module = cpp_module_find_or_create(&module_count, &modules, module_path);
+        cpp_module_add_type_definition(module, &pdb_data, udt_type_index, line);
+    }
 
-        struct cpp_module *module = NULL;
+    //
+    // Load module-specific global symbols
+    //
 
-        for (uint32_t i = 0; i < module_count; i++)
+    char *prev_module_path = NULL;
+
+    for (uint32_t symbol_record_index = 0; symbol_record_index < pdb_data.symbol_records.count; symbol_record_index++)
+    {
+        struct cv_symbol *symbol = &pdb_data.symbol_records.symbols[symbol_record_index];
+        struct cv_pe_section_offset *code_offset = NULL;
+
+        switch (symbol->type)
         {
-            if (strcmp(module_path, modules[i].path) == 0)
+        case S_UDT:
+        case S_UDT_ST:
+        case S_COBOLUDT:
+        case S_COBOLUDT_ST:
+            // HACK: insert user defined types into the last known module
+            //       we do this because we don't know where else to put them :shrug:
+            if (prev_module_path)
             {
-                module = &modules[i];
+                struct cpp_module *module = cpp_module_find_or_create(&module_count, &modules, prev_module_path);
+                cpp_module_add_type_definition(module, &pdb_data, symbol->user_defined_type_symbol.type_index, 0);
+            }
+            break;
+        
+        case S_PROCREF:
+        case S_PROCREF_ST:
+        case S_LPROCREF:
+        case S_LPROCREF_ST:
+            if (symbol->procedure_reference_symbol.module_index)
+            {
+                assert(symbol->procedure_reference_symbol.module_index < pdb_data.modules.count);
+                struct dbi_module *referenced_module = &pdb_data.modules.modules[symbol->procedure_reference_symbol.module_index];
+
+                if (prev_module_path)
+                    free(prev_module_path);
+                
+
+                char *module_path = NULL;
+
+                //
+                // TODO: get module_path from referenced_module->module_name
+                //
+
+                prev_module_path = canonizalize_path(output_path, NULL, module_path, 0);
+                assert(prev_module_path);
+            }
+            break;
+        
+        case S_PUB32:
+        case S_PUB32_ST:
+            code_offset = &symbol->public_symbol.code_offset;
+            break;
+        
+        case S_LDATA32:
+        case S_LDATA32_ST:
+        case S_GDATA32:
+        case S_GDATA32_ST:
+        case S_LMANDATA:
+        case S_LMANDATA_ST:
+        case S_GMANDATA:
+        case S_GMANDATA_ST:
+            code_offset = &symbol->data_symbol.code_offset;
+            break;
+        
+        case S_LTHREAD32:
+        case S_LTHREAD32_ST:
+        case S_GTHREAD32:
+        case S_GTHREAD32_ST:
+            code_offset = &symbol->thread_storage_symbol.code_offset;
+            break;
+        
+        case S_LPROC32:
+        case S_LPROC32_ST:
+        case S_GPROC32:
+        case S_GPROC32_ST:
+        case S_LPROC32_ID:
+        case S_GPROC32_ID:
+        case S_LPROC32_DPC:
+        case S_LPROC32_DPC_ID:
+            code_offset = &symbol->procedure_symbol.code_offset;
+            break;
+
+        default:
+            break;
+        }
+
+        if (!code_offset)
+            continue;
+        
+        for (uint32_t contribution_index = 0; contribution_index < pdb_data.section_contributions.count; contribution_index++)
+        {
+            struct dbi_section_contribution *contribution = &pdb_data.section_contributions.entries[contribution_index];
+
+            if ((code_offset->section_index == contribution->section_index) &&
+                (code_offset->memory_offset >= contribution->offset) &&
+                (code_offset->memory_offset < contribution->offset + contribution->size))
+            {
+                assert(contribution->module_index < pdb_data.modules.count);
+                struct dbi_module *contributing_module = &pdb_data.modules.modules[contribution->module_index];
+
+                if (prev_module_path)
+                    free(prev_module_path);
+                
+
+                char *module_path = NULL;
+
+                //
+                // TODO: get module_path from contributing_module->module_name
+                //
+
+                prev_module_path = canonizalize_path(output_path, NULL, module_path, 0);
+                assert(prev_module_path);
                 break;
             }
         }
-
-        //
-        // Create a new module if an existing one was not found
-        //
-
-        if (!module)
-        {
-            struct cpp_module new_module;
-            memset(&new_module, 0, sizeof(new_module));
-
-            new_module.path = module_path;
-
-            DYNARRAY_PUSH(modules, module_count, new_module);
-
-            module = &modules[module_count - 1];
-        }
-
-        //
-        // Add the user-defined type to the module
-        //
-
-        cpp_module_add_type_definition(module, &pdb_data, udt_type_index, line);
     }
 
     //
     // Process DBI modules
     //
 
-    // for (uint32_t dbi_module_index = 0; dbi_module_index < pdb_data.modules.count; dbi_module_index++)
-    // {
-    //     struct dbi_module *dbi_module = &pdb_data.modules.modules[dbi_module_index];
-    //     dbi_module_print(dbi_module, 0, stdout);
-    //     printf("\n");
-    //     //
-    //     // TODO
-    //     //
-    // }
+    for (uint32_t dbi_module_index = 0; dbi_module_index < pdb_data.modules.count; dbi_module_index++)
+    {
+        struct dbi_module *dbi_module = &pdb_data.modules.modules[dbi_module_index];
+        
+        for (uint32_t symbol_index = 0; symbol_index < dbi_module->symbols.count; symbol_index++)
+        {
+            struct cv_symbol *symbol = &dbi_module->symbols.symbols[symbol_index];
+
+            switch (symbol->type)
+            {
+                // TODO
+            }
+        }
+    }
 
     //
     // Export c++ modules

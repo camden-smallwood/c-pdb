@@ -967,12 +967,6 @@ void cv_symbols_read(
 
     memset(item, 0, sizeof(*item));
 
-    uint32_t signature = 0;
-    MSF_STREAM_READ(msf, msf_stream, out_offset, signature, file_stream);
-
-    // TODO: support other versions
-    assert(signature == CV_SIGNATURE_C13);
-
     while (*out_offset < symbols_size)
     {
         struct cv_symbol symbol;
