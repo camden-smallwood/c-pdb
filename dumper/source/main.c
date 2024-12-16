@@ -6,6 +6,79 @@
 #include "cpp.h"
 #include "utils.h"
 
+void main_initialize(int argc, const char **argv);
+void main_dispose(void);
+void process_global_types(void);
+void process_build_info_ids(void);
+void process_user_defined_type_ids(void);
+void process_symbol_records(void);
+void process_modules(void);
+void export_cpp_modules(void);
+
+int main(int argc, const char *argv[])
+{
+    main_initialize(argc, argv);
+
+    process_global_types();
+    process_build_info_ids();
+    process_user_defined_type_ids();
+    process_symbol_records();
+    process_modules();
+    
+    export_cpp_modules();
+
+    main_dispose();
+}
+
+struct
+{
+    const char *pdb_path;
+    const char *output_path;
+
+    struct pdb_data pdb_data;
+
+    uint32_t module_count;
+    struct cpp_module *modules;
+} main_globals;
+
+void main_initialize(int argc, const char **argv)
+{
+    memset(&main_globals, 0, sizeof(main_globals));
+
+    if (argc != 3)
+    {
+        fprintf(stderr, "Usage: dumper <pdb-file> <output-dir>\n");
+        exit(EXIT_FAILURE);
+    }
+
+    main_globals.pdb_path = argv[1];
+    main_globals.output_path = argv[2];
+
+    FILE *pdb_file = fopen(main_globals.pdb_path, "r");
+
+    if (!pdb_file)
+    {
+        fprintf(stderr, "ERROR: Failed to open \"%s\"\n", main_globals.pdb_path);
+        exit(EXIT_FAILURE);
+    }
+
+    pdb_data_read(&main_globals.pdb_data, pdb_file);
+
+    fclose(pdb_file);
+}
+
+void main_dispose(void)
+{
+    for (uint32_t i = 0; i < main_globals.module_count; i++)
+        cpp_module_dispose(&main_globals.modules[i]);
+
+    free(main_globals.modules);
+
+    pdb_data_dispose(&main_globals.pdb_data);
+
+    exit(EXIT_SUCCESS);
+}
+
 //---------------------------------------------------------------------------------
 // TODO: this is posix only... do it better!
 #include <sys/stat.h>
@@ -26,7 +99,7 @@ void create_file_path_dirs(char *file_path)
         mkdir(dir_path, S_IRWXU | S_IRWXG | S_IROTH);
         next_sep = strchr(next_sep + 1, '/');
     }
-    
+
     free(dir_path);
 }
 //---------------------------------------------------------------------------------
@@ -71,9 +144,8 @@ char *sanitize_path(char *path)
     return result;
 }
 
-char *canonizalize_path(const char *out_path, char *root_path, char *path, int is_dir)
+char *canonizalize_path(char *root_path, char *path, int is_dir)
 {
-    assert(out_path);
     assert(path);
 
     char *result = NULL;
@@ -82,13 +154,13 @@ char *canonizalize_path(const char *out_path, char *root_path, char *path, int i
     // Add the out path to the result path
     //
 
-    size_t out_path_length = strlen(out_path);
+    size_t out_path_length = strlen(main_globals.output_path);
 
     if (out_path_length)
     {
-        string_append(&result, (char *)out_path);
+        string_append(&result, (char *)main_globals.output_path);
 
-        if (out_path[out_path_length - 1] != '/' && out_path[out_path_length - 1] != '\\')
+        if (main_globals.output_path[out_path_length - 1] != '/' && main_globals.output_path[out_path_length - 1] != '\\')
             string_append(&result, "/");
     }
 
@@ -127,7 +199,7 @@ char *canonizalize_path(const char *out_path, char *root_path, char *path, int i
     }
 
     char *sanitized_path = sanitize_path(path);
-    
+
     path = sanitized_path;
     size_t path_length = strlen(path);
 
@@ -155,7 +227,8 @@ char *canonizalize_path(const char *out_path, char *root_path, char *path, int i
     while (current)
     {
         current = strchr(current, '/');
-        if (!current) break;
+        if (!current)
+            break;
         current++;
 
         char *next = strchr(current, '/');
@@ -163,7 +236,7 @@ char *canonizalize_path(const char *out_path, char *root_path, char *path, int i
 
         char *component = calloc(length + 1, sizeof(char));
         assert(component);
-        
+
         strncpy(component, current, length);
 
         if (strcmp(component, ".") == 0)
@@ -201,10 +274,8 @@ char *canonizalize_path(const char *out_path, char *root_path, char *path, int i
     return result;
 }
 
-struct cpp_module *cpp_module_find_or_create(uint32_t *out_module_count, struct cpp_module **out_modules, char *module_path)
+struct cpp_module *cpp_module_find_or_create(char *module_path)
 {
-    assert(out_module_count);
-    assert(out_modules);
     assert(module_path);
 
     //
@@ -213,11 +284,11 @@ struct cpp_module *cpp_module_find_or_create(uint32_t *out_module_count, struct 
 
     struct cpp_module *module = NULL;
 
-    for (uint32_t i = 0; i < *out_module_count; i++)
+    for (uint32_t i = 0; i < main_globals.module_count; i++)
     {
-        if (strcmp(module_path, (*out_modules)[i].path) == 0)
+        if (strcmp(module_path, main_globals.modules[i].path) == 0)
         {
-            module = &(*out_modules)[i];
+            module = &main_globals.modules[i];
             break;
         }
     }
@@ -233,74 +304,36 @@ struct cpp_module *cpp_module_find_or_create(uint32_t *out_module_count, struct 
 
         new_module.path = module_path;
 
-        DYNARRAY_PUSH((*out_modules), *out_module_count, new_module);
+        DYNARRAY_PUSH(main_globals.modules, main_globals.module_count, new_module);
 
-        module = &(*out_modules)[*out_module_count - 1];
+        module = &main_globals.modules[main_globals.module_count - 1];
     }
 
     return module;
 }
 
-int main(int argc, const char *argv[])
+void process_global_types(void)
 {
-    if (argc != 3)
+    if (main_globals.pdb_data.ipi_symbols.count != 0 || main_globals.pdb_data.tpi_symbols.count == 0)
+        return;
+    
+    struct cpp_module module;
+    memset(&module, 0, sizeof(module));
+
+    module.path = strdup("types.h");
+    assert(module.path);
+
+    for (uint32_t i = main_globals.pdb_data.tpi_header.minimum_index; i < main_globals.pdb_data.tpi_header.maximum_index; i++)
+        cpp_module_add_type_definition(&module, &main_globals.pdb_data, i, 0);
+
+    DYNARRAY_PUSH(main_globals.modules, main_globals.module_count, module);
+}
+
+void process_build_info_ids(void)
+{
+    for (uint32_t id_index = main_globals.pdb_data.ipi_header.minimum_index; id_index < main_globals.pdb_data.ipi_header.maximum_index; id_index++)
     {
-        fprintf(stderr, "Usage: dumper <pdb-file> <output-dir>\n");
-        exit(EXIT_FAILURE);
-    }
-
-    const char *pdb_path = argv[1];
-    const char *output_path = argv[2];
-
-    //
-    // Load the PDB file
-    //
-
-    FILE *pdb_file = fopen(pdb_path, "r");
-
-    if (!pdb_file)
-    {
-        fprintf(stderr, "ERROR: Failed to open \"%s\"\n", pdb_path);
-        exit(EXIT_FAILURE);
-    }
-
-    struct pdb_data pdb_data;
-    pdb_data_read(&pdb_data, pdb_file);
-
-    fclose(pdb_file);
-
-    //
-    // Set up C++ containers
-    //
-
-    uint32_t module_count = 0;
-    struct cpp_module *modules = NULL;
-
-    //
-    // Dump all types to a single header module if we don't have any ID symbols
-    //
-
-    if (!pdb_data.ipi_symbols.count && pdb_data.tpi_symbols.count)
-    {
-        struct cpp_module module;
-        memset(&module, 0, sizeof(module));
-
-        module.path = strdup("types.h");
-        assert(module.path);
-
-        for (uint32_t i = pdb_data.tpi_header.minimum_index; i < pdb_data.tpi_header.maximum_index; i++)
-            cpp_module_add_type_definition(&module, &pdb_data, i, 0);
-
-        DYNARRAY_PUSH(modules, module_count, module);
-    }
-
-    //
-    // Load available build info
-    //
-
-    for (uint32_t id_index = pdb_data.ipi_header.minimum_index; id_index < pdb_data.ipi_header.maximum_index; id_index++)
-    {
-        struct ipi_symbol *symbol = ipi_symbol_get(&pdb_data.ipi_header, &pdb_data.ipi_symbols, id_index);
+        struct ipi_symbol *symbol = ipi_symbol_get(&main_globals.pdb_data.ipi_header, &main_globals.pdb_data.ipi_symbols, id_index);
         assert(symbol);
 
         if (symbol->type != LF_BUILDINFO)
@@ -309,7 +342,7 @@ int main(int argc, const char *argv[])
         char **arguments = malloc(symbol->build_info.count * sizeof(char *));
 
         for (uint32_t i = 0; i < symbol->build_info.count; i++)
-            arguments[i] = ipi_string_id_to_string(&pdb_data.ipi_header, &pdb_data.ipi_symbols, symbol->build_info.argument_indices[i]);
+            arguments[i] = ipi_string_id_to_string(&main_globals.pdb_data.ipi_header, &main_globals.pdb_data.ipi_symbols, symbol->build_info.argument_indices[i]);
 
         char *root_path = NULL;
         char *compiler_path = NULL;
@@ -342,10 +375,10 @@ int main(int argc, const char *argv[])
         assert(root_path);
         assert(module_path);
 
-        module_path = canonizalize_path(output_path, root_path, module_path, 0);
+        module_path = canonizalize_path(root_path, module_path, 0);
         assert(module_path);
 
-        struct cpp_module *module = cpp_module_find_or_create(&module_count, &modules, module_path);
+        struct cpp_module *module = cpp_module_find_or_create(module_path);
 
         if (compiler_path)
         {
@@ -370,14 +403,13 @@ int main(int argc, const char *argv[])
 
         free(arguments);
     }
+}
 
-    //
-    // Load available user-defined types
-    //
-
-    for (uint32_t id_index = pdb_data.ipi_header.minimum_index; id_index < pdb_data.ipi_header.maximum_index; id_index++)
+void process_user_defined_type_ids(void)
+{
+    for (uint32_t id_index = main_globals.pdb_data.ipi_header.minimum_index; id_index < main_globals.pdb_data.ipi_header.maximum_index; id_index++)
     {
-        struct ipi_symbol *symbol = ipi_symbol_get(&pdb_data.ipi_header, &pdb_data.ipi_symbols, id_index);
+        struct ipi_symbol *symbol = ipi_symbol_get(&main_globals.pdb_data.ipi_header, &main_globals.pdb_data.ipi_symbols, id_index);
         assert(symbol);
 
         if (symbol->type != LF_UDT_SRC_LINE && symbol->type != LF_UDT_MOD_SRC_LINE)
@@ -389,14 +421,14 @@ int main(int argc, const char *argv[])
 
         if (symbol->type == LF_UDT_SRC_LINE)
         {
-            module_path = ipi_string_id_to_string(&pdb_data.ipi_header, &pdb_data.ipi_symbols, symbol->udt_src_line.file_id_index);
+            module_path = ipi_string_id_to_string(&main_globals.pdb_data.ipi_header, &main_globals.pdb_data.ipi_symbols, symbol->udt_src_line.file_id_index);
             udt_type_index = symbol->udt_src_line.udt_type_index;
             line = symbol->udt_src_line.line;
         }
         else if (symbol->type == LF_UDT_MOD_SRC_LINE)
         {
-            assert(symbol->udt_mod_src_line.file_string_offset < pdb_data.string_table.header.names_size);
-            module_path = strdup(pdb_data.string_table.names_data + symbol->udt_mod_src_line.file_string_offset);
+            assert(symbol->udt_mod_src_line.file_string_offset < main_globals.pdb_data.string_table.header.names_size);
+            module_path = strdup(main_globals.pdb_data.string_table.names_data + symbol->udt_mod_src_line.file_string_offset);
             udt_type_index = symbol->udt_mod_src_line.udt_type_index;
             line = symbol->udt_mod_src_line.line;
         }
@@ -411,23 +443,22 @@ int main(int argc, const char *argv[])
         assert(module_path);
 
         char *old_module_path = module_path;
-        module_path = canonizalize_path(output_path, NULL, module_path, 0);
+        module_path = canonizalize_path(NULL, module_path, 0);
         assert(module_path);
         free(old_module_path);
 
-        struct cpp_module *module = cpp_module_find_or_create(&module_count, &modules, module_path);
-        cpp_module_add_type_definition(module, &pdb_data, udt_type_index, line);
+        struct cpp_module *module = cpp_module_find_or_create(module_path);
+        cpp_module_add_type_definition(module, &main_globals.pdb_data, udt_type_index, line);
     }
+}
 
-    //
-    // Load module-specific global symbols
-    //
-
+void process_symbol_records(void)
+{
     char *prev_module_path = NULL;
 
-    for (uint32_t symbol_record_index = 0; symbol_record_index < pdb_data.symbol_records.count; symbol_record_index++)
+    for (uint32_t symbol_record_index = 0; symbol_record_index < main_globals.pdb_data.symbol_records.count; symbol_record_index++)
     {
-        struct cv_symbol *symbol = &pdb_data.symbol_records.symbols[symbol_record_index];
+        struct cv_symbol *symbol = &main_globals.pdb_data.symbol_records.symbols[symbol_record_index];
         struct cv_pe_section_offset *code_offset = NULL;
 
         switch (symbol->type)
@@ -440,23 +471,25 @@ int main(int argc, const char *argv[])
             //       we do this because we don't know where else to put them :shrug:
             if (prev_module_path)
             {
-                struct cpp_module *module = cpp_module_find_or_create(&module_count, &modules, prev_module_path);
-                cpp_module_add_type_definition(module, &pdb_data, symbol->user_defined_type_symbol.type_index, 0);
+                char *module_path = strdup(prev_module_path);
+                assert(module_path);
+
+                struct cpp_module *module = cpp_module_find_or_create(module_path);
+                cpp_module_add_type_definition(module, &main_globals.pdb_data, symbol->user_defined_type_symbol.type_index, 0);
             }
             break;
-        
+
         case S_PROCREF:
         case S_PROCREF_ST:
         case S_LPROCREF:
         case S_LPROCREF_ST:
             if (symbol->procedure_reference_symbol.module_index)
             {
-                assert(symbol->procedure_reference_symbol.module_index < pdb_data.modules.count);
-                struct dbi_module *referenced_module = &pdb_data.modules.modules[symbol->procedure_reference_symbol.module_index];
+                assert(symbol->procedure_reference_symbol.module_index < main_globals.pdb_data.modules.count);
+                struct dbi_module *referenced_module = &main_globals.pdb_data.modules.modules[symbol->procedure_reference_symbol.module_index];
 
                 if (prev_module_path)
                     free(prev_module_path);
-                
 
                 char *module_path = NULL;
 
@@ -464,16 +497,16 @@ int main(int argc, const char *argv[])
                 // TODO: get module_path from referenced_module->module_name
                 //
 
-                prev_module_path = canonizalize_path(output_path, NULL, module_path, 0);
-                assert(prev_module_path);
+                // prev_module_path = canonizalize_path(NULL, module_path, 0);
+                // assert(prev_module_path);
             }
             break;
-        
+
         case S_PUB32:
         case S_PUB32_ST:
             code_offset = &symbol->public_symbol.code_offset;
             break;
-        
+
         case S_LDATA32:
         case S_LDATA32_ST:
         case S_GDATA32:
@@ -484,14 +517,14 @@ int main(int argc, const char *argv[])
         case S_GMANDATA_ST:
             code_offset = &symbol->data_symbol.code_offset;
             break;
-        
+
         case S_LTHREAD32:
         case S_LTHREAD32_ST:
         case S_GTHREAD32:
         case S_GTHREAD32_ST:
             code_offset = &symbol->thread_storage_symbol.code_offset;
             break;
-        
+
         case S_LPROC32:
         case S_LPROC32_ST:
         case S_GPROC32:
@@ -509,21 +542,20 @@ int main(int argc, const char *argv[])
 
         if (!code_offset)
             continue;
-        
-        for (uint32_t contribution_index = 0; contribution_index < pdb_data.section_contributions.count; contribution_index++)
+
+        for (uint32_t contribution_index = 0; contribution_index < main_globals.pdb_data.section_contributions.count; contribution_index++)
         {
-            struct dbi_section_contribution *contribution = &pdb_data.section_contributions.entries[contribution_index];
+            struct dbi_section_contribution *contribution = &main_globals.pdb_data.section_contributions.entries[contribution_index];
 
             if ((code_offset->section_index == contribution->section_index) &&
                 (code_offset->memory_offset >= contribution->offset) &&
                 (code_offset->memory_offset < contribution->offset + contribution->size))
             {
-                assert(contribution->module_index < pdb_data.modules.count);
-                struct dbi_module *contributing_module = &pdb_data.modules.modules[contribution->module_index];
+                assert(contribution->module_index < main_globals.pdb_data.modules.count);
+                struct dbi_module *contributing_module = &main_globals.pdb_data.modules.modules[contribution->module_index];
 
                 if (prev_module_path)
                     free(prev_module_path);
-                
 
                 char *module_path = NULL;
 
@@ -531,21 +563,20 @@ int main(int argc, const char *argv[])
                 // TODO: get module_path from contributing_module->module_name
                 //
 
-                prev_module_path = canonizalize_path(output_path, NULL, module_path, 0);
-                assert(prev_module_path);
+                // prev_module_path = canonizalize_path(NULL, module_path, 0);
+                // assert(prev_module_path);
                 break;
             }
         }
     }
+}
 
-    //
-    // Process DBI modules
-    //
-
-    for (uint32_t dbi_module_index = 0; dbi_module_index < pdb_data.modules.count; dbi_module_index++)
+void process_modules(void)
+{
+    for (uint32_t dbi_module_index = 0; dbi_module_index < main_globals.pdb_data.modules.count; dbi_module_index++)
     {
-        struct dbi_module *dbi_module = &pdb_data.modules.modules[dbi_module_index];
-        
+        struct dbi_module *dbi_module = &main_globals.pdb_data.modules.modules[dbi_module_index];
+
         for (uint32_t symbol_index = 0; symbol_index < dbi_module->symbols.count; symbol_index++)
         {
             struct cv_symbol *symbol = &dbi_module->symbols.symbols[symbol_index];
@@ -555,15 +586,38 @@ int main(int argc, const char *argv[])
                 // TODO
             }
         }
+
+        for (uint32_t subsection_index = 0; subsection_index < dbi_module->c11_lines_subsection_count; subsection_index++)
+        {
+            struct dbi_subsection *subsection = &dbi_module->c11_lines_subsections[subsection_index];
+            
+            // TODO: remove this VVV
+            // dbi_subsection_print(subsection, 0, stdout);
+            // printf("\n");
+            
+            // if (subsection->type == DEBUG_S_FILECHKSMS)
+            //     printf("file name: %s\n", main_globals.pdb_data.string_table.names_data + subsection->file_checksum.header.name_offset);
+        }
+
+        for (uint32_t subsection_index = 0; subsection_index < dbi_module->c13_lines_subsection_count; subsection_index++)
+        {
+            struct dbi_subsection *subsection = &dbi_module->c13_lines_subsections[subsection_index];
+            
+            // TODO: remove this VVV
+            // dbi_subsection_print(subsection, 0, stdout);
+            // printf("\n");
+            
+            // if (subsection->type == DEBUG_S_FILECHKSMS)
+            //     printf("file name: %s\n", main_globals.pdb_data.string_table.names_data + subsection->file_checksum.header.name_offset);
+        }
     }
+}
 
-    //
-    // Export c++ modules
-    //
-
-    for (uint32_t i = 0; i < module_count; i++)
+void export_cpp_modules(void)
+{
+    for (uint32_t i = 0; i < main_globals.module_count; i++)
     {
-        struct cpp_module *module = &modules[i];
+        struct cpp_module *module = &main_globals.modules[i];
 
         create_file_path_dirs(module->path);
 
@@ -571,21 +625,4 @@ int main(int argc, const char *argv[])
         cpp_module_print(module, module_stream);
         fclose(module_stream);
     }
-
-    //
-    // Dispose c++ modules
-    //
-
-    for (uint32_t i = 0; i < module_count; i++)
-        cpp_module_dispose(&modules[i]);
-
-    free(modules);
-
-    //
-    // Cleanup
-    //
-
-    pdb_data_dispose(&pdb_data);
-
-    exit(EXIT_SUCCESS);
 }

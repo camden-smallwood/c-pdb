@@ -148,18 +148,26 @@ static_assert(sizeof(struct dbi_module_header) == 64);
 
 void dbi_module_header_print(struct dbi_module_header *header, uint32_t depth, FILE *stream);
 
+/* ---------- DBI module */
+
 #define DBI_MODULE_STRUCT \
 STRUCT_DECL(dbi_module) \
     FIELD_STRUCT(struct dbi_module_header, header, dbi_module_header_print) \
     FIELD_PRIMITIVE(char *, module_name, "\"%s\"") \
     FIELD_PRIMITIVE(char *, object_file_name, "\"%s\"") \
     FIELD_STRUCT(struct cv_symbols, symbols, cv_symbols_print) \
+    FIELD_PRIMITIVE(uint32_t, c11_lines_subsection_count, "%u") \
+    FIELD_STRUCT_DYNAMIC_ARRAY(struct dbi_subsection *, c11_lines_subsections, c11_lines_subsection_count, dbi_subsection_print) \
+    FIELD_PRIMITIVE(uint32_t, c13_lines_subsection_count, "%u") \
+    FIELD_STRUCT_DYNAMIC_ARRAY(struct dbi_subsection *, c13_lines_subsections, c13_lines_subsection_count, dbi_subsection_print) \
 STRUCT_END(dbi_module)
 
 DBI_MODULE_STRUCT
 
 void dbi_module_dispose(struct dbi_module *module);
 void dbi_module_print(struct dbi_module *module, uint32_t depth, FILE *stream);
+
+/* ---------- DBI modules */
 
 #define DBI_MODULES_STRUCT \
 STRUCT_DECL(dbi_modules) \
@@ -172,6 +180,8 @@ DBI_MODULES_STRUCT
 void dbi_modules_read(struct dbi_modules *modules, struct msf *msf, struct dbi_header *dbi_header, FILE *stream);
 void dbi_modules_dispose(struct dbi_modules *modules);
 void dbi_modules_print(struct dbi_modules *modules, uint32_t depth, FILE *stream);
+
+/* ---------- DBI extra stream indices */
 
 #define DBI_EXTRA_STREAM_INDEX_ENUM \
 ENUM_DECL(dbi_extra_stream_index) \
@@ -192,6 +202,8 @@ DBI_EXTRA_STREAM_INDEX_ENUM
 
 void dbi_extra_stream_index_print(enum dbi_extra_stream_index index, FILE *stream);
 
+/* ---------- DBI extra streams */
+
 #define DBI_EXTRA_STREAMS_STRUCT \
 STRUCT_DECL(dbi_extra_streams) \
     FIELD_PRIMITIVE(uint32_t, count, "%u") \
@@ -203,6 +215,8 @@ DBI_EXTRA_STREAMS_STRUCT
 void dbi_extra_streams_read(struct dbi_extra_streams *extra_streams, struct msf *msf, struct dbi_header *dbi_header, FILE *stream);
 void dbi_extra_streams_dispose(struct dbi_extra_streams *extra_streams);
 void dbi_extra_streams_print(struct dbi_extra_streams *extra_streams, uint32_t depth, FILE *stream);
+
+/* ---------- DBI section header */
 
 #define DBI_SECTION_HEADER_STRUCT \
 STRUCT_DECL(dbi_section_header) \
@@ -224,6 +238,8 @@ static_assert(sizeof(struct dbi_section_header) == 40);
 void dbi_section_header_print(struct dbi_section_header *header, uint32_t depth, FILE *stream);
 void dbi_section_headers_read(struct msf *msf, struct msf_stream *stream, struct dbi_section_header **out_headers, uint32_t *out_count, FILE *file_stream);
 
+/* ---------- DBI OMAP record */
+
 #define DBI_OMAP_RECORD_STRUCT \
 STRUCT_DECL(dbi_omap_record) \
     FIELD_PRIMITIVE(uint32_t, source_address, "0x%X") \
@@ -235,6 +251,8 @@ static_assert(sizeof(struct dbi_omap_record) == 8);
 
 void dbi_omap_record_print(struct dbi_omap_record *record, uint32_t depth, FILE *stream);
 void dbi_omap_records_read(struct msf *msf, struct msf_stream *stream, struct dbi_omap_record **out_records, uint32_t *out_count, FILE *file_stream);
+
+/* ---------- DBI address map */
 
 #define DBI_ADDRESS_MAP_STRUCT \
 STRUCT_DECL(dbi_address_map) \
@@ -253,3 +271,126 @@ DBI_ADDRESS_MAP_STRUCT
 void dbi_address_map_read(struct dbi_address_map *map, struct msf *msf, struct dbi_extra_streams *extra_streams, FILE *file_stream);
 void dbi_address_map_dispose(struct dbi_address_map *map);
 void dbi_address_map_print(struct dbi_address_map *map, uint32_t depth, FILE *stream);
+
+/* ---------- DBI file checksum type */
+
+#define DBI_FILE_CHECKSUM_TYPE_ENUM \
+ENUM_DECL(dbi_file_checksum_type) \
+    ENUM_VALUE(DBI_FILE_CHECKSUM_TYPE_NONE) \
+    ENUM_VALUE(DBI_FILE_CHECKSUM_TYPE_MD5) \
+    ENUM_VALUE(DBI_FILE_CHECKSUM_TYPE_SHA1) \
+    ENUM_VALUE(DBI_FILE_CHECKSUM_TYPE_SHA256) \
+ENUM_END(dbi_file_checksum_type)
+
+DBI_FILE_CHECKSUM_TYPE_ENUM
+
+void dbi_file_checksum_type_print(enum dbi_file_checksum_type item, FILE *stream);
+
+/* ---------- DBI file checksum header */
+
+#define DBI_FILE_CHECKSUM_HEADER_STRUCT \
+STRUCT_DECL(dbi_file_checksum_header) \
+    FIELD_PRIMITIVE(uint32_t, name_offset, "%u") \
+    FIELD_PRIMITIVE(uint8_t, size, "%u") \
+    FIELD_PRIMITIVE_FMT(uint8_t, type, dbi_file_checksum_type_print) \
+STRUCT_END(dbi_file_checksum_header)
+
+#pragma pack(push, 1)
+DBI_FILE_CHECKSUM_HEADER_STRUCT
+#pragma pack(pop)
+static_assert(sizeof(struct dbi_file_checksum_header) == 6);
+
+void dbi_file_checksum_header_print(struct dbi_file_checksum_header *item, uint32_t depth, FILE *stream);
+
+/* ---------- DBI file checksum */
+
+#define DBI_FILE_CHECKSUM_STRUCT \
+STRUCT_DECL(dbi_file_checksum) \
+    FIELD_STRUCT(struct dbi_file_checksum_header, header, dbi_file_checksum_header_print) \
+    FIELD_PRIMITIVE_DYNAMIC_ARRAY_FMT(char *, data, header.size, hex_string_print) \
+STRUCT_END(dbi_file_checksum)
+
+DBI_FILE_CHECKSUM_STRUCT
+
+void dbi_file_checksum_dispose(struct dbi_file_checksum *item);
+void dbi_file_checksum_print(struct dbi_file_checksum *item, uint32_t depth, FILE *stream);
+void dbi_file_checksum_read(struct dbi_file_checksum *item, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, FILE *file_stream);
+
+/* ---------- DBI inlinee line */
+
+#define DBI_INLINEE_LINE_STRUCT \
+STRUCT_DECL(dbi_inlinee_line) \
+    FIELD_PRIMITIVE(uint32_t, inlinee_id_index, "%u") \
+    FIELD_PRIMITIVE(uint32_t, file_index, "%u") \
+    FIELD_PRIMITIVE(uint32_t, line, "%u") \
+    FIELD_PRIMITIVE(uint32_t, file_count, "%u") \
+    FIELD_PRIMITIVE_DYNAMIC_ARRAY(uint32_t *, file_name_offsets, file_count, "%u") \
+STRUCT_END(dbi_inlinee_line)
+
+DBI_INLINEE_LINE_STRUCT
+
+void dbi_inlinee_line_dispose(struct dbi_inlinee_line *item);
+void dbi_inlinee_line_print(struct dbi_inlinee_line *item, uint32_t depth, FILE *stream);
+void dbi_inlinee_line_read(struct dbi_inlinee_line *item, uint32_t signature, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, FILE *file_stream);
+
+/* ---------- DBI inlinee lines */
+
+enum
+{
+    CV_INLINEE_SOURCE_LINE_SIGNATURE = 0x0,
+    CV_INLINEE_SOURCE_LINE_SIGNATURE_EX = 0x1,
+};
+
+#define DBI_INLINEE_LINES_STRUCT \
+STRUCT_DECL(dbi_inlinee_lines) \
+    FIELD_PRIMITIVE(uint32_t, signature, "%u") \
+    FIELD_PRIMITIVE(uint32_t, count, "%u") \
+    FIELD_STRUCT_DYNAMIC_ARRAY(struct dbi_inlinee_line *, lines, count, dbi_inlinee_line_print) \
+STRUCT_END(dbi_inlinee_lines)
+
+DBI_INLINEE_LINES_STRUCT
+
+void dbi_inlinee_lines_dispose(struct dbi_inlinee_lines *item);
+void dbi_inlinee_lines_print(struct dbi_inlinee_lines *item, uint32_t depth, FILE *stream);
+void dbi_inlinee_lines_read(struct dbi_inlinee_lines *item, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, uint32_t size, FILE *file_stream);
+
+/* ---------- DBI subsection type */
+
+#define DBI_SUBSECTION_TYPE_ENUM \
+ENUM_DECL(dbi_subsection_type) \
+    ENUM_VALUE(DEBUG_S_SYMBOLS, 0xF1) \
+    ENUM_VALUE(DEBUG_S_LINES, 0xF2) \
+    ENUM_VALUE(DEBUG_S_STRINGTABLE, 0xF3) \
+    ENUM_VALUE(DEBUG_S_FILECHKSMS, 0xF4) \
+    ENUM_VALUE(DEBUG_S_FRAMEDATA, 0xF5) \
+    ENUM_VALUE(DEBUG_S_INLINEELINES, 0xF6) \
+    ENUM_VALUE(DEBUG_S_CROSSSCOPEIMPORTS, 0xF7) \
+    ENUM_VALUE(DEBUG_S_CROSSSCOPEEXPORTS, 0xF8) \
+    ENUM_VALUE(DEBUG_S_IL_LINES, 0xF9) \
+    ENUM_VALUE(DEBUG_S_FUNC_MDTOKEN_MAP, 0xFA) \
+    ENUM_VALUE(DEBUG_S_TYPE_MDTOKEN_MAP, 0xFB) \
+    ENUM_VALUE(DEBUG_S_MERGED_ASSEMBLYINPUT, 0xFC) \
+    ENUM_VALUE(DEBUG_S_COFF_SYMBOL_RVA, 0xFD) \
+ENUM_END(dbi_subsection_type)
+
+DBI_SUBSECTION_TYPE_ENUM
+
+void dbi_subsection_type_print(enum dbi_subsection_type item, FILE *stream);
+
+/* ---------- DBI subsection header */
+
+#define DBI_SUBSECTION_STRUCT \
+STRUCT_DECL(dbi_subsection) \
+    FIELD_PRIMITIVE_FMT(uint32_t, type, dbi_subsection_type_print) \
+    FIELD_PRIMITIVE(uint32_t, size, "%u") \
+    FIELD_UNION_DECL() \
+        FIELD_UNION_FIELD_STRUCT(struct dbi_file_checksum, file_checksum, type, DEBUG_S_FILECHKSMS, dbi_file_checksum_print) \
+        FIELD_UNION_FIELD_STRUCT(struct dbi_inlinee_lines, inlinee_lines, type, DEBUG_S_INLINEELINES, dbi_inlinee_lines_print) \
+    FIELD_UNION_END() \
+STRUCT_END(dbi_subsection)
+
+DBI_SUBSECTION_STRUCT
+
+void dbi_subsection_dispose(struct dbi_subsection *item);
+void dbi_subsection_print(struct dbi_subsection *item, uint32_t depth, FILE *stream);
+void dbi_subsection_read(struct dbi_subsection *item, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, FILE *file_stream);

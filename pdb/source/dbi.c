@@ -129,6 +129,16 @@ void dbi_module_dispose(struct dbi_module *module)
     free(module->object_file_name);
 
     cv_symbols_dispose(&module->symbols);
+
+    for (uint32_t i = 0; i < module->c11_lines_subsection_count; i++)
+        dbi_subsection_dispose(&module->c11_lines_subsections[i]);
+    
+    free(module->c11_lines_subsections);
+
+    for (uint32_t i = 0; i < module->c13_lines_subsection_count; i++)
+        dbi_subsection_dispose(&module->c13_lines_subsections[i]);
+    
+    free(module->c13_lines_subsections);
 }
 
 void dbi_module_print(struct dbi_module *item, uint32_t depth, FILE *stream)
@@ -221,9 +231,33 @@ void dbi_modules_read(
 
         cv_symbols_read(&module->symbols, msf, module_stream, module->header.symbols_size, &current_offset, stream);
 
+        //
+        // Read C11 lines subsections
+        //
+
+        uint32_t c11_lines_start_offset = current_offset;
+
+        while (current_offset < c11_lines_start_offset + module->header.lines_size)
+        {
+            struct dbi_subsection subsection;
+            dbi_subsection_read(&subsection, msf, module_stream, &current_offset, stream);
+            DYNARRAY_PUSH(module->c11_lines_subsections, module->c11_lines_subsection_count, subsection);
+        }
+
+        //
+        // Read C13 lines subsections
+        //
+
+        uint32_t c13_lines_start_offset = current_offset;
+
+        while (current_offset < c13_lines_start_offset + module->header.c13_lines_size)
+        {
+            struct dbi_subsection subsection;
+            dbi_subsection_read(&subsection, msf, module_stream, &current_offset, stream);
+            DYNARRAY_PUSH(module->c13_lines_subsections, module->c13_lines_subsection_count, subsection);
+        }
+
         // TODO:
-        // module->header.lines_size
-        // module->header.c13_lines_size
         // module->header.file_count
         // module->header.filename_offsets
         // module->header.source_file_index
@@ -411,4 +445,296 @@ void dbi_address_map_print(struct dbi_address_map *item, uint32_t depth, FILE *s
     assert(stream);
 
     DBI_ADDRESS_MAP_STRUCT
+}
+
+void dbi_file_checksum_type_print(enum dbi_file_checksum_type item, FILE *stream)
+{
+    assert(stream);
+
+    DBI_FILE_CHECKSUM_TYPE_ENUM
+}
+
+void dbi_file_checksum_header_print(struct dbi_file_checksum_header *item, uint32_t depth, FILE *stream)
+{
+    assert(item);
+    assert(stream);
+
+    DBI_FILE_CHECKSUM_HEADER_STRUCT
+}
+
+void dbi_file_checksum_dispose(struct dbi_file_checksum *item)
+{
+    assert(item);
+
+    free(item->data);
+}
+
+void dbi_file_checksum_print(struct dbi_file_checksum *item, uint32_t depth, FILE *stream)
+{
+    assert(item);
+    assert(stream);
+
+    DBI_FILE_CHECKSUM_STRUCT
+}
+
+void dbi_file_checksum_read(
+    struct dbi_file_checksum *item,
+    struct msf *msf,
+    struct msf_stream *msf_stream,
+    uint32_t *out_offset,
+    FILE *file_stream)
+{
+    assert(item);
+    assert(msf);
+    assert(msf_stream);
+    assert(out_offset);
+    assert(file_stream);
+
+    MSF_STREAM_READ(msf, msf_stream, out_offset, item->header, file_stream);
+
+    item->data = calloc(item->header.size, sizeof(uint8_t));
+    assert(item->data);
+
+    msf_stream_read_data(msf, msf_stream, *out_offset, item->header.size, item->data, file_stream);
+    *out_offset += item->header.size;
+}
+
+void dbi_inlinee_line_dispose(struct dbi_inlinee_line *item)
+{
+    assert(item);
+
+    free(item->file_name_offsets);
+}
+
+void dbi_inlinee_line_print(struct dbi_inlinee_line *item, uint32_t depth, FILE *stream)
+{
+    assert(item);
+    assert(stream);
+
+    DBI_INLINEE_LINE_STRUCT
+}
+
+void dbi_inlinee_line_read(
+    struct dbi_inlinee_line *item,
+    uint32_t signature,
+    struct msf *msf,
+    struct msf_stream *msf_stream,
+    uint32_t *out_offset,
+    FILE *file_stream)
+{
+    assert(item);
+    assert(msf);
+    assert(msf_stream);
+    assert(out_offset);
+    assert(file_stream);
+
+    memset(item, 0, sizeof(*item));
+
+    MSF_STREAM_READ(msf, msf_stream, out_offset, item->inlinee_id_index, file_stream);
+    MSF_STREAM_READ(msf, msf_stream, out_offset, item->file_index, file_stream);
+    MSF_STREAM_READ(msf, msf_stream, out_offset, item->line, file_stream);
+
+    if (signature == CV_INLINEE_SOURCE_LINE_SIGNATURE_EX)
+    {
+        MSF_STREAM_READ(msf, msf_stream, out_offset, item->file_count, file_stream);
+
+        item->file_name_offsets = malloc(item->file_count * sizeof(*item->file_name_offsets));
+        assert(item->file_name_offsets);
+        
+        msf_stream_read_data(msf, msf_stream, *out_offset, item->file_count * sizeof(*item->file_name_offsets), item->file_name_offsets, file_stream);
+        *out_offset += item->file_count * sizeof(*item->file_name_offsets);
+    }
+}
+
+void dbi_inlinee_lines_dispose(struct dbi_inlinee_lines *item)
+{
+    assert(item);
+
+    for (uint32_t i = 0; i < item->count; i++)
+        dbi_inlinee_line_dispose(&item->lines[i]);
+    
+    free(item->lines);
+}
+
+void dbi_inlinee_lines_print(struct dbi_inlinee_lines *item, uint32_t depth, FILE *stream)
+{
+    assert(item);
+    assert(stream);
+
+    DBI_INLINEE_LINES_STRUCT
+}
+
+void dbi_inlinee_lines_read(
+    struct dbi_inlinee_lines *item,
+    struct msf *msf,
+    struct msf_stream *msf_stream,
+    uint32_t *out_offset,
+    uint32_t size,
+    FILE *file_stream)
+{
+    assert(item);
+    assert(msf);
+    assert(msf_stream);
+    assert(out_offset);
+    assert(file_stream);
+
+    memset(item, 0, sizeof(*item));
+    
+    uint32_t start_offset = *out_offset;
+
+    MSF_STREAM_READ(msf, msf_stream, out_offset, item->signature, file_stream);
+
+    while (*out_offset < start_offset + size)
+    {
+        struct dbi_inlinee_line line;
+        dbi_inlinee_line_read(&line, item->signature, msf, msf_stream, out_offset, file_stream);
+        DYNARRAY_PUSH(item->lines, item->count, line);
+    }
+
+    // TODO: remove this VVV
+    // dbi_inlinee_lines_print(item, 0, stdout);
+    // printf("\n");
+}
+
+void dbi_subsection_type_print(enum dbi_subsection_type item, FILE *stream)
+{
+    assert(stream);
+
+    DBI_SUBSECTION_TYPE_ENUM
+}
+
+void dbi_subsection_print(struct dbi_subsection *item, uint32_t depth, FILE *stream)
+{
+    assert(item);
+    assert(stream);
+
+    DBI_SUBSECTION_STRUCT
+}
+
+void dbi_subsection_dispose(struct dbi_subsection *item)
+{
+    assert(item);
+
+    switch (item->type)
+    {
+    // case DEBUG_S_SYMBOLS:
+    //     break;
+    
+    // case DEBUG_S_LINES:
+    //     break;
+    
+    // case DEBUG_S_STRINGTABLE:
+    //     break;
+    
+    case DEBUG_S_FILECHKSMS:
+        dbi_file_checksum_dispose(&item->file_checksum);
+        break;
+    
+    // case DEBUG_S_FRAMEDATA:
+    //     break;
+    
+    case DEBUG_S_INLINEELINES:
+        dbi_inlinee_lines_dispose(&item->inlinee_lines);
+        break;
+    
+    // case DEBUG_S_CROSSSCOPEIMPORTS:
+    //     break;
+    
+    // case DEBUG_S_CROSSSCOPEEXPORTS:
+    //     break;
+    
+    // case DEBUG_S_IL_LINES:
+    //     break;
+    
+    // case DEBUG_S_FUNC_MDTOKEN_MAP:
+    //     break;
+    
+    // case DEBUG_S_TYPE_MDTOKEN_MAP:
+    //     break;
+    
+    // case DEBUG_S_MERGED_ASSEMBLYINPUT:
+    //     break;
+    
+    // case DEBUG_S_COFF_SYMBOL_RVA:
+    //     break;
+    
+    default:
+        fprintf(stderr, "%s:%i: ERROR: unhandled dbi_subsection_type value: ", __FILE__, __LINE__);
+        dbi_subsection_type_print(item->type, stderr);
+        fprintf(stderr, "\n");
+        exit(EXIT_FAILURE);
+    }
+}
+
+void dbi_subsection_read(
+    struct dbi_subsection *item,
+    struct msf *msf,
+    struct msf_stream *msf_stream,
+    uint32_t *out_offset,
+    FILE *file_stream)
+{
+    assert(item);
+    assert(msf);
+    assert(msf_stream);
+    assert(out_offset);
+    assert(file_stream);
+
+    memset(item, 0, sizeof(*item));
+
+    MSF_STREAM_READ(msf, msf_stream, out_offset, item->type, file_stream);
+    MSF_STREAM_READ(msf, msf_stream, out_offset, item->size, file_stream);
+
+    uint32_t start_offset = *out_offset;
+
+    switch (item->type)
+    {
+    // case DEBUG_S_SYMBOLS:
+    //     break;
+    
+    // case DEBUG_S_LINES:
+    //     break;
+    
+    // case DEBUG_S_STRINGTABLE:
+    //     break;
+    
+    case DEBUG_S_FILECHKSMS:
+        dbi_file_checksum_read(&item->file_checksum, msf, msf_stream, out_offset, file_stream);
+        break;
+    
+    // case DEBUG_S_FRAMEDATA:
+    //     break;
+    
+    case DEBUG_S_INLINEELINES:
+        dbi_inlinee_lines_read(&item->inlinee_lines, msf, msf_stream, out_offset, item->size, file_stream);
+        break;
+    
+    // case DEBUG_S_CROSSSCOPEIMPORTS:
+    //     break;
+    
+    // case DEBUG_S_CROSSSCOPEEXPORTS:
+    //     break;
+    
+    // case DEBUG_S_IL_LINES:
+    //     break;
+    
+    // case DEBUG_S_FUNC_MDTOKEN_MAP:
+    //     break;
+    
+    // case DEBUG_S_TYPE_MDTOKEN_MAP:
+    //     break;
+    
+    // case DEBUG_S_MERGED_ASSEMBLYINPUT:
+    //     break;
+    
+    // case DEBUG_S_COFF_SYMBOL_RVA:
+    //     break;
+    
+    default:
+        // fprintf(stderr, "%s:%i: ERROR: unhandled dbi_subsection_type value: ", __FILE__, __LINE__);
+        // dbi_subsection_type_print(item->type, stderr);
+        // fprintf(stderr, "\n");
+        // exit(EXIT_FAILURE);
+    }
+
+    *out_offset = start_offset + item->size;
 }

@@ -69,7 +69,7 @@ void fixed_string_print(
     FILE *stream)
 {
     assert(string);
-    assert(length);
+    assert(stream);
     
     char *temp = calloc(length + 1, sizeof(char));
     assert(temp);
@@ -79,4 +79,16 @@ void fixed_string_print(
     fprintf(stream, "\"%s\"", temp);
 
     free(temp);
+}
+
+void hex_string_print(
+    char *string,
+    uint32_t length,
+    FILE *stream)
+{
+    assert(string);
+    assert(stream);
+
+    for (uint32_t i = 0; i < length; i++)
+        fprintf(stream, "%02X", (unsigned char)string[i]);
 }
