@@ -358,7 +358,7 @@ void msf_stream_read_data(
     assert(stream);
     assert(destination);
     assert(file_stream);
-    assert(size <= stream->size);
+    assert(offset + size <= stream->size);
 
     uint32_t page_size = msf_get_page_size(msf);
     uint32_t start_page_index = offset / page_size;

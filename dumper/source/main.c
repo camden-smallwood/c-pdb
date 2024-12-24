@@ -587,28 +587,52 @@ void process_modules(void)
             }
         }
 
+        // printf("----------------------------------------\n");
+        // printf("C11 LINES\n");
+        // printf("----------------------------------------\n");
+
         for (uint32_t subsection_index = 0; subsection_index < dbi_module->c11_lines_subsection_count; subsection_index++)
         {
             struct dbi_subsection *subsection = &dbi_module->c11_lines_subsections[subsection_index];
             
-            // TODO: remove this VVV
-            // dbi_subsection_print(subsection, 0, stdout);
-            // printf("\n");
+            if (subsection->type != DEBUG_S_FILECHKSMS)
+                continue;
             
-            // if (subsection->type == DEBUG_S_FILECHKSMS)
-            //     printf("file name: %s\n", main_globals.pdb_data.string_table.names_data + subsection->file_checksum.header.name_offset);
+            for (uint32_t i = 0; i < subsection->file_checksums.count; i++)
+            {
+                struct dbi_file_checksum *entry = &subsection->file_checksums.entries[i];
+
+                // assert(entry->header.name_offset < main_globals.pdb_data.string_table.header.names_size);
+                // char *file_path = canonizalize_path(NULL, main_globals.pdb_data.string_table.names_data + entry->header.name_offset, 0);
+                // assert(file_path);
+
+                // printf("file_path: %s\n", file_path);
+                // free(file_path);
+            }
         }
+
+        // printf("----------------------------------------\n");
+        // printf("C13 LINES\n");
+        // printf("----------------------------------------\n");
 
         for (uint32_t subsection_index = 0; subsection_index < dbi_module->c13_lines_subsection_count; subsection_index++)
         {
             struct dbi_subsection *subsection = &dbi_module->c13_lines_subsections[subsection_index];
+
+            if (subsection->type != DEBUG_S_FILECHKSMS)
+                continue;
             
-            // TODO: remove this VVV
-            // dbi_subsection_print(subsection, 0, stdout);
-            // printf("\n");
-            
-            // if (subsection->type == DEBUG_S_FILECHKSMS)
-            //     printf("file name: %s\n", main_globals.pdb_data.string_table.names_data + subsection->file_checksum.header.name_offset);
+            for (uint32_t i = 0; i < subsection->file_checksums.count; i++)
+            {
+                struct dbi_file_checksum *entry = &subsection->file_checksums.entries[i];
+
+                // assert(entry->header.name_offset < main_globals.pdb_data.string_table.header.names_size);
+                // char *file_path = canonizalize_path(NULL, main_globals.pdb_data.string_table.names_data + entry->header.name_offset, 0);
+                // assert(file_path);
+
+                // printf("file_path: %s\n", file_path);
+                // free(file_path);
+            }
         }
     }
 }

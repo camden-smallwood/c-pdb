@@ -30,7 +30,7 @@ void pdb_data_read(struct pdb_data *pdb_data, FILE *stream)
     }
 
     dbi_header_read(&pdb_data->dbi_header, &pdb_data->msf, stream);
-    dbi_modules_read(&pdb_data->modules, &pdb_data->msf, &pdb_data->dbi_header, stream);
+    dbi_modules_read(&pdb_data->modules, &pdb_data->msf, &pdb_data->dbi_header, &pdb_data->string_table, stream);
     dbi_section_contributions_read(&pdb_data->section_contributions, &pdb_data->msf, &pdb_data->dbi_header, stream);
     //
     // TODO: read these:

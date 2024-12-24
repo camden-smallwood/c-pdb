@@ -5,6 +5,7 @@
 #include "msf.h"
 #include "tpi.h"
 #include "cv.h"
+#include "pdbi.h"
 #include "macros_decl.h"
 
 /* ---------- machine types */
@@ -177,7 +178,7 @@ STRUCT_END(dbi_modules)
 
 DBI_MODULES_STRUCT
 
-void dbi_modules_read(struct dbi_modules *modules, struct msf *msf, struct dbi_header *dbi_header, FILE *stream);
+void dbi_modules_read(struct dbi_modules *modules, struct msf *msf, struct dbi_header *dbi_header, struct pdb_string_table *string_table, FILE *stream);
 void dbi_modules_dispose(struct dbi_modules *modules);
 void dbi_modules_print(struct dbi_modules *modules, uint32_t depth, FILE *stream);
 
@@ -272,6 +273,99 @@ void dbi_address_map_read(struct dbi_address_map *map, struct msf *msf, struct d
 void dbi_address_map_dispose(struct dbi_address_map *map);
 void dbi_address_map_print(struct dbi_address_map *map, uint32_t depth, FILE *stream);
 
+/* ---------- DBI line */
+
+#define DBI_LINE_STRUCT \
+STRUCT_DECL(dbi_line) \
+    FIELD_PRIMITIVE(uint32_t, offset, "%u") \
+    FIELD_PRIMITIVE(uint32_t, flags, "%u") \
+STRUCT_END(dbi_line)
+
+DBI_LINE_STRUCT
+static_assert(sizeof(struct dbi_line) == 8);
+
+void dbi_line_print(struct dbi_line *item, uint32_t depth, FILE *stream);
+
+/* ---------- DBI line column */
+
+#define DBI_LINE_COLUMN_STRUCT \
+STRUCT_DECL(dbi_line_column) \
+    FIELD_PRIMITIVE(uint16_t, start_column, "%u") \
+    FIELD_PRIMITIVE(uint16_t, end_column, "%u") \
+STRUCT_END(dbi_line_column)
+
+DBI_LINE_COLUMN_STRUCT
+static_assert(sizeof(struct dbi_line_column) == 4);
+
+void dbi_line_column_print(struct dbi_line_column *item, uint32_t depth, FILE *stream);
+
+/* ---------- DBI lines block header */
+
+#define DBI_LINES_BLOCK_HEADER_STRUCT \
+STRUCT_DECL(dbi_lines_block_header) \
+    FIELD_PRIMITIVE(uint32_t, file_index, "%u") \
+    FIELD_PRIMITIVE(uint32_t, line_count, "%u") \
+    FIELD_PRIMITIVE(uint32_t, block_size, "%u") \
+STRUCT_END(dbi_lines_block_header)
+
+DBI_LINES_BLOCK_HEADER_STRUCT
+static_assert(sizeof(struct dbi_lines_block_header) == 12);
+
+void dbi_lines_block_header_print(struct dbi_lines_block_header *item, uint32_t depth, FILE *stream);
+
+/* ---------- DBI lines block */
+
+#define DBI_LINES_BLOCK_STRUCT \
+STRUCT_DECL(dbi_lines_block) \
+    FIELD_STRUCT(struct dbi_lines_block_header, header, dbi_lines_block_header_print) \
+    FIELD_PRIMITIVE(uint32_t, line_count, "%u") \
+    FIELD_STRUCT_DYNAMIC_ARRAY(struct dbi_line *, lines, line_count, dbi_line_print) \
+    FIELD_PRIMITIVE(uint32_t, column_count, "%u") \
+    FIELD_STRUCT_DYNAMIC_ARRAY(struct dbi_line_column *, columns, column_count, dbi_line_column_print) \
+STRUCT_END(dbi_lines_block)
+
+DBI_LINES_BLOCK_STRUCT
+
+struct dbi_lines_header;
+
+void dbi_lines_block_dispose(struct dbi_lines_block *item);
+void dbi_lines_block_print(struct dbi_lines_block *item, uint32_t depth, FILE *stream);
+void dbi_lines_block_read(struct dbi_lines_block *item, struct msf *msf, struct msf_stream *msf_stream, struct dbi_lines_header *lines_header, uint32_t *out_offset, FILE *file_stream);
+
+/* ---------- DBI lines header */
+
+enum dbi_lines_header_flags
+{
+    CV_LINES_HAVE_COLUMNS = 1 << 0,
+};
+
+#define DBI_LINES_HEADER_STRUCT \
+STRUCT_DECL(dbi_lines_header) \
+    FIELD_STRUCT(struct cv_pe_section_offset, offset, cv_pe_section_offset_print) \
+    FIELD_PRIMITIVE(uint16_t, flags, "%u") \
+    FIELD_PRIMITIVE(uint32_t, code_size, "%u") \
+STRUCT_END(dbi_lines_header)
+
+DBI_LINES_HEADER_STRUCT
+
+void dbi_lines_header_print(struct dbi_lines_header *item, uint32_t depth, FILE *stream);
+void dbi_lines_header_read(struct dbi_lines_header *item, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, FILE *file_stream);
+
+/* ---------- DBI lines */
+
+#define DBI_LINES_STRUCT \
+STRUCT_DECL(dbi_lines) \
+    FIELD_STRUCT(struct dbi_lines_header, header, dbi_lines_header_print) \
+    FIELD_PRIMITIVE(uint32_t, block_count, "%u") \
+    FIELD_STRUCT_DYNAMIC_ARRAY(struct dbi_lines_block *, blocks, block_count, dbi_lines_block_print) \
+STRUCT_END(dbi_lines)
+
+DBI_LINES_STRUCT
+
+void dbi_lines_dispose(struct dbi_lines *item);
+void dbi_lines_print(struct dbi_lines *item, uint32_t depth, FILE *stream);
+void dbi_lines_read(struct dbi_lines *item, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, uint32_t size, FILE *file_stream);
+
 /* ---------- DBI file checksum type */
 
 #define DBI_FILE_CHECKSUM_TYPE_ENUM \
@@ -314,7 +408,21 @@ DBI_FILE_CHECKSUM_STRUCT
 
 void dbi_file_checksum_dispose(struct dbi_file_checksum *item);
 void dbi_file_checksum_print(struct dbi_file_checksum *item, uint32_t depth, FILE *stream);
-void dbi_file_checksum_read(struct dbi_file_checksum *item, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, FILE *file_stream);
+void dbi_file_checksum_read(struct dbi_file_checksum *item, struct msf *msf, struct msf_stream *msf_stream, struct pdb_string_table *string_table, uint32_t *out_offset, FILE *file_stream);
+
+/* ---------- DBI file checksums */
+
+#define DBI_FILE_CHECKSUMS_STRUCT \
+STRUCT_DECL(dbi_file_checksums) \
+    FIELD_PRIMITIVE(uint32_t, count, "%u") \
+    FIELD_STRUCT_DYNAMIC_ARRAY(struct dbi_file_checksum *, entries, count, dbi_file_checksum_print) \
+STRUCT_END(dbi_file_checksums)
+
+DBI_FILE_CHECKSUMS_STRUCT
+
+void dbi_file_checksums_dispose(struct dbi_file_checksums *item);
+void dbi_file_checksums_print(struct dbi_file_checksums *item, uint32_t depth, FILE *stream);
+void dbi_file_checksums_read(struct dbi_file_checksums *item, struct msf *msf, struct msf_stream *msf_stream, struct pdb_string_table *string_table, uint32_t *out_offset, uint32_t size, FILE *file_stream);
 
 /* ---------- DBI inlinee line */
 
@@ -384,7 +492,8 @@ STRUCT_DECL(dbi_subsection) \
     FIELD_PRIMITIVE_FMT(uint32_t, type, dbi_subsection_type_print) \
     FIELD_PRIMITIVE(uint32_t, size, "%u") \
     FIELD_UNION_DECL() \
-        FIELD_UNION_FIELD_STRUCT(struct dbi_file_checksum, file_checksum, type, DEBUG_S_FILECHKSMS, dbi_file_checksum_print) \
+        FIELD_UNION_FIELD_STRUCT(struct dbi_lines, lines, type, DEBUG_S_LINES, dbi_lines_print) \
+        FIELD_UNION_FIELD_STRUCT(struct dbi_file_checksums, file_checksums, type, DEBUG_S_FILECHKSMS, dbi_file_checksums_print) \
         FIELD_UNION_FIELD_STRUCT(struct dbi_inlinee_lines, inlinee_lines, type, DEBUG_S_INLINEELINES, dbi_inlinee_lines_print) \
     FIELD_UNION_END() \
 STRUCT_END(dbi_subsection)
@@ -393,4 +502,4 @@ DBI_SUBSECTION_STRUCT
 
 void dbi_subsection_dispose(struct dbi_subsection *item);
 void dbi_subsection_print(struct dbi_subsection *item, uint32_t depth, FILE *stream);
-void dbi_subsection_read(struct dbi_subsection *item, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, FILE *file_stream);
+void dbi_subsection_read(struct dbi_subsection *item, struct msf *msf, struct msf_stream *msf_stream, struct pdb_string_table *string_table, uint32_t *out_offset, FILE *file_stream);
