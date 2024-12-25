@@ -5,6 +5,7 @@
 #include "pdb.h"
 #include "cpp.h"
 #include "utils.h"
+#include "path.h"
 
 void main_initialize(int argc, const char **argv);
 void main_dispose(void);
@@ -28,6 +29,8 @@ int main(int argc, const char *argv[])
     export_cpp_modules();
 
     main_dispose();
+
+    exit(EXIT_SUCCESS);
 }
 
 struct
@@ -75,8 +78,6 @@ void main_dispose(void)
     free(main_globals.modules);
 
     pdb_data_dispose(&main_globals.pdb_data);
-
-    exit(EXIT_SUCCESS);
 }
 
 //---------------------------------------------------------------------------------
@@ -217,59 +218,13 @@ char *canonizalize_path(char *root_path, char *path, int is_dir)
     // Split the path into components and canonicalize it
     //
 
-    size_t result_length = strlen(result);
-
-    size_t component_count = 0;
-    char **components = NULL;
-
-    char *current = result;
-
-    while (current)
-    {
-        current = strchr(current, '/');
-        if (!current)
-            break;
-        current++;
-
-        char *next = strchr(current, '/');
-        size_t length = next ? (next - current) : (result_length - (current - result));
-
-        char *component = calloc(length + 1, sizeof(char));
-        assert(component);
-
-        strncpy(component, current, length);
-
-        if (strcmp(component, ".") == 0)
-        {
-            free(component);
-        }
-        else if (strcmp(component, "..") == 0)
-        {
-            free(component);
-            DYNARRAY_POP(components, component_count, sizeof(component));
-        }
-        else
-        {
-            DYNARRAY_PUSH(components, component_count, component);
-        }
-
-        current = next;
-    }
+    struct path final_path;
+    path_from_string(&final_path, result);
 
     free(result);
-    result = NULL;
+    result = path_to_string(&final_path, is_dir);
 
-    for (size_t i = 0; i < component_count; i++)
-    {
-        string_append(&result, "/");
-        string_append(&result, components[i]);
-        free(components[i]);
-    }
-
-    free(components);
-
-    if (is_dir)
-        string_append(&result, "/");
+    path_dispose(&final_path);
 
     return result;
 }
@@ -314,6 +269,14 @@ struct cpp_module *cpp_module_find_or_create(char *module_path)
 
 void process_global_types(void)
 {
+    //
+    // NOTE:
+    // If there are no available symbols in the IPI stream, then we don't have any information
+    // about what files each of the symbols in the TPI stream belong in. When this is encountered,
+    // we just export every type into a toplevel "types.h" header file. There *may* be a better
+    // way to do this, but I think this is a reasonable approach for now...
+    //
+
     if (main_globals.pdb_data.ipi_symbols.count != 0 || main_globals.pdb_data.tpi_symbols.count == 0)
         return;
     
@@ -415,9 +378,9 @@ void process_user_defined_type_ids(void)
         if (symbol->type != LF_UDT_SRC_LINE && symbol->type != LF_UDT_MOD_SRC_LINE)
             continue;
 
-        char *module_path = NULL;
-        uint32_t udt_type_index = UINT32_MAX;
-        uint32_t line = 0;
+        char *module_path;
+        uint32_t udt_type_index;
+        uint32_t line;
 
         if (symbol->type == LF_UDT_SRC_LINE)
         {
