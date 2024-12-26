@@ -17,7 +17,7 @@ STRUCT_DECL(tpi_udt_src_line) \
 STRUCT_END(tpi_udt_src_line)
 
 TPI_UDT_SRC_LINE_STRUCT
-static_assert(sizeof(struct tpi_udt_src_line) == 12);
+static_assert(sizeof(struct tpi_udt_src_line) == 12, "invalid tpi_udt_src_line size");
 
 void tpi_udt_src_line_print(struct tpi_udt_src_line *item, uint32_t depth, FILE *stream);
 
@@ -34,7 +34,7 @@ STRUCT_END(tpi_udt_mod_src_line)
 #pragma pack(push, 1)
 TPI_UDT_MOD_SRC_LINE_STRUCT
 #pragma pack(pop)
-static_assert(sizeof(struct tpi_udt_mod_src_line) == 14);
+static_assert(sizeof(struct tpi_udt_mod_src_line) == 14, "invalid tpi_udt_mod_src_line size");
 
 void tpi_udt_mod_src_line_print(struct tpi_udt_mod_src_line *item, uint32_t depth, FILE *stream);
 

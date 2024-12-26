@@ -8,7 +8,7 @@
 /* ---------- MSF header V2 */
 
 static const char msf_header_v2_signature[] = "Microsoft C/C++ program database 2.00\r\n\032JG\0";
-static_assert(sizeof(msf_header_v2_signature) == 44);
+static_assert(sizeof(msf_header_v2_signature) == 44, "invalid msf_header_v2_signature size");
 
 #define MSF_HEADER_V2_STRUCT                                                                              \
     STRUCT_DECL(msf_header_v2)                                                                            \
@@ -21,7 +21,7 @@ static_assert(sizeof(msf_header_v2_signature) == 44);
     STRUCT_END(msf_header_v2)
 
 MSF_HEADER_V2_STRUCT
-static_assert(sizeof(struct msf_header_v2) == 60);
+static_assert(sizeof(struct msf_header_v2) == 60, "invalid msf_header_v2 size");
 
 void msf_header_v2_print(struct msf_header_v2 *item, uint32_t depth, FILE *stream);
 int msf_header_v2_read(struct msf_header_v2 *v2, FILE *stream);
@@ -29,7 +29,7 @@ int msf_header_v2_read(struct msf_header_v2 *v2, FILE *stream);
 /* ---------- MSF header V7 */
 
 static const char msf_header_v7_signature[] = "Microsoft C/C++ MSF 7.00\r\n\032DS\0\0";
-static_assert(sizeof(msf_header_v7_signature) == 32);
+static_assert(sizeof(msf_header_v7_signature) == 32, "invalid msf_header_v7_signature size");
 
 #define MSF_HEADER_V7_STRUCT                                                                              \
     STRUCT_DECL(msf_header_v7)                                                                            \
@@ -43,7 +43,7 @@ static_assert(sizeof(msf_header_v7_signature) == 32);
     STRUCT_END(msf_header_v7)
 
 MSF_HEADER_V7_STRUCT
-static_assert(sizeof(struct msf_header_v7) == 56);
+static_assert(sizeof(struct msf_header_v7) == 56, "invalid msf_header_v7 size");
 
 void msf_header_v7_print(struct msf_header_v7 *item, uint32_t depth, FILE *stream);
 int msf_header_v7_read(struct msf_header_v7 *v7, FILE *stream);

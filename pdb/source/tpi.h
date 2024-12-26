@@ -13,7 +13,7 @@ STRUCT_DECL(tpi_slice) \
 STRUCT_END(tpi_slice)
 
 TPI_SLICE_STRUCT
-static_assert(sizeof(struct tpi_slice) == 8);
+static_assert(sizeof(struct tpi_slice) == 8, "invalid tpi_slice size");
 
 void tpi_slice_print(struct tpi_slice *slice, uint32_t depth, FILE *stream);
 
@@ -36,7 +36,7 @@ STRUCT_DECL(tpi_header) \
 STRUCT_END(tpi_header)
 
 TPI_HEADER_STRUCT
-static_assert(sizeof(struct tpi_header) == 56);
+static_assert(sizeof(struct tpi_header) == 56, "invalid tpi_header size");
 
 void tpi_header_read(struct msf *msf, struct tpi_header *out_header, FILE *stream);
 void tpi_header_print(struct tpi_header *header, uint32_t depth, FILE *stream);
@@ -354,7 +354,7 @@ STRUCT_DECL(tpi_properties) \
 STRUCT_END(tpi_properties)
 
 TPI_PROPERTIES_STRUCT
-static_assert(sizeof(struct tpi_properties) == sizeof(uint16_t));
+static_assert(sizeof(struct tpi_properties) == sizeof(uint16_t), "invalid tpi_properties size");
 
 void tpi_properties_print(struct tpi_properties *properties, uint32_t depth, FILE *stream);
 
@@ -373,7 +373,7 @@ STRUCT_DECL(tpi_field_attributes) \
 STRUCT_END(tpi_field_attributes)
 
 TPI_FIELD_ATTRIBUTES_STRUCT
-static_assert(sizeof(struct tpi_field_attributes) == sizeof(uint16_t));
+static_assert(sizeof(struct tpi_field_attributes) == sizeof(uint16_t), "invalid tpi_field_attributes size");
 
 void tpi_field_attributes_print(struct tpi_field_attributes *attributes, uint32_t depth, FILE *stream);
 
@@ -402,7 +402,7 @@ STRUCT_END(tpi_member_header)
 #pragma pack(push, 1)
 TPI_MEMBER_HEADER_STRUCT
 #pragma pack(pop)
-static_assert(sizeof(struct tpi_member_header) == 6);
+static_assert(sizeof(struct tpi_member_header) == 6, "invalid tpi_member_header size");
 
 void tpi_member_header_print(struct tpi_member_header *header, uint32_t depth, FILE *stream);
 
@@ -432,7 +432,7 @@ STRUCT_END(tpi_static_member_header)
 #pragma pack(push, 1)
 TPI_STATIC_MEMBER_HEADER_STRUCT
 #pragma pack(pop)
-static_assert(sizeof(struct tpi_static_member_header) == 6);
+static_assert(sizeof(struct tpi_static_member_header) == 6, "invalid tpi_static_member_header size");
 
 void tpi_static_member_header_print(struct tpi_static_member_header *header, uint32_t depth, FILE *stream);
 
@@ -509,7 +509,7 @@ STRUCT_DECL(tpi_pointer_attributes) \
 STRUCT_END(tpi_pointer_attributes)
 
 TPI_POINTER_ATTRIBUTES_STRUCT
-static_assert(sizeof(struct tpi_pointer_attributes) == sizeof(uint32_t));
+static_assert(sizeof(struct tpi_pointer_attributes) == sizeof(uint32_t), "invalid tpi_pointer_attributes size");
 
 void tpi_pointer_attributes_print(struct tpi_pointer_attributes *attributes, uint32_t depth, FILE *stream);
 
@@ -524,7 +524,7 @@ STRUCT_END(tpi_pointer_header)
 #pragma pack(push, 1)
 TPI_POINTER_HEADER_STRUCT
 #pragma pack(pop)
-static_assert(sizeof(struct tpi_pointer_header) == 8);
+static_assert(sizeof(struct tpi_pointer_header) == 8, "invalid tpi_pointer_header size");
 
 void tpi_pointer_header_print(struct tpi_pointer_header *header, uint32_t depth, FILE *stream);
 
@@ -564,7 +564,7 @@ STRUCT_DECL(tpi_procedure_attributes) \
 STRUCT_END(tpi_procedure_attributes)
 
 TPI_PROCEDURE_ATTRIBUTES_STRUCT
-static_assert(sizeof(struct tpi_procedure_attributes) == sizeof(uint8_t));
+static_assert(sizeof(struct tpi_procedure_attributes) == sizeof(uint8_t), "invalid tpi_procedure_attributes size");
 
 void tpi_procedure_attributes_print(struct tpi_procedure_attributes *attributes, uint32_t depth, FILE *stream);
 
@@ -582,7 +582,7 @@ STRUCT_END(tpi_procedure)
 #pragma pack(push, 1)
 TPI_PROCEDURE_STRUCT
 #pragma pack(pop)
-static_assert(sizeof(struct tpi_procedure) == 12);
+static_assert(sizeof(struct tpi_procedure) == 12, "invalid tpi_procedure size");
 
 void tpi_procedure_print(struct tpi_procedure *item, uint32_t depth, FILE *stream);
 
@@ -604,7 +604,7 @@ STRUCT_END(tpi_modifier)
 #pragma pack(push, 1)
 TPI_MODIFIER_STRUCT
 #pragma pack(pop)
-static_assert(sizeof(struct tpi_modifier) == 6);
+static_assert(sizeof(struct tpi_modifier) == 6, "invalid tpi_modifier size");
 
 void tpi_modifier_print(struct tpi_modifier *item, uint32_t depth, FILE *stream);
 
@@ -673,7 +673,7 @@ STRUCT_DECL(tpi_enumeration_header) \
 STRUCT_END(tpi_enumeration_header)
 
 TPI_ENUMERATION_HEADER_STRUCT
-static_assert(sizeof(struct tpi_enumeration_header) == 12);
+static_assert(sizeof(struct tpi_enumeration_header) == 12, "invalid tpi_enumeration_header size");
 
 void tpi_enumeration_header_print(struct tpi_enumeration_header *header, uint32_t depth, FILE *stream);
 
@@ -700,7 +700,7 @@ STRUCT_DECL(tpi_array_header) \
 STRUCT_END(tpi_array_header)
 
 TPI_ARRAY_HEADER_STRUCT
-static_assert(sizeof(struct tpi_array_header) == 8);
+static_assert(sizeof(struct tpi_array_header) == 8, "invalid tpi_array_header size");
 
 void tpi_array_header_print(struct tpi_array_header *header, uint32_t depth, FILE *stream);
 
@@ -729,7 +729,7 @@ STRUCT_DECL(tpi_union_header) \
 STRUCT_END(tpi_union_header)
 
 TPI_UNION_HEADER_STRUCT
-static_assert(sizeof(struct tpi_union_header) == 8);
+static_assert(sizeof(struct tpi_union_header) == 8, "invalid tpi_union_header size");
 
 void tpi_union_header_print(struct tpi_union_header *header, uint32_t depth, FILE *stream);
 
@@ -759,7 +759,7 @@ STRUCT_DECL(tpi_bitfield) \
 STRUCT_END(tpi_bitfield)
 
 TPI_BITFIELD_STRUCT
-static_assert(sizeof(struct tpi_bitfield) == 8);
+static_assert(sizeof(struct tpi_bitfield) == 8, "invalid tpi_bitfield size");
 
 void tpi_bitfield_print(struct tpi_bitfield *item, uint32_t depth, FILE *stream);
 
@@ -778,7 +778,7 @@ STRUCT_DECL(tpi_member_function) \
 STRUCT_END(tpi_member_function)
 
 TPI_MEMBER_FUNCTION_STRUCT
-static_assert(sizeof(struct tpi_member_function) == 24);
+static_assert(sizeof(struct tpi_member_function) == 24, "invalid tpi_member_function size");
 
 void tpi_member_function_read(struct tpi_member_function *item, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, FILE *file_stream);
 void tpi_member_function_print(struct tpi_member_function *item, uint32_t depth, FILE *stream);
@@ -794,7 +794,7 @@ STRUCT_END(tpi_overloaded_method_header)
 #pragma pack(push, 1)
 TPI_OVERLOADED_METHOD_HEADER_STRUCT
 #pragma pack(pop)
-static_assert(sizeof(struct tpi_overloaded_method_header) == 6);
+static_assert(sizeof(struct tpi_overloaded_method_header) == 6, "invalid tpi_overloaded_method_header size");
 
 void tpi_overloaded_method_header_print(struct tpi_overloaded_method_header *header, uint32_t depth, FILE *stream);
 
@@ -837,7 +837,7 @@ STRUCT_END(tpi_method_header)
 #pragma pack(push, 1)
 TPI_METHOD_HEADER_STRUCT
 #pragma pack(pop)
-static_assert(sizeof(struct tpi_method_header) == 6);
+static_assert(sizeof(struct tpi_method_header) == 6, "invalid tpi_method_header size");
 
 void tpi_method_header_print(struct tpi_method_header *header, uint32_t depth, FILE *stream);
 
@@ -865,7 +865,7 @@ STRUCT_DECL(tpi_method_list_entry_header) \
 STRUCT_END(tpi_method_list_entry_header)
 
 TPI_METHOD_LIST_ENTRY_HEADER_STRUCT
-static_assert(sizeof(struct tpi_method_list_entry_header) == 8);
+static_assert(sizeof(struct tpi_method_list_entry_header) == 8, "invalid tpi_method_list_entry_header size");
 
 void tpi_method_list_entry_header_print(struct tpi_method_list_entry_header *header, uint32_t depth, FILE *stream);
 
@@ -905,7 +905,7 @@ STRUCT_END(tpi_vtable)
 #pragma pack(push, 1)
 TPI_VTABLE_STRUCT
 #pragma pack(pop)
-static_assert(sizeof(struct tpi_vtable) == 6);
+static_assert(sizeof(struct tpi_vtable) == 6, "invalid tpi_vtable size");
 
 void tpi_vtable_print(struct tpi_vtable *item, uint32_t depth, FILE *stream);
 
@@ -920,7 +920,7 @@ STRUCT_END(tpi_nested_type_header)
 #pragma pack(push, 1)
 TPI_NESTED_TYPE_HEADER_STRUCT
 #pragma pack(pop)
-static_assert(sizeof(struct tpi_nested_type_header) == 6);
+static_assert(sizeof(struct tpi_nested_type_header) == 6, "invalid tpi_nested_type_header size");
 
 void tpi_nested_type_header_print(struct tpi_nested_type_header *header, uint32_t depth, FILE *stream);
 
@@ -949,7 +949,7 @@ STRUCT_END(tpi_base_class_header)
 #pragma pack(push, 1)
 TPI_BASE_CLASS_HEADER_STRUCT
 #pragma pack(pop)
-static_assert(sizeof(struct tpi_base_class_header) == 6);
+static_assert(sizeof(struct tpi_base_class_header) == 6, "invalid tpi_base_class_header size");
 
 void tpi_base_class_header_print(struct tpi_base_class_header *header, uint32_t depth, FILE *stream);
 
@@ -977,7 +977,7 @@ STRUCT_END(tpi_virtual_base_class_header)
 #pragma pack(push, 1)
 TPI_VIRTUAL_BASE_CLASS_HEADER_STRUCT
 #pragma pack(pop)
-static_assert(sizeof(struct tpi_virtual_base_class_header) == 10);
+static_assert(sizeof(struct tpi_virtual_base_class_header) == 10, "invalid tpi_virtual_base_class_header size");
 
 void tpi_virtual_base_class_header_print(struct tpi_virtual_base_class_header *header, uint32_t depth, FILE *stream);
 
@@ -1004,7 +1004,7 @@ STRUCT_DECL(tpi_class_header) \
 STRUCT_END(tpi_class_header)
 
 TPI_CLASS_HEADER_STRUCT
-static_assert(sizeof(struct tpi_class_header) == 8);
+static_assert(sizeof(struct tpi_class_header) == 8, "invalid tpi_class_header size");
 
 void tpi_class_header_print(struct tpi_class_header *header, uint32_t depth, FILE *stream);
 

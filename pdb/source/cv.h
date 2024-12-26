@@ -910,7 +910,7 @@ STRUCT_DECL(cv_frame_proc_flags) \
 STRUCT_END(cv_frame_proc_flags)
 
 CV_FRAME_PROC_FLAGS_STRUCT
-static_assert(sizeof(struct cv_frame_proc_flags) == sizeof(uint32_t));
+static_assert(sizeof(struct cv_frame_proc_flags) == sizeof(uint32_t), "invalid cv_frame_proc_flags size");
 
 void cv_frame_proc_flags_print(struct cv_frame_proc_flags *item, uint32_t depth, FILE *stream);
 
@@ -950,7 +950,7 @@ STRUCT_DECL(cv_env_block_flags) \
 STRUCT_END(cv_env_block_flags)
 
 CV_ENV_BLOCK_FLAGS_STRUCT
-static_assert(sizeof(struct cv_env_block_flags) == sizeof(uint8_t));
+static_assert(sizeof(struct cv_env_block_flags) == sizeof(uint8_t), "invalid cv_env_block_flags size");
 
 void cv_env_block_flags_print(struct cv_env_block_flags *item, uint32_t depth, FILE *stream);
 

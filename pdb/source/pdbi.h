@@ -16,7 +16,7 @@ STRUCT_DECL(pdb_header) \
 STRUCT_END(pdb_header)
 
 PDB_HEADER_STRUCT
-static_assert(sizeof(struct pdb_header) == 12);
+static_assert(sizeof(struct pdb_header) == 12, "invalid pdb_header size");
 
 void pdb_header_read(struct pdb_header *header, struct msf *msf, FILE *stream);
 void pdb_header_print(struct pdb_header *header, uint32_t depth, FILE *stream);
@@ -30,7 +30,7 @@ STRUCT_DECL(pdb_named_stream) \
 STRUCT_END(pdb_named_stream)
 
 PDB_NAMED_STREAM_STRUCT
-static_assert(sizeof(struct pdb_named_stream) == 8);
+static_assert(sizeof(struct pdb_named_stream) == 8, "invalid pdb_named_stream size");
 
 void pdb_named_stream_print(struct pdb_named_stream *named_stream, uint32_t depth, FILE *file_stream);
 
@@ -82,7 +82,7 @@ STRUCT_DECL(pdb_string_table_header) \
 STRUCT_END(pdb_string_table_header)
 
 PDB_STRING_TABLE_HEADER_STRUCT
-static_assert(sizeof(struct pdb_string_table_header) == 12);
+static_assert(sizeof(struct pdb_string_table_header) == 12, "invalid pdb_string_table_header size");
 
 void pdb_string_table_header_print(struct pdb_string_table_header *header, uint32_t depth, FILE *stream);
 

@@ -72,7 +72,7 @@ STRUCT_DECL(dbi_header) \
 STRUCT_END(dbi_header)
 
 DBI_HEADER_STRUCT
-static_assert(sizeof(struct dbi_header) == 64);
+static_assert(sizeof(struct dbi_header) == 64, "invalid dbi_header size");
 
 void dbi_header_read(struct dbi_header *header, struct msf *msf, FILE *stream);
 void dbi_header_print(struct dbi_header *header, uint32_t depth, FILE *stream);
@@ -93,7 +93,7 @@ STRUCT_DECL(dbi_section_contribution) \
 STRUCT_END(dbi_section_contribution)
 
 DBI_SECTION_CONTRIBUTION_STRUCT
-static_assert(sizeof(struct dbi_section_contribution) == 28);
+static_assert(sizeof(struct dbi_section_contribution) == 28, "invalid dbi_section_contribution size");
 
 void dbi_section_contribution_print(struct dbi_section_contribution *contribution, uint32_t depth, FILE *stream);
 
@@ -145,7 +145,7 @@ STRUCT_DECL(dbi_module_header) \
 STRUCT_END(dbi_module_header)
 
 DBI_MODULE_HEADER_STRUCT
-static_assert(sizeof(struct dbi_module_header) == 64);
+static_assert(sizeof(struct dbi_module_header) == 64, "invalid dbi_module_header size");
 
 void dbi_module_header_print(struct dbi_module_header *header, uint32_t depth, FILE *stream);
 
@@ -234,7 +234,7 @@ STRUCT_DECL(dbi_section_header) \
 STRUCT_END(dbi_section_header)
 
 DBI_SECTION_HEADER_STRUCT
-static_assert(sizeof(struct dbi_section_header) == 40);
+static_assert(sizeof(struct dbi_section_header) == 40, "invalid dbi_section_header size");
 
 void dbi_section_header_print(struct dbi_section_header *header, uint32_t depth, FILE *stream);
 void dbi_section_headers_read(struct msf *msf, struct msf_stream *stream, struct dbi_section_header **out_headers, uint32_t *out_count, FILE *file_stream);
@@ -248,7 +248,7 @@ STRUCT_DECL(dbi_omap_record) \
 STRUCT_END(dbi_omap_record)
 
 DBI_OMAP_RECORD_STRUCT
-static_assert(sizeof(struct dbi_omap_record) == 8);
+static_assert(sizeof(struct dbi_omap_record) == 8, "invalid dbi_omap_record size");
 
 void dbi_omap_record_print(struct dbi_omap_record *record, uint32_t depth, FILE *stream);
 void dbi_omap_records_read(struct msf *msf, struct msf_stream *stream, struct dbi_omap_record **out_records, uint32_t *out_count, FILE *file_stream);
@@ -282,7 +282,7 @@ STRUCT_DECL(dbi_line) \
 STRUCT_END(dbi_line)
 
 DBI_LINE_STRUCT
-static_assert(sizeof(struct dbi_line) == 8);
+static_assert(sizeof(struct dbi_line) == 8, "invalid dbi_line size");
 
 void dbi_line_print(struct dbi_line *item, uint32_t depth, FILE *stream);
 
@@ -295,7 +295,7 @@ STRUCT_DECL(dbi_line_column) \
 STRUCT_END(dbi_line_column)
 
 DBI_LINE_COLUMN_STRUCT
-static_assert(sizeof(struct dbi_line_column) == 4);
+static_assert(sizeof(struct dbi_line_column) == 4, "invalid dbi_line_column size");
 
 void dbi_line_column_print(struct dbi_line_column *item, uint32_t depth, FILE *stream);
 
@@ -309,7 +309,7 @@ STRUCT_DECL(dbi_lines_block_header) \
 STRUCT_END(dbi_lines_block_header)
 
 DBI_LINES_BLOCK_HEADER_STRUCT
-static_assert(sizeof(struct dbi_lines_block_header) == 12);
+static_assert(sizeof(struct dbi_lines_block_header) == 12, "invalid dbi_lines_block_header size");
 
 void dbi_lines_block_header_print(struct dbi_lines_block_header *item, uint32_t depth, FILE *stream);
 
@@ -392,7 +392,7 @@ STRUCT_END(dbi_file_checksum_header)
 #pragma pack(push, 1)
 DBI_FILE_CHECKSUM_HEADER_STRUCT
 #pragma pack(pop)
-static_assert(sizeof(struct dbi_file_checksum_header) == 6);
+static_assert(sizeof(struct dbi_file_checksum_header) == 6, "invalid dbi_file_checksum_header size");
 
 void dbi_file_checksum_header_print(struct dbi_file_checksum_header *item, uint32_t depth, FILE *stream);
 
