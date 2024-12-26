@@ -2,6 +2,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#ifdef _WIN32
+#include <direct.h>
+#endif
 #include "pdb.h"
 #include "cpp.h"
 #include "utils.h"
@@ -97,7 +100,11 @@ void create_file_path_dirs(char *file_path)
         size_t dir_path_len = next_sep - file_path;
         memcpy(dir_path, file_path, dir_path_len);
         dir_path[dir_path_len] = '\0';
+#ifdef _WIN32
+        mkdir(dir_path);
+#else
         mkdir(dir_path, S_IRWXU | S_IRWXG | S_IROTH);
+#endif
         next_sep = strchr(next_sep + 1, '/');
     }
 
