@@ -28,7 +28,9 @@ char *string_prepend(char **string, char *prefix);
 
 /* ---------- print functions */
 
+#if defined(__GNUC__) || defined(__clang__)
 __attribute__((__format__(__printf__, 3, 4)))
+#endif
 void fprintf_depth(FILE *stream, uint32_t depth, char *fmt, ...);
 
 void fixed_string_print(char *string, uint32_t length, FILE *stream);
