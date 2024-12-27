@@ -2,22 +2,26 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
 #ifdef _WIN32
 #include <direct.h>
+#else
+#include <sys/stat.h>
 #endif
+
 #include "pdb.h"
 #include "cpp.h"
 #include "utils.h"
 #include "path.h"
 
-void main_initialize(int argc, const char **argv);
-void main_dispose(void);
-void process_global_types(void);
-void process_build_info_ids(void);
-void process_user_defined_type_ids(void);
-void process_symbol_records(void);
-void process_modules(void);
-void export_cpp_modules(void);
+static void main_initialize(int argc, const char **argv);
+static void main_dispose(void);
+static void process_global_types(void);
+static void process_build_info_ids(void);
+static void process_user_defined_type_ids(void);
+static void process_symbol_records(void);
+static void process_modules(void);
+static void export_cpp_modules(void);
 
 int main(int argc, const char *argv[])
 {
@@ -45,9 +49,9 @@ struct
 
     uint32_t module_count;
     struct cpp_module *modules;
-} main_globals;
+} static main_globals;
 
-void main_initialize(int argc, const char **argv)
+static void main_initialize(int argc, const char **argv)
 {
     memset(&main_globals, 0, sizeof(main_globals));
 
@@ -73,7 +77,7 @@ void main_initialize(int argc, const char **argv)
     fclose(pdb_file);
 }
 
-void main_dispose(void)
+static void main_dispose(void)
 {
     for (uint32_t i = 0; i < main_globals.module_count; i++)
         cpp_module_dispose(&main_globals.modules[i]);
@@ -83,10 +87,7 @@ void main_dispose(void)
     pdb_data_dispose(&main_globals.pdb_data);
 }
 
-//---------------------------------------------------------------------------------
-// TODO: this is posix only... do it better!
-#include <sys/stat.h>
-void create_file_path_dirs(char *file_path)
+static void create_file_path_dirs(char *file_path)
 {
     assert(file_path);
 
@@ -110,9 +111,8 @@ void create_file_path_dirs(char *file_path)
 
     free(dir_path);
 }
-//---------------------------------------------------------------------------------
 
-char *sanitize_path(char *path)
+static char *sanitize_path(char *path)
 {
     assert(path);
 
@@ -152,7 +152,7 @@ char *sanitize_path(char *path)
     return result;
 }
 
-char *canonizalize_path(char *root_path, char *path, int is_dir)
+static char *canonizalize_path(char *root_path, char *path, int is_dir)
 {
     assert(path);
 
@@ -236,13 +236,9 @@ char *canonizalize_path(char *root_path, char *path, int is_dir)
     return result;
 }
 
-struct cpp_module *cpp_module_find_or_create(char *module_path)
+static struct cpp_module *cpp_module_find(char *module_path)
 {
     assert(module_path);
-
-    //
-    // Attempt to find an existing module with the same path
-    //
 
     struct cpp_module *module = NULL;
 
@@ -255,26 +251,39 @@ struct cpp_module *cpp_module_find_or_create(char *module_path)
         }
     }
 
-    //
-    // Create a new module if an existing one was not found
-    //
-
-    if (!module)
-    {
-        struct cpp_module new_module;
-        memset(&new_module, 0, sizeof(new_module));
-
-        new_module.path = module_path;
-
-        DYNARRAY_PUSH(main_globals.modules, main_globals.module_count, new_module);
-
-        module = &main_globals.modules[main_globals.module_count - 1];
-    }
-
     return module;
 }
 
-void process_global_types(void)
+static struct cpp_module *cpp_module_create(char *module_path)
+{
+    assert(module_path);
+
+    struct cpp_module new_module;
+    memset(&new_module, 0, sizeof(new_module));
+
+    new_module.path = module_path;
+
+    DYNARRAY_PUSH(main_globals.modules, main_globals.module_count, new_module);
+
+    return &main_globals.modules[main_globals.module_count - 1];
+}
+
+static inline struct cpp_module *cpp_module_find_or_create(char *module_path)
+{
+    assert(module_path);
+
+    struct cpp_module *result = cpp_module_find(module_path);
+
+    if (result)
+    {
+        free(module_path);
+        return result;
+    }
+
+    return cpp_module_create(module_path);
+}
+
+static void process_global_types(void)
 {
     //
     // NOTE:
@@ -290,7 +299,7 @@ void process_global_types(void)
     struct cpp_module module;
     memset(&module, 0, sizeof(module));
 
-    module.path = strdup("types.h");
+    module.path = canonizalize_path(NULL, "types.h", 0);
     assert(module.path);
 
     for (uint32_t i = main_globals.pdb_data.tpi_header.minimum_index; i < main_globals.pdb_data.tpi_header.maximum_index; i++)
@@ -299,7 +308,7 @@ void process_global_types(void)
     DYNARRAY_PUSH(main_globals.modules, main_globals.module_count, module);
 }
 
-void process_build_info_ids(void)
+static void process_build_info_ids(void)
 {
     for (uint32_t id_index = main_globals.pdb_data.ipi_header.minimum_index; id_index < main_globals.pdb_data.ipi_header.maximum_index; id_index++)
     {
@@ -375,7 +384,7 @@ void process_build_info_ids(void)
     }
 }
 
-void process_user_defined_type_ids(void)
+static void process_user_defined_type_ids(void)
 {
     for (uint32_t id_index = main_globals.pdb_data.ipi_header.minimum_index; id_index < main_globals.pdb_data.ipi_header.maximum_index; id_index++)
     {
@@ -422,7 +431,7 @@ void process_user_defined_type_ids(void)
     }
 }
 
-void process_symbol_records(void)
+static void process_symbol_records(void)
 {
     char *prev_module_path = NULL;
 
@@ -541,7 +550,7 @@ void process_symbol_records(void)
     }
 }
 
-void process_modules(void)
+static void process_modules(void)
 {
     for (uint32_t dbi_module_index = 0; dbi_module_index < main_globals.pdb_data.modules.count; dbi_module_index++)
     {
@@ -607,7 +616,7 @@ void process_modules(void)
     }
 }
 
-void export_cpp_modules(void)
+static void export_cpp_modules(void)
 {
     for (uint32_t i = 0; i < main_globals.module_count; i++)
     {
