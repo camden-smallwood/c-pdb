@@ -152,7 +152,7 @@ static char *sanitize_path(char *path)
     return result;
 }
 
-static char *canonizalize_path(char *root_path, char *path, int is_dir)
+static char *canonicalize_path(char *root_path, char *path, int is_dir)
 {
     assert(path);
 
@@ -299,7 +299,7 @@ static void process_global_types(void)
     struct cpp_module module;
     memset(&module, 0, sizeof(module));
 
-    module.path = canonizalize_path(NULL, "types.h", 0);
+    module.path = canonicalize_path(NULL, "types.h", 0);
     assert(module.path);
 
     for (uint32_t i = main_globals.pdb_data.tpi_header.minimum_index; i < main_globals.pdb_data.tpi_header.maximum_index; i++)
@@ -354,7 +354,7 @@ static void process_build_info_ids(void)
         assert(root_path);
         assert(module_path);
 
-        module_path = canonizalize_path(root_path, module_path, 0);
+        module_path = canonicalize_path(root_path, module_path, 0);
         assert(module_path);
 
         struct cpp_module *module = cpp_module_find_or_create(module_path);
@@ -422,7 +422,7 @@ static void process_user_defined_type_ids(void)
         assert(module_path);
 
         char *old_module_path = module_path;
-        module_path = canonizalize_path(NULL, module_path, 0);
+        module_path = canonicalize_path(NULL, module_path, 0);
         assert(module_path);
         free(old_module_path);
 
@@ -476,7 +476,7 @@ static void process_symbol_records(void)
                 // TODO: get module_path from referenced_module->module_name
                 //
 
-                // prev_module_path = canonizalize_path(NULL, module_path, 0);
+                // prev_module_path = canonicalize_path(NULL, module_path, 0);
                 // assert(prev_module_path);
             }
             break;
@@ -542,7 +542,7 @@ static void process_symbol_records(void)
                 // TODO: get module_path from contributing_module->module_name
                 //
 
-                // prev_module_path = canonizalize_path(NULL, module_path, 0);
+                // prev_module_path = canonicalize_path(NULL, module_path, 0);
                 // assert(prev_module_path);
                 break;
             }
@@ -582,7 +582,7 @@ static void process_modules(void)
                 struct dbi_file_checksum *entry = &subsection->file_checksums.entries[i];
 
                 // assert(entry->header.name_offset < main_globals.pdb_data.string_table.header.names_size);
-                // char *file_path = canonizalize_path(NULL, main_globals.pdb_data.string_table.names_data + entry->header.name_offset, 0);
+                // char *file_path = canonicalize_path(NULL, main_globals.pdb_data.string_table.names_data + entry->header.name_offset, 0);
                 // assert(file_path);
 
                 // printf("file_path: %s\n", file_path);
@@ -606,7 +606,7 @@ static void process_modules(void)
                 struct dbi_file_checksum *entry = &subsection->file_checksums.entries[i];
 
                 // assert(entry->header.name_offset < main_globals.pdb_data.string_table.header.names_size);
-                // char *file_path = canonizalize_path(NULL, main_globals.pdb_data.string_table.names_data + entry->header.name_offset, 0);
+                // char *file_path = canonicalize_path(NULL, main_globals.pdb_data.string_table.names_data + entry->header.name_offset, 0);
                 // assert(file_path);
 
                 // printf("file_path: %s\n", file_path);
