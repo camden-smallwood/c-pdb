@@ -330,7 +330,7 @@ void cpp_enum_add_members(struct cpp_enum *item, struct pdb_data *pdb, uint32_t 
 
     struct tpi_symbol *members_symbol = tpi_symbol_get(&pdb->tpi_header, &pdb->tpi_symbols, members_type_index);
     
-    // HACK: idk why some enums are showing up with huge indices
+    // TODO: HACK: idk why some enums are showing up with huge indices
     if (!members_symbol)
     {
         assert(item->value_count == 0);
@@ -684,7 +684,7 @@ void cpp_class_add_members(struct cpp_class *item, struct pdb_data *pdb, uint32_
 
             if (!method_symbol)
             {
-                // HACK: need to check this...
+                // TODO: HACK: need to check this...
                 member.method.return_type_name = strdup("void");
                 assert(member.method.return_type_name);
             }

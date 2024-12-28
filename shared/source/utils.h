@@ -25,6 +25,9 @@
 
 char *string_append(char **string, char *suffix);
 char *string_prepend(char **string, char *prefix);
+int string_starts_with(char *string, char *starts_with);
+int string_ends_with(char *string, char *ends_with);
+void string_split(char *string, char c, size_t *out_count, char ***out_strings);
 
 /* ---------- print functions */
 

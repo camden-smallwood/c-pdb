@@ -431,6 +431,55 @@ static void process_user_defined_type_ids(void)
     }
 }
 
+static char *dbi_module_get_object_file_path(struct dbi_module *module)
+{
+    assert(module);
+    
+    char *result = sanitize_path(module->module_name);
+    
+    struct path obj_path;
+    path_from_string(&obj_path, result);
+
+    if (obj_path.component_count)
+    {
+        char *file_name = obj_path.components[obj_path.component_count - 1];
+
+        if (string_ends_with(file_name, ".o") || string_ends_with(file_name, ".obj"))
+        {
+            size_t part_count = 0;
+            char **parts = NULL;
+            string_split(file_name, '.', &part_count, &parts);
+
+            uint32_t index = UINT32_MAX;
+            
+            // for &ext in cpp::SOURCE_FILE_EXTS {
+            //     if file_name.contains(format!(".{ext}.").as_str()) {
+            //         for (i, &part) in parts.iter().skip(1).enumerate() {
+            //             if part == ext {
+            //                 index = Some(i);
+            //                 break;
+            //             }
+            //         }
+            //     }
+            // }
+
+            // if let Some(index) = index {
+            //     parts.resize(index, "");
+            //     parts.push("obj");
+            // }
+
+            // free(result);
+            // result = parts.join(".").into();
+
+            for (size_t i = 0; i < part_count; i++)
+                free(parts[i]);
+            free(parts);
+        }
+    }
+
+    return result;
+}
+
 static void process_symbol_records(void)
 {
     char *prev_module_path = NULL;
@@ -453,6 +502,9 @@ static void process_symbol_records(void)
                 char *module_path = strdup(prev_module_path);
                 assert(module_path);
 
+                free(prev_module_path);
+                prev_module_path = NULL;
+
                 struct cpp_module *module = cpp_module_find_or_create(module_path);
                 cpp_module_add_type_definition(module, &main_globals.pdb_data, symbol->user_defined_type_symbol.type_index, 0);
             }
@@ -470,14 +522,13 @@ static void process_symbol_records(void)
                 if (prev_module_path)
                     free(prev_module_path);
 
-                char *module_path = NULL;
+                char *module_path = dbi_module_get_object_file_path(referenced_module);
+                assert(module_path);
 
-                //
-                // TODO: get module_path from referenced_module->module_name
-                //
+                prev_module_path = canonicalize_path(NULL, module_path, 0);
+                assert(prev_module_path);
 
-                // prev_module_path = canonicalize_path(NULL, module_path, 0);
-                // assert(prev_module_path);
+                free(module_path);
             }
             break;
 
@@ -536,14 +587,13 @@ static void process_symbol_records(void)
                 if (prev_module_path)
                     free(prev_module_path);
 
-                char *module_path = NULL;
+                char *module_path = dbi_module_get_object_file_path(contributing_module);
+                assert(module_path);
 
-                //
-                // TODO: get module_path from contributing_module->module_name
-                //
+                prev_module_path = canonicalize_path(NULL, module_path, 0);
+                assert(prev_module_path);
 
-                // prev_module_path = canonicalize_path(NULL, module_path, 0);
-                // assert(prev_module_path);
+                free(module_path);
                 break;
             }
         }

@@ -853,10 +853,10 @@ void dbi_subsection_dispose(struct dbi_subsection *item)
         //     break;
 
     default:
-        fprintf(stderr, "%s:%i: ERROR: unhandled dbi_subsection_type value: ", __FILE__, __LINE__);
-        dbi_subsection_type_print(item->type, stderr);
-        fprintf(stderr, "\n");
-        exit(EXIT_FAILURE);
+        // fprintf(stderr, "%s:%i: ERROR: unhandled dbi_subsection_type value: ", __FILE__, __LINE__);
+        // dbi_subsection_type_print(item->type, stderr);
+        // fprintf(stderr, "\n");
+        // exit(EXIT_FAILURE);
     }
 }
 
@@ -935,10 +935,10 @@ void dbi_subsection_read(
         //     break;
 
     default:
-        fprintf(stderr, "%s:%i: ERROR: unhandled dbi_subsection_type value: ", __FILE__, __LINE__);
-        dbi_subsection_type_print(item->type, stderr);
-        fprintf(stderr, "\n");
-        exit(EXIT_FAILURE);
+        // fprintf(stderr, "%s:%i: ERROR: unhandled dbi_subsection_type value: ", __FILE__, __LINE__);
+        // dbi_subsection_type_print(item->type, stderr);
+        // fprintf(stderr, "\n");
+        // exit(EXIT_FAILURE);
     }
 
     *out_offset = start_offset + item->size;
