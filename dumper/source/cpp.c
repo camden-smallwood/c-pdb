@@ -1836,6 +1836,23 @@ char *cpp_type_name(
         return type_name;
     }
 
+    case LF_FIELDLIST:
+    case LF_ARGLIST:
+    case LF_METHODLIST:
+    case LF_VTSHAPE:
+    {
+        char *type_name = strdup("...");
+        assert(type_name);
+
+        if (declaration_name)
+        {
+            string_append(&type_name, " ");
+            string_append(&type_name, declaration_name);
+        }
+
+        return type_name;
+    }
+
     default:
         fprintf(stderr, "%s:%i: ERROR: Unhandled tpi_leaf value: ", __FILE__, __LINE__);
         tpi_leaf_print(symbol->leaf, stderr);

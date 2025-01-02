@@ -688,7 +688,7 @@ static void dbi_module_get_file_path_and_header_paths(
         strcasecmp(obj_path_string, "* Linker Generated Manifest RES *") != 0 &&
         (obj_ext && strcasecmp(obj_ext, "exp") != 0))
     {
-        fprintf(stderr, "%s:%i: WARNING: Failed to find source file of \"%s\"\n", __FILE__, __LINE__, obj_path_string);
+        fprintf(stderr, "WARNING: Failed to find source file of \"%s\"\n", obj_path_string);
     }
 
     path_dispose(&obj_path);
@@ -831,6 +831,10 @@ static uint32_t process_scoped_symbols(struct dbi_module *dbi_module, uint32_t s
             // TODO
             break;
         
+        case S_ANNOTATION:
+            // TODO
+            break;
+        
         case S_CONSTANT:
         case S_CONSTANT_ST:
         case S_MANCONSTANT:
@@ -958,8 +962,32 @@ static void process_modules(void)
             case S_GPROC32_ID:
             case S_LPROC32_DPC:
             case S_LPROC32_DPC_ID:
+            {
                 symbol_index += process_procedure_symbols(dbi_module, symbol_index + 1);
+
+                char *signature = cpp_type_name(
+                    &main_globals.pdb_data,
+                    cv_symbol->procedure_symbol.type_index,
+                    cv_symbol->procedure_symbol.name,
+                    0, // TODO
+                    NULL, // TODO
+                    0);
+                assert(signature);
+
+                struct cpp_module_member member = {
+                    .type = CPP_MODULE_MEMBER_TYPE_PROCEDURE,
+                    .procedure = {
+                        .address = 0, // TODO
+                        .line = 0, // TODO
+                        .type_index = cv_symbol->procedure_symbol.type_index,
+                        .signature = signature,
+                        .body = NULL, // TODO
+                    }
+                };
+
+                DYNARRAY_PUSH(cpp_module->members, cpp_module->member_count, member);
                 break;
+            }
             
             case S_THUNK32:
             case S_THUNK32_ST:
@@ -1072,7 +1100,7 @@ static void process_modules(void)
                 free(type_name);
                 
                 struct cpp_module_member member = {
-                    .type = CPP_MODULE_MEMBER_TYPE_CONSTANT,
+                    .type = CPP_MODULE_MEMBER_TYPE_DATA,
                     .data = result,
                 };
 
@@ -1103,7 +1131,7 @@ static void process_modules(void)
                 free(type_name);
 
                 struct cpp_module_member member = {
-                    .type = CPP_MODULE_MEMBER_TYPE_CONSTANT,
+                    .type = CPP_MODULE_MEMBER_TYPE_THREAD_STORAGE,
                     .constant = result,
                 };
 
@@ -1143,6 +1171,11 @@ static void process_modules(void)
                 break;
             
             case S_ENVBLOCK:
+                // TODO
+                break;
+            
+            case S_LABEL32:
+            case S_LABEL32_ST:
                 // TODO
                 break;
             
