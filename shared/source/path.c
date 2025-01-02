@@ -49,7 +49,9 @@ void path_from_string(struct path *path, char *string)
         else if (strcmp(component, "..") == 0)
         {
             free(component);
-            DYNARRAY_POP(path->components, path->component_count, sizeof(component));
+
+            if (path->component_count)
+                DYNARRAY_POP(path->components, path->component_count, sizeof(component));
         }
         else
         {
@@ -112,4 +114,46 @@ void path_remove_component(struct path *path, size_t index)
     
     path->components = realloc(path->components, path->component_count * sizeof(*path->components));
     assert(path->components);
+}
+
+char *path_get_extension(struct path *path)
+{
+    assert(path);
+
+    if (path->component_count == 0)
+        return NULL;
+    
+    char *ext = strrchr(path->components[path->component_count - 1], '.');
+
+    if (!ext)
+        return NULL;
+    
+    return strdup(ext + 1);
+}
+
+char *path_get_file_stem(struct path *path)
+{
+    assert(path);
+
+    if (path->component_count == 0)
+        return NULL;
+    
+    char *component = path->components[path->component_count - 1];
+    char *ext = strrchr(component, '.');
+
+    if (!ext)
+        return strdup(component);
+    
+    size_t length = (size_t)(ext - component);
+
+    if (length == 0)
+        return strdup(component);
+    
+    char *result = malloc(length + 1);
+    assert(result);
+    
+    memcpy(result, component, length);
+    result[length] = '\0';
+
+    return result;
 }

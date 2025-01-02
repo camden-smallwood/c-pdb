@@ -68,8 +68,8 @@ void tpi_substr_list_print(struct tpi_substr_list *item, uint32_t depth, FILE *s
 
 #define TPI_BUILD_INFO_STRUCT \
 STRUCT_DECL(tpi_build_info) \
-    FIELD_PRIMITIVE(uint16_t, count, "%u") \
-    FIELD_PRIMITIVE_DYNAMIC_ARRAY(uint32_t *, argument_indices, count, "%u") \
+    FIELD_PRIMITIVE(uint16_t, argument_count, "%u") \
+    FIELD_PRIMITIVE_DYNAMIC_ARRAY(uint32_t *, argument_id_indices, argument_count, "%u") \
 STRUCT_END(tpi_build_info)
 
 TPI_BUILD_INFO_STRUCT

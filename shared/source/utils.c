@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <ctype.h>
 #include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
@@ -117,6 +118,58 @@ void string_split(char *string, char c, size_t *out_count, char ***out_strings)
 
         current = next;
     }
+}
+
+void string_lower(char *string)
+{
+    if (!string)
+        return;
+    
+    size_t length = strlen(string);
+
+    for (size_t i = 0; i < length; i++)
+    {
+        string[i] = tolower(string[i]);
+    }
+}
+
+void string_upper(char *string)
+{
+    if (!string)
+        return;
+    
+    size_t length = strlen(string);
+
+    for (size_t i = 0; i < length; i++)
+    {
+        string[i] = toupper(string[i]);
+    }
+}
+
+char *string_to_lower(const char *string)
+{
+    if (!string)
+        return NULL;
+    
+    char *result = strdup(string);
+    assert(result);
+    
+    string_lower(result);
+    
+    return result;
+}
+
+char *string_to_upper(const char *string)
+{
+    if (!string)
+        return NULL;
+    
+    char *result = strdup(string);
+    assert(result);
+    
+    string_upper(result);
+
+    return result;
 }
 
 void fprintf_depth(FILE *stream, uint32_t depth, char *fmt, ...)

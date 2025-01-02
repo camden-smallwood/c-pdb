@@ -853,6 +853,7 @@ void dbi_subsection_dispose(struct dbi_subsection *item)
         //     break;
 
     default:
+        break;
         // fprintf(stderr, "%s:%i: ERROR: unhandled dbi_subsection_type value: ", __FILE__, __LINE__);
         // dbi_subsection_type_print(item->type, stderr);
         // fprintf(stderr, "\n");
@@ -935,6 +936,7 @@ void dbi_subsection_read(
         //     break;
 
     default:
+        break;
         // fprintf(stderr, "%s:%i: ERROR: unhandled dbi_subsection_type value: ", __FILE__, __LINE__);
         // dbi_subsection_type_print(item->type, stderr);
         // fprintf(stderr, "\n");

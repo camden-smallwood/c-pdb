@@ -55,7 +55,7 @@ void tpi_build_info_dispose(struct tpi_build_info *item)
 {
     assert(item);
 
-    free(item->argument_indices);
+    free(item->argument_id_indices);
 }
 
 void tpi_build_info_print(struct tpi_build_info *item, uint32_t depth, FILE *stream)
@@ -216,15 +216,15 @@ void ipi_symbols_read(
         {
             uint32_t temp_offset = offset;
 
-            MSF_STREAM_READ(msf, msf_stream, &temp_offset, symbol->build_info.count, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, &temp_offset, symbol->build_info.argument_count, file_stream);
 
-            symbol->build_info.argument_indices = malloc(symbol->build_info.count * sizeof(*symbol->build_info.argument_indices));
-            assert(symbol->build_info.argument_indices);
+            symbol->build_info.argument_id_indices = malloc(symbol->build_info.argument_count * sizeof(*symbol->build_info.argument_id_indices));
+            assert(symbol->build_info.argument_id_indices);
 
-            for (uint32_t i = 0; i < symbol->build_info.count; i++)
+            for (uint32_t i = 0; i < symbol->build_info.argument_count; i++)
             {
-                MSF_STREAM_READ(msf, msf_stream, &temp_offset, symbol->build_info.argument_indices[i], file_stream);
-                assert(symbol->build_info.argument_indices[i] <= ipi_header->maximum_index);
+                MSF_STREAM_READ(msf, msf_stream, &temp_offset, symbol->build_info.argument_id_indices[i], file_stream);
+                assert(symbol->build_info.argument_id_indices[i] <= ipi_header->maximum_index);
             }
             break;
         }

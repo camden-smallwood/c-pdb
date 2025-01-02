@@ -243,6 +243,8 @@ void tpi_enumerate_variant_read(
     assert(out_offset);
     assert(file_stream);
 
+    memset(variant, 0, sizeof(*variant));
+
     uint16_t variant_leaf;
     MSF_STREAM_READ(msf, msf_stream, out_offset, variant_leaf, file_stream);
 
@@ -296,6 +298,8 @@ void tpi_enumerate_variant_read(
         fprintf(stderr, "\n");
         exit(EXIT_FAILURE);
     }
+
+    assert(variant->type <= TPI_ENUMERATE_VARIANT_INT64);
 }
 
 void tpi_enumerate_variant_print(struct tpi_enumerate_variant *item, uint32_t depth, FILE *stream)
@@ -304,6 +308,57 @@ void tpi_enumerate_variant_print(struct tpi_enumerate_variant *item, uint32_t de
     assert(stream);
 
     TPI_ENUMERATE_VARIANT_STRUCT
+}
+
+char *tpi_enumerate_variant_to_string(struct tpi_enumerate_variant *variant)
+{
+    assert(variant);
+
+    char buffer[256];
+    memset(buffer, 0, sizeof(buffer));
+
+    switch (variant->type)
+    {
+    case TPI_ENUMERATE_VARIANT_UINT8:
+        sprintf(buffer, "%u", variant->uint8);
+        break;
+
+    case TPI_ENUMERATE_VARIANT_UINT16:
+        sprintf(buffer, "%u", variant->uint16);
+        break;
+
+    case TPI_ENUMERATE_VARIANT_UINT32:
+        sprintf(buffer, "%u", variant->uint32);
+        break;
+
+    case TPI_ENUMERATE_VARIANT_UINT64:
+        sprintf(buffer, "%llu", variant->uint64);
+        break;
+
+    case TPI_ENUMERATE_VARIANT_INT8:
+        sprintf(buffer, "%i", variant->int8);
+        break;
+
+    case TPI_ENUMERATE_VARIANT_INT16:
+        sprintf(buffer, "%i", variant->int16);
+        break;
+
+    case TPI_ENUMERATE_VARIANT_INT32:
+        sprintf(buffer, "%i", variant->int32);
+        break;
+
+    case TPI_ENUMERATE_VARIANT_INT64:
+        sprintf(buffer, "%lli", variant->int64);
+        break;
+
+    default:
+        fprintf(stderr, "%s:%i: ERROR: unhandled tpi_enumerate_variant_type value: ", __FILE__, __LINE__);
+        tpi_enumerate_variant_type_print(variant->type, stderr);
+        fprintf(stderr, "\n");
+        exit(EXIT_FAILURE);
+    }
+
+    return strdup(buffer);
 }
 
 void tpi_enumerate_dispose(struct tpi_enumerate *item)

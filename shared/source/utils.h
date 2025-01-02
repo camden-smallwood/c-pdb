@@ -16,9 +16,13 @@
 #define DYNARRAY_POP(array, count, element_size)              \
     do                                                        \
     {                                                         \
+        assert(count);                                        \
         (count)--;                                            \
         (array) = realloc((array), (count) * (element_size)); \
-        assert(array);                                        \
+        if (count)                                            \
+        {                                                     \
+            assert(array);                                    \
+        }                                                     \
     } while (0)
 
 /* ---------- string functions */
@@ -28,6 +32,10 @@ char *string_prepend(char **string, char *prefix);
 int string_starts_with(char *string, char *starts_with);
 int string_ends_with(char *string, char *ends_with);
 void string_split(char *string, char c, size_t *out_count, char ***out_strings);
+void string_lower(char *string);
+void string_upper(char *string);
+char *string_to_lower(const char *string);
+char *string_to_upper(const char *string);
 
 /* ---------- print functions */
 

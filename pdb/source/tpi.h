@@ -647,6 +647,7 @@ TPI_ENUMERATE_VARIANT_STRUCT
 
 void tpi_enumerate_variant_read(struct tpi_enumerate_variant *variant, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, FILE *file_stream);
 void tpi_enumerate_variant_print(struct tpi_enumerate_variant *variant, uint32_t depth, FILE *stream);
+char *tpi_enumerate_variant_to_string(struct tpi_enumerate_variant *variant);
 
 /* ---------- TPI enumerate */
 
