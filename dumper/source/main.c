@@ -163,7 +163,7 @@ static char *canonicalize_path(char *root_path, char *path, int is_dir)
     //
 
     size_t out_path_length = strlen(main_globals.output_path);
-
+    
     if (out_path_length)
     {
         string_append(&result, (char *)main_globals.output_path);
@@ -281,6 +281,150 @@ static inline struct cpp_module *cpp_module_find_or_create(char *module_path)
     }
 
     return cpp_module_create(module_path);
+}
+
+static const char *const CPP_SOURCE_FILE_EXTS[] = {
+    "c",
+    "cc",
+    "cpp",
+    "cxx",
+    "pch",
+    "asm",
+    "fasm",
+    "masm",
+    "res",
+    "exp",
+};
+
+static const size_t CPP_SOURCE_FILE_EXT_COUNT =
+    sizeof(CPP_SOURCE_FILE_EXTS) / sizeof(CPP_SOURCE_FILE_EXTS[0]);
+
+static void dbi_module_get_file_path_and_header_paths(
+    struct dbi_module *dbi_module,
+    char **out_file_path,
+    size_t *out_header_path_count,
+    char ***out_header_paths)
+{
+    assert(dbi_module);
+
+    assert(out_file_path);
+    *out_file_path = NULL;
+
+    if (out_header_path_count || out_header_paths)
+    {
+        assert(out_header_path_count);
+        *out_header_path_count = 0;
+
+        assert(out_header_paths);
+        *out_header_paths = NULL;
+    }
+
+    char *obj_path_string = sanitize_path(dbi_module->module_name);
+    assert(obj_path_string);
+
+    struct path obj_path;
+    path_from_string(&obj_path, obj_path_string);
+
+    char *obj_stem = path_get_file_stem(&obj_path);
+    char *obj_ext = path_get_extension(&obj_path);
+
+    uint32_t subsection_count = dbi_module->c11_lines_subsection_count;
+    struct dbi_subsection *subsections = dbi_module->c11_lines_subsections;
+
+    if (subsection_count == 0)
+    {
+        subsection_count = dbi_module->c13_lines_subsection_count;
+        subsections = dbi_module->c13_lines_subsections;
+    }
+
+    for (uint32_t subsection_index = 0; subsection_index < subsection_count; subsection_index++)
+    {
+        struct dbi_subsection *subsection = &subsections[subsection_index];
+        
+        if (subsection->type != DEBUG_S_FILECHKSMS)
+            continue;
+
+        for (uint32_t i = 0; i < subsection->file_checksums.count; i++)
+        {
+            struct dbi_file_checksum *entry = &subsection->file_checksums.entries[i];
+
+            assert(entry->header.name_offset < main_globals.pdb_data.string_table.header.names_size);
+            char *file_path = sanitize_path(main_globals.pdb_data.string_table.names_data + entry->header.name_offset);
+            assert(file_path);
+
+            struct path path;
+            path_from_string(&path, file_path);
+
+            char *file_stem = path_get_file_stem(&path);
+            assert(file_stem);
+
+            char *file_ext = path_get_extension(&path);
+            
+            if (file_ext)
+            {
+                for (size_t j = 0; j < CPP_SOURCE_FILE_EXT_COUNT; j++)
+                {
+                    // If the file extension is a recognized source file extension, and the file stem
+                    // matches the .obj file stem, add it to the headers list
+                    if (strcasecmp(file_ext, CPP_SOURCE_FILE_EXTS[j]) == 0 &&
+                        strcasecmp(file_stem, obj_stem) == 0)
+                    {
+                        free(file_path);
+                        path_dispose(&path);
+                        file_path = canonicalize_path(NULL, main_globals.pdb_data.string_table.names_data + entry->header.name_offset, 0);
+                        assert(file_path);
+                        path_from_string(&path, file_path);
+                        *out_file_path = path_to_string(&path, 0);
+                        assert(*out_file_path);
+                        break;
+                    }
+                }
+            }
+            
+            if (!*out_file_path && out_header_path_count && out_header_paths)
+            {
+                char *header_path = path_to_string(&path, 0);
+                assert(header_path);
+                DYNARRAY_PUSH(*out_header_paths, *out_header_path_count, header_path);
+            }
+
+            path_dispose(&path);
+
+            free(file_stem);
+            free(file_ext);
+            free(file_path);
+        }
+
+        if (subsections == dbi_module->c11_lines_subsections && subsection_index == subsection_count - 1)
+        {
+            subsection_count = dbi_module->c13_lines_subsection_count;
+            subsections = dbi_module->c13_lines_subsections;
+            subsection_index = UINT32_MAX;
+        }
+    }
+
+    if (!*out_file_path &&
+        strcasecmp(obj_path_string, "* CIL *") != 0 &&
+        strcasecmp(obj_path_string, "* Linker *") != 0 &&
+        strcasecmp(obj_path_string, "* Linker Generated Manifest RES *") != 0 &&
+        (obj_ext && strcasecmp(obj_ext, "exp") != 0))
+    {
+        fprintf(stderr, "WARNING: Failed to find source file of \"%s\"\n", obj_path_string);
+    }
+
+    path_dispose(&obj_path);
+
+    free(obj_ext);
+    free(obj_stem);
+    free(obj_path_string);
+}
+
+static char *dbi_module_get_file_path(struct dbi_module *dbi_module)
+{
+    char *file_path = NULL;
+    dbi_module_get_file_path_and_header_paths(dbi_module, &file_path, NULL, NULL);
+
+    return file_path;
 }
 
 static void process_global_types(void)
@@ -470,30 +614,15 @@ static void process_symbol_records(void)
                 assert(symbol->procedure_reference_symbol.module_index < main_globals.pdb_data.modules.count);
                 struct dbi_module *referenced_module = &main_globals.pdb_data.modules.modules[symbol->procedure_reference_symbol.module_index];
 
-                // TODO: remove this VVV
-                // dbi_module_header_print(&referenced_module->header, 0, stdout);
-                // printf("\n");
-
-                //
-                // TODO
-                //
-
-                // if (prev_module_path)
-                //     free(prev_module_path);
-
-                // char *module_path = dbi_module_get_object_file_path(referenced_module);
-                // assert(module_path);
-
-                // prev_module_path = canonicalize_path(NULL, module_path, 0);
-                // assert(prev_module_path);
-
-                // free(module_path);
+                char *module_path = dbi_module_get_file_path(referenced_module);
+                
+                if (module_path)
+                {
+                    prev_module_path = strdup(module_path);
+                    assert(prev_module_path);
+                    free(module_path);
+                }
             }
-            break;
-
-        case S_PUB32:
-        case S_PUB32_ST:
-            code_offset = &symbol->public_symbol.code_offset;
             break;
 
         case S_LDATA32:
@@ -507,11 +636,9 @@ static void process_symbol_records(void)
             code_offset = &symbol->data_symbol.code_offset;
             break;
 
-        case S_LTHREAD32:
-        case S_LTHREAD32_ST:
-        case S_GTHREAD32:
-        case S_GTHREAD32_ST:
-            code_offset = &symbol->thread_storage_symbol.code_offset;
+        case S_PUB32:
+        case S_PUB32_ST:
+            code_offset = &symbol->public_symbol.code_offset;
             break;
 
         case S_LPROC32:
@@ -525,6 +652,52 @@ static void process_symbol_records(void)
             code_offset = &symbol->procedure_symbol.code_offset;
             break;
 
+        case S_LTHREAD32:
+        case S_LTHREAD32_ST:
+        case S_GTHREAD32:
+        case S_GTHREAD32_ST:
+            code_offset = &symbol->thread_storage_symbol.code_offset;
+            break;
+        
+        case S_TRAMPOLINE:
+            code_offset = &symbol->trampoline_symbol.target_offset;
+            break;
+        
+        case S_LABEL32:
+        case S_LABEL32_ST:
+            code_offset = &symbol->label_symbol.section_offset;
+            break;
+        
+        case S_BLOCK32:
+        case S_BLOCK32_ST:
+            code_offset = &symbol->block_symbol.section_offset;
+            break;
+        
+        case S_THUNK32:
+        case S_THUNK32_ST:
+            code_offset = &symbol->thunk_symbol.section_offset;
+            break;
+        
+        case S_SEPCODE:
+            code_offset = &symbol->separated_code_symbol.section_offset;
+            break;
+        
+        case S_FRAMEPROC:
+            code_offset = &symbol->frame_proc_symbol.exception_handler_offset;
+            break;
+        
+        case S_CALLSITEINFO:
+            code_offset = &symbol->call_site_info_symbol.code_offset;
+            break;
+        
+        case S_COFFGROUP:
+            code_offset = &symbol->coff_group_symbol.code_offset;
+            break;
+        
+        case S_ANNOTATION:
+            code_offset = &symbol->annotation_symbol.code_offset;
+            break;
+        
         default:
             break;
         }
@@ -543,159 +716,18 @@ static void process_symbol_records(void)
                 assert(contribution->module_index < main_globals.pdb_data.modules.count);
                 struct dbi_module *contributing_module = &main_globals.pdb_data.modules.modules[contribution->module_index];
 
-                // TODO: remove this VVV
-                // dbi_module_header_print(&contributing_module->header, 0, stdout);
-                // printf("\n");
-
-                //
-                // TODO
-                //
-
-                // if (prev_module_path)
-                //     free(prev_module_path);
-
-                // char *module_path = dbi_module_get_object_file_path(contributing_module);
-                // assert(module_path);
-
-                // prev_module_path = canonicalize_path(NULL, module_path, 0);
-                // assert(prev_module_path);
-
-                // free(module_path);
-                // break;
-            }
-        }
-    }
-}
-
-static const char *const CPP_SOURCE_FILE_EXTS[] = {
-    "c",
-    "cc",
-    "cpp",
-    "cxx",
-    "pch",
-    "asm",
-    "fasm",
-    "masm",
-    "res",
-    "exp",
-};
-
-static const size_t CPP_SOURCE_FILE_EXT_COUNT =
-    sizeof(CPP_SOURCE_FILE_EXTS) / sizeof(CPP_SOURCE_FILE_EXTS[0]);
-
-static void dbi_module_get_file_path_and_header_paths(
-    struct dbi_module *dbi_module,
-    char **out_file_path,
-    size_t *out_header_path_count,
-    char ***out_header_paths)
-{
-    assert(dbi_module);
-    assert(out_file_path);
-    assert(out_header_path_count);
-    assert(out_header_paths);
-
-    *out_file_path = NULL;
-    *out_header_path_count = 0;
-    *out_header_paths = NULL;
-
-    char *obj_path_string = sanitize_path(dbi_module->module_name);
-    assert(obj_path_string);
-
-    struct path obj_path;
-    path_from_string(&obj_path, obj_path_string);
-
-    char *obj_stem = path_get_file_stem(&obj_path);
-    char *obj_ext = path_get_extension(&obj_path);
-
-    uint32_t subsection_count = dbi_module->c11_lines_subsection_count;
-    struct dbi_subsection *subsections = dbi_module->c11_lines_subsections;
-
-    if (subsection_count == 0)
-    {
-        subsection_count = dbi_module->c13_lines_subsection_count;
-        subsections = dbi_module->c13_lines_subsections;
-    }
-
-    for (uint32_t subsection_index = 0; subsection_index < subsection_count; subsection_index++)
-    {
-        struct dbi_subsection *subsection = &subsections[subsection_index];
-        
-        if (subsection->type != DEBUG_S_FILECHKSMS)
-            continue;
-
-        for (uint32_t i = 0; i < subsection->file_checksums.count; i++)
-        {
-            struct dbi_file_checksum *entry = &subsection->file_checksums.entries[i];
-
-            assert(entry->header.name_offset < main_globals.pdb_data.string_table.header.names_size);
-            char *file_path = canonicalize_path(NULL, main_globals.pdb_data.string_table.names_data + entry->header.name_offset, 0);
-            assert(file_path);
-
-            struct path path;
-            path_from_string(&path, file_path);
-
-            char *file_stem = path_get_file_stem(&path);
-            assert(file_stem);
-
-            char *file_ext = path_get_extension(&path);
-            
-            if (file_ext)
-            {
-                for (size_t j = 0; j < CPP_SOURCE_FILE_EXT_COUNT; j++)
+                char *module_path = dbi_module_get_file_path(contributing_module);
+                
+                if (module_path)
                 {
-                    // If the file extension is a recognized source file extension, and the file stem
-                    // matches the .obj file stem, add it to the headers list
-                    if (strcasecmp(file_ext, CPP_SOURCE_FILE_EXTS[j]) == 0 &&
-                        strcasecmp(file_stem, obj_stem) == 0)
-                    {
-                        *out_file_path = path_to_string(&path, 0);
-                        assert(*out_file_path);
-                    }
-                    // Otherwise, add it to the headers list
-                    else
-                    {
-                        char *header_path = path_to_string(&path, 0);
-                        assert(header_path);
-                        DYNARRAY_PUSH(*out_header_paths, *out_header_path_count, header_path);
-                    }
+                    prev_module_path = strdup(module_path);
+                    assert(prev_module_path);
+                    free(module_path);
+                    break;
                 }
             }
-            else
-            {
-                char *header_path = path_to_string(&path, 0);
-                assert(header_path);
-                DYNARRAY_PUSH(*out_header_paths, *out_header_path_count, header_path);
-            }
-
-            path_dispose(&path);
-
-            free(file_stem);
-            free(file_ext);
-            free(file_path);
-        }
-
-        if (subsections == dbi_module->c11_lines_subsections && subsection_index == subsection_count - 1)
-        {
-            subsection_count = dbi_module->c13_lines_subsection_count;
-            subsections = dbi_module->c13_lines_subsections;
-            subsection_index = UINT32_MAX;
         }
     }
-
-    if (!*out_file_path &&
-        strcasecmp(obj_path_string, "* CIL *") != 0 &&
-        strcasecmp(obj_path_string, "* Linker *") != 0 &&
-        strcasecmp(obj_path_string, "* Linker Generated Manifest RES *") != 0 &&
-        (obj_ext && strcasecmp(obj_ext, "exp") != 0))
-    {
-        fprintf(stderr, "WARNING: Failed to find source file of \"%s\"\n", obj_path_string);
-    }
-
-    path_dispose(&obj_path);
-
-    free(obj_ext);
-    free(obj_stem);
-    free(obj_path_string);
 }
 
 static uint32_t process_scoped_symbols(struct dbi_module *dbi_module, uint32_t start_index, uint16_t scope_end_symbol_type);
@@ -1020,7 +1052,13 @@ static void process_modules(void)
             {
                 uint32_t underlying_type_index = cv_symbol->user_defined_type_symbol.type_index;
 
-                char *type_name = strdup(cv_symbol->user_defined_type_symbol.name);
+                char *type_name = cpp_type_name(
+                    &main_globals.pdb_data,
+                    cv_symbol->user_defined_type_symbol.type_index,
+                    cv_symbol->user_defined_type_symbol.name,
+                    0,
+                    NULL,
+                    0);
                 assert(type_name);
                 
                 struct cpp_module_member member = {
@@ -1056,10 +1094,18 @@ static void process_modules(void)
                 assert(value_string);
                 size_t value_string_length = strlen(value_string);
 
-                size_t result_length = /*const */6 + type_name_length + /* = */3 + value_string_length + /*;\0*/2;
+                size_t result_length = type_name_length + /* = */3 + value_string_length + /*;\0*/2;
+                int prepend = 0;
+
+                if (!string_starts_with(type_name, "const "))
+                {
+                    result_length += /*const */6;
+                    prepend = 1;
+                }
+
                 char *result = malloc(result_length);
                 assert(result);
-                sprintf(result, "const %s = %s;", type_name, value_string);
+                sprintf(result, "%s%s = %s;", prepend ? "const " : "", type_name, value_string);
 
                 free(value_string);
                 free(type_name);
