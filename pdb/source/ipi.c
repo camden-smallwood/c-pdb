@@ -160,25 +160,54 @@ void ipi_symbols_read(
     assert(ipi_header);
     assert(file_stream);
 
+    //
+    // Collect info about where each IPI symbol is located
+    //
+
+    struct ipi_symbol_info
+    {
+        uint32_t offset;
+        uint16_t size;
+    };
+
+    uint32_t symbol_info_count = 0;
+    struct ipi_symbol_info *symbol_info = NULL;
+
     uint32_t offset = ipi_header->header_size;
 
     while (offset < msf_stream->size)
     {
-        symbols->count++;
-        symbols->symbols = realloc(symbols->symbols, symbols->count * sizeof(*symbols->symbols));
-        assert(symbols->symbols);
+        struct ipi_symbol_info info;
+        
+        MSF_STREAM_READ(msf, msf_stream, &offset, info.size, file_stream);
+        assert(info.size >= sizeof(uint16_t));
 
-        struct ipi_symbol *symbol = &symbols->symbols[symbols->count - 1];
-        memset(symbol, 0, sizeof(*symbol));
+        info.offset = offset;
 
-        uint16_t size;
-        msf_stream_read_data(msf, msf_stream, offset, sizeof(size), &size, file_stream);
-        offset += sizeof(size);
-        assert(size >= sizeof(uint16_t));
+        DYNARRAY_PUSH(symbol_info, symbol_info_count, info);
 
-        msf_stream_read_data(msf, msf_stream, offset, sizeof(symbol->type), &symbol->type, file_stream);
-        offset += sizeof(symbol->type);
-        size -= sizeof(symbol->type);
+        offset += info.size;
+    }
+
+    //
+    // Pre-allocate all of the IPI symbols
+    //
+
+    symbols->count = symbol_info_count;
+    symbols->symbols = calloc(symbols->count, sizeof(*symbols->symbols));
+    assert(symbols->symbols);
+
+    //
+    // Read each IPI symbol
+    //
+
+    for (uint32_t i = 0; i < symbol_info_count; i++)
+    {
+        offset = symbol_info[i].offset;
+        
+        struct ipi_symbol *symbol = &symbols->symbols[i];
+
+        MSF_STREAM_READ(msf, msf_stream, &offset, symbol->type, file_stream);
 
         switch (symbol->type)
         {
@@ -266,8 +295,6 @@ void ipi_symbols_read(
             fprintf(stderr, "\n");
             exit(EXIT_FAILURE);
         }
-
-        offset += size;
     }
 }
 

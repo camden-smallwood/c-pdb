@@ -967,75 +967,111 @@ void cv_symbols_read(
 
     memset(item, 0, sizeof(*item));
 
+    //
+    // Collect info about where each CV symbol is located
+    //
+
+    struct cv_symbol_info
+    {
+        uint32_t offset;
+        uint16_t size;
+    };
+
+    uint32_t symbol_info_count = 0;
+    struct cv_symbol_info *symbol_info = NULL;
+
     while (*out_offset < symbols_size)
     {
-        struct cv_symbol symbol;
-        memset(&symbol, 0, sizeof(symbol));
+        struct cv_symbol_info info;
+        
+        MSF_STREAM_READ(msf, msf_stream, out_offset, info.size, file_stream);
+        assert(info.size >= sizeof(uint16_t));
 
-        MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.size, file_stream);
-        assert(symbol.size >= sizeof(uint16_t));
+        info.offset = *out_offset;
 
+        DYNARRAY_PUSH(symbol_info, symbol_info_count, info);
+
+        *out_offset += info.size;
+    }
+
+    //
+    // Pre-allocate all of the CV symbols
+    //
+
+    item->count = symbol_info_count;
+    item->symbols = calloc(item->count, sizeof(*item->symbols));
+    assert(item->symbols);
+
+    //
+    // Read each CV symbol
+    //
+
+    for (uint32_t i = 0; i < symbol_info_count; i++)
+    {
+        *out_offset = symbol_info[i].offset;
         uint32_t start_offset = *out_offset;
 
-        MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.type, file_stream);
+        struct cv_symbol *symbol = &item->symbols[i];
 
-        switch (symbol.type)
+        MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->type, file_stream);
+
+        switch (symbol->type)
         {
         case S_END:
             break;
         
         case S_OBJNAME:
         case S_OBJNAME_ST:
-            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.obj_name_symbol.signature, file_stream);
-            symbol.obj_name_symbol.name = msf_read_cv_symbol_string(msf, msf_stream, out_offset, symbol.type, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->obj_name_symbol.signature, file_stream);
+            symbol->obj_name_symbol.name = msf_read_cv_symbol_string(msf, msf_stream, out_offset, symbol->type, file_stream);
             break;
         
         case S_REGISTER:
         case S_REGISTER_ST:
-            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.register_variable_symbol.type_index, file_stream);
-            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.register_variable_symbol.register_index, file_stream);
-            symbol.register_variable_symbol.name = msf_read_cv_symbol_string(msf, msf_stream, out_offset, symbol.type, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->register_variable_symbol.type_index, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->register_variable_symbol.register_index, file_stream);
+            symbol->register_variable_symbol.name = msf_read_cv_symbol_string(msf, msf_stream, out_offset, symbol->type, file_stream);
             break;
 
         case S_CONSTANT:
         case S_CONSTANT_ST:
         case S_MANCONSTANT:
-            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.constant_symbol.type_index, file_stream);
-            tpi_enumerate_variant_read(&symbol.constant_symbol.value, msf, msf_stream, out_offset, file_stream);
-            symbol.constant_symbol.name = msf_read_cv_symbol_string(msf, msf_stream, out_offset, symbol.type, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->constant_symbol.type_index, file_stream);
+            tpi_enumerate_variant_read(&symbol->constant_symbol.value, msf, msf_stream, out_offset, file_stream);
+            symbol->constant_symbol.name = msf_read_cv_symbol_string(msf, msf_stream, out_offset, symbol->type, file_stream);
             break;
 
         case S_UDT:
         case S_UDT_ST:
         case S_COBOLUDT:
         case S_COBOLUDT_ST:
-            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.user_defined_type_symbol.type_index, file_stream);
-            symbol.user_defined_type_symbol.name = msf_read_cv_symbol_string(msf, msf_stream, out_offset, symbol.type, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->user_defined_type_symbol.type_index, file_stream);
+            symbol->user_defined_type_symbol.name = msf_read_cv_symbol_string(msf, msf_stream, out_offset, symbol->type, file_stream);
             break;
 
         case S_MANYREG:
         case S_MANYREG_ST:
         case S_MANYREG2:
         case S_MANYREG2_ST:
-            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.multi_register_variable_symbol.type_index, file_stream);
-            if (symbol.type == S_MANYREG2 || symbol.type == S_MANYREG2_ST)
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->multi_register_variable_symbol.type_index, file_stream);
+            if (symbol->type == S_MANYREG2 || symbol->type == S_MANYREG2_ST)
             {
                 uint16_t count = 0;
                 MSF_STREAM_READ(msf, msf_stream, out_offset, count, file_stream);
-                symbol.multi_register_variable_symbol.register_count = count;
+                symbol->multi_register_variable_symbol.register_count = count;
             }
             else
             {
                 uint8_t count = 0;
                 MSF_STREAM_READ(msf, msf_stream, out_offset, count, file_stream);
-                symbol.multi_register_variable_symbol.register_count = count;
+                symbol->multi_register_variable_symbol.register_count = count;
             }
-            for (uint32_t i = 0; i < symbol.multi_register_variable_symbol.register_count; i++)
+            for (uint32_t i = 0; i < symbol->multi_register_variable_symbol.register_count; i++)
             {
                 struct cv_multi_register_entry entry;
                 MSF_STREAM_READ(msf, msf_stream, out_offset, entry.register_index, file_stream);
-                entry.register_name = msf_read_cv_symbol_string(msf, msf_stream, out_offset, symbol.type, file_stream);
-                DYNARRAY_PUSH(symbol.multi_register_variable_symbol.registers, symbol.multi_register_variable_symbol.register_count, entry);
+                entry.register_name = msf_read_cv_symbol_string(msf, msf_stream, out_offset, symbol->type, file_stream);
+                DYNARRAY_PUSH(symbol->multi_register_variable_symbol.registers, symbol->multi_register_variable_symbol.register_count, entry);
             }
             break;
 
@@ -1047,16 +1083,16 @@ void cv_symbols_read(
         case S_LMANDATA_ST:
         case S_GMANDATA:
         case S_GMANDATA_ST:
-            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.data_symbol.type_index, file_stream);
-            cv_pe_section_offset_read(&symbol.data_symbol.code_offset, msf, msf_stream, out_offset, file_stream);
-            symbol.data_symbol.name = msf_read_cv_symbol_string(msf, msf_stream, out_offset, symbol.type, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->data_symbol.type_index, file_stream);
+            cv_pe_section_offset_read(&symbol->data_symbol.code_offset, msf, msf_stream, out_offset, file_stream);
+            symbol->data_symbol.name = msf_read_cv_symbol_string(msf, msf_stream, out_offset, symbol->type, file_stream);
             break;
 
         case S_PUB32:
         case S_PUB32_ST:
-            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.public_symbol.flags, file_stream);
-            cv_pe_section_offset_read(&symbol.public_symbol.code_offset, msf, msf_stream, out_offset, file_stream);
-            symbol.public_symbol.name = msf_read_cv_symbol_string(msf, msf_stream, out_offset, symbol.type, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->public_symbol.flags, file_stream);
+            cv_pe_section_offset_read(&symbol->public_symbol.code_offset, msf, msf_stream, out_offset, file_stream);
+            symbol->public_symbol.name = msf_read_cv_symbol_string(msf, msf_stream, out_offset, symbol->type, file_stream);
             break;
 
         case S_LPROC32:
@@ -1067,106 +1103,106 @@ void cv_symbols_read(
         case S_GPROC32_ID:
         case S_LPROC32_DPC:
         case S_LPROC32_DPC_ID:
-            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.procedure_symbol.parent_symbol_index, file_stream);
-            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.procedure_symbol.end_symbol_index, file_stream);
-            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.procedure_symbol.next_symbol_index, file_stream);
-            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.procedure_symbol.code_block_length, file_stream);
-            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.procedure_symbol.debug_start_offset, file_stream);
-            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.procedure_symbol.debug_end_offset, file_stream);
-            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.procedure_symbol.type_index, file_stream);
-            cv_pe_section_offset_read(&symbol.procedure_symbol.code_offset, msf, msf_stream, out_offset, file_stream);
-            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.procedure_symbol.flags, file_stream);
-            symbol.procedure_symbol.name = msf_read_cv_symbol_string(msf, msf_stream, out_offset, symbol.type, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->procedure_symbol.parent_symbol_index, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->procedure_symbol.end_symbol_index, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->procedure_symbol.next_symbol_index, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->procedure_symbol.code_block_length, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->procedure_symbol.debug_start_offset, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->procedure_symbol.debug_end_offset, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->procedure_symbol.type_index, file_stream);
+            cv_pe_section_offset_read(&symbol->procedure_symbol.code_offset, msf, msf_stream, out_offset, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->procedure_symbol.flags, file_stream);
+            symbol->procedure_symbol.name = msf_read_cv_symbol_string(msf, msf_stream, out_offset, symbol->type, file_stream);
             break;
 
         case S_LTHREAD32:
         case S_LTHREAD32_ST:
         case S_GTHREAD32:
         case S_GTHREAD32_ST:
-            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.thread_storage_symbol.type_index, file_stream);
-            cv_pe_section_offset_read(&symbol.thread_storage_symbol.code_offset, msf, msf_stream, out_offset, file_stream);
-            symbol.thread_storage_symbol.name = msf_read_cv_symbol_string(msf, msf_stream, out_offset, symbol.type, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->thread_storage_symbol.type_index, file_stream);
+            cv_pe_section_offset_read(&symbol->thread_storage_symbol.code_offset, msf, msf_stream, out_offset, file_stream);
+            symbol->thread_storage_symbol.name = msf_read_cv_symbol_string(msf, msf_stream, out_offset, symbol->type, file_stream);
             break;
 
         case S_COMPILE2:
         case S_COMPILE2_ST:
         case S_COMPILE3:
-            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.compile_flags_symbol.language, file_stream);
-            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.compile_flags_symbol.flags, file_stream);
-            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.compile_flags_symbol.padding, file_stream);
-            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.compile_flags_symbol.cpu_type, file_stream);
-            cv_compiler_version_read(&symbol.compile_flags_symbol.frontend_version, msf, msf_stream, out_offset, symbol.type, file_stream);
-            cv_compiler_version_read(&symbol.compile_flags_symbol.backend_version, msf, msf_stream, out_offset, symbol.type, file_stream);
-            symbol.compile_flags_symbol.version_string = msf_read_cv_symbol_string(msf, msf_stream, out_offset, symbol.type, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->compile_flags_symbol.language, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->compile_flags_symbol.flags, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->compile_flags_symbol.padding, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->compile_flags_symbol.cpu_type, file_stream);
+            cv_compiler_version_read(&symbol->compile_flags_symbol.frontend_version, msf, msf_stream, out_offset, symbol->type, file_stream);
+            cv_compiler_version_read(&symbol->compile_flags_symbol.backend_version, msf, msf_stream, out_offset, symbol->type, file_stream);
+            symbol->compile_flags_symbol.version_string = msf_read_cv_symbol_string(msf, msf_stream, out_offset, symbol->type, file_stream);
             break;
 
         case S_UNAMESPACE:
         case S_UNAMESPACE_ST:
-            symbol.using_namespace_symbol.name = msf_read_cv_symbol_string(msf, msf_stream, out_offset, symbol.type, file_stream);
+            symbol->using_namespace_symbol.name = msf_read_cv_symbol_string(msf, msf_stream, out_offset, symbol->type, file_stream);
             break;
 
         case S_PROCREF:
         case S_PROCREF_ST:
         case S_LPROCREF:
         case S_LPROCREF_ST:
-            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.procedure_reference_symbol.sum_name, file_stream);
-            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.procedure_reference_symbol.symbol_index, file_stream);
-            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.procedure_reference_symbol.module_index, file_stream);
-            symbol.procedure_reference_symbol.name = msf_read_cv_symbol_string(msf, msf_stream, out_offset, symbol.type, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->procedure_reference_symbol.sum_name, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->procedure_reference_symbol.symbol_index, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->procedure_reference_symbol.module_index, file_stream);
+            symbol->procedure_reference_symbol.name = msf_read_cv_symbol_string(msf, msf_stream, out_offset, symbol->type, file_stream);
             break;
 
         case S_DATAREF:
         case S_DATAREF_ST:
-            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.data_reference_symbol.sum_name, file_stream);
-            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.data_reference_symbol.symbol_index, file_stream);
-            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.data_reference_symbol.module_index, file_stream);
-            symbol.data_reference_symbol.name = msf_read_cv_symbol_string(msf, msf_stream, out_offset, symbol.type, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->data_reference_symbol.sum_name, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->data_reference_symbol.symbol_index, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->data_reference_symbol.module_index, file_stream);
+            symbol->data_reference_symbol.name = msf_read_cv_symbol_string(msf, msf_stream, out_offset, symbol->type, file_stream);
             break;
 
         case S_ANNOTATIONREF:
-            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.annotation_reference_symbol.sum_name, file_stream);
-            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.annotation_reference_symbol.symbol_index, file_stream);
-            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.annotation_reference_symbol.module_index, file_stream);
-            symbol.annotation_reference_symbol.name = msf_read_cv_symbol_string(msf, msf_stream, out_offset, symbol.type, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->annotation_reference_symbol.sum_name, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->annotation_reference_symbol.symbol_index, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->annotation_reference_symbol.module_index, file_stream);
+            symbol->annotation_reference_symbol.name = msf_read_cv_symbol_string(msf, msf_stream, out_offset, symbol->type, file_stream);
             break;
 
         case S_TRAMPOLINE:
-            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.trampoline_symbol.type, file_stream);
-            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.trampoline_symbol.size, file_stream);
-            cv_pe_section_offset_read(&symbol.trampoline_symbol.thunk_offset, msf, msf_stream, out_offset, file_stream);
-            cv_pe_section_offset_read(&symbol.trampoline_symbol.target_offset, msf, msf_stream, out_offset, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->trampoline_symbol.type, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->trampoline_symbol.size, file_stream);
+            cv_pe_section_offset_read(&symbol->trampoline_symbol.thunk_offset, msf, msf_stream, out_offset, file_stream);
+            cv_pe_section_offset_read(&symbol->trampoline_symbol.target_offset, msf, msf_stream, out_offset, file_stream);
             break;
 
         case S_EXPORT:
-            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.export_symbol.ordinal, file_stream);
-            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.export_symbol.flags, file_stream);
-            symbol.export_symbol.name = msf_read_cv_symbol_string(msf, msf_stream, out_offset, symbol.type, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->export_symbol.ordinal, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->export_symbol.flags, file_stream);
+            symbol->export_symbol.name = msf_read_cv_symbol_string(msf, msf_stream, out_offset, symbol->type, file_stream);
             break;
 
         case S_LOCAL:
-            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.local_symbol.type_index, file_stream);
-            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.local_symbol.flags, file_stream);
-            symbol.local_symbol.name = msf_read_cv_symbol_string(msf, msf_stream, out_offset, symbol.type, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->local_symbol.type_index, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->local_symbol.flags, file_stream);
+            symbol->local_symbol.name = msf_read_cv_symbol_string(msf, msf_stream, out_offset, symbol->type, file_stream);
             break;
 
         case S_BUILDINFO:
-            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.build_info_symbol.id_index, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->build_info_symbol.id_index, file_stream);
             break;
 
         case S_INLINESITE:
         case S_INLINESITE2:
-            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.inline_site_symbol.parent_symbol_index, file_stream);
-            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.inline_site_symbol.end_symbol_index, file_stream);
-            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.inline_site_symbol.inlinee_id_index, file_stream);
-            if (symbol.type == S_INLINESITE2)
-                MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.inline_site_symbol.invocation_count, file_stream);
-            while (*out_offset < start_offset + symbol.size)
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->inline_site_symbol.parent_symbol_index, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->inline_site_symbol.end_symbol_index, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->inline_site_symbol.inlinee_id_index, file_stream);
+            if (symbol->type == S_INLINESITE2)
+                MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->inline_site_symbol.invocation_count, file_stream);
+            while (*out_offset < start_offset + symbol->size)
             {
                 struct cv_annotation annotation;
                 cv_annotation_read(&annotation, msf, msf_stream, out_offset, file_stream);
                 DYNARRAY_PUSH(
-                    symbol.inline_site_symbol.annotations.annotations,
-                    symbol.inline_site_symbol.annotations.count,
+                    symbol->inline_site_symbol.annotations.annotations,
+                    symbol->inline_site_symbol.annotations.count,
                     annotation);
             }
             break;
@@ -1179,75 +1215,75 @@ void cv_symbols_read(
 
         case S_LABEL32:
         case S_LABEL32_ST:
-            cv_pe_section_offset_read(&symbol.label_symbol.section_offset, msf, msf_stream, out_offset, file_stream);
-            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.label_symbol.flags, file_stream);
-            symbol.label_symbol.name = msf_read_cv_symbol_string(msf, msf_stream, out_offset, symbol.type, file_stream);
+            cv_pe_section_offset_read(&symbol->label_symbol.section_offset, msf, msf_stream, out_offset, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->label_symbol.flags, file_stream);
+            symbol->label_symbol.name = msf_read_cv_symbol_string(msf, msf_stream, out_offset, symbol->type, file_stream);
             break;
 
         case S_BLOCK32:
         case S_BLOCK32_ST:
-            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.block_symbol.parent_symbol_index, file_stream);
-            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.block_symbol.end_symbol_index, file_stream);
-            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.block_symbol.length, file_stream);
-            cv_pe_section_offset_read(&symbol.block_symbol.section_offset, msf, msf_stream, out_offset, file_stream);
-            symbol.block_symbol.name = msf_read_cv_symbol_string(msf, msf_stream, out_offset, symbol.type, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->block_symbol.parent_symbol_index, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->block_symbol.end_symbol_index, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->block_symbol.length, file_stream);
+            cv_pe_section_offset_read(&symbol->block_symbol.section_offset, msf, msf_stream, out_offset, file_stream);
+            symbol->block_symbol.name = msf_read_cv_symbol_string(msf, msf_stream, out_offset, symbol->type, file_stream);
             break;
 
         case S_REGREL32:
-            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.register_relative_symbol.offset, file_stream);
-            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.register_relative_symbol.type_index, file_stream);
-            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.register_relative_symbol.register_index, file_stream);
-            symbol.register_relative_symbol.name = msf_read_cv_symbol_string(msf, msf_stream, out_offset, symbol.type, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->register_relative_symbol.offset, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->register_relative_symbol.type_index, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->register_relative_symbol.register_index, file_stream);
+            symbol->register_relative_symbol.name = msf_read_cv_symbol_string(msf, msf_stream, out_offset, symbol->type, file_stream);
             break;
 
         case S_THUNK32:
         case S_THUNK32_ST:
-            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.thunk_symbol.parent_symbol_index, file_stream);
-            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.thunk_symbol.end_symbol_index, file_stream);
-            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.thunk_symbol.next_symbol_index, file_stream);
-            cv_pe_section_offset_read(&symbol.thunk_symbol.section_offset, msf, msf_stream, out_offset, file_stream);
-            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.thunk_symbol.length, file_stream);
-            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.thunk_symbol.ordinal, file_stream);
-            symbol.thunk_symbol.name = msf_read_cv_symbol_string(msf, msf_stream, out_offset, symbol.type, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->thunk_symbol.parent_symbol_index, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->thunk_symbol.end_symbol_index, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->thunk_symbol.next_symbol_index, file_stream);
+            cv_pe_section_offset_read(&symbol->thunk_symbol.section_offset, msf, msf_stream, out_offset, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->thunk_symbol.length, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->thunk_symbol.ordinal, file_stream);
+            symbol->thunk_symbol.name = msf_read_cv_symbol_string(msf, msf_stream, out_offset, symbol->type, file_stream);
             break;
 
         case S_SEPCODE:
-            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.separated_code_symbol.parent_symbol_index, file_stream);
-            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.separated_code_symbol.end_symbol_index, file_stream);
-            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.separated_code_symbol.length, file_stream);
-            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.separated_code_symbol.flags, file_stream);
-            cv_pe_section_offset_read(&symbol.separated_code_symbol.section_offset, msf, msf_stream, out_offset, file_stream);
-            cv_pe_section_offset_read(&symbol.separated_code_symbol.parent_section_offset, msf, msf_stream, out_offset, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->separated_code_symbol.parent_symbol_index, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->separated_code_symbol.end_symbol_index, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->separated_code_symbol.length, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->separated_code_symbol.flags, file_stream);
+            cv_pe_section_offset_read(&symbol->separated_code_symbol.section_offset, msf, msf_stream, out_offset, file_stream);
+            cv_pe_section_offset_read(&symbol->separated_code_symbol.parent_section_offset, msf, msf_stream, out_offset, file_stream);
             break;
         
         case S_FRAMECOOKIE:
-            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.frame_cookie_symbol.frame_relative_offset, file_stream);
-            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.frame_cookie_symbol.register_index, file_stream);
-            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.frame_cookie_symbol.cookie_type, file_stream);
-            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.frame_cookie_symbol.flags, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->frame_cookie_symbol.frame_relative_offset, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->frame_cookie_symbol.register_index, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->frame_cookie_symbol.cookie_type, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->frame_cookie_symbol.flags, file_stream);
             break;
         
         case S_FRAMEPROC:
-            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.frame_proc_symbol.frame_size, file_stream);
-            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.frame_proc_symbol.padding_size, file_stream);
-            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.frame_proc_symbol.padding_offset, file_stream);
-            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.frame_proc_symbol.callee_save_registers_size, file_stream);
-            cv_pe_section_offset_read(&symbol.frame_proc_symbol.exception_handler_offset, msf, msf_stream, out_offset, file_stream);
-            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.frame_proc_symbol.flags, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->frame_proc_symbol.frame_size, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->frame_proc_symbol.padding_size, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->frame_proc_symbol.padding_offset, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->frame_proc_symbol.callee_save_registers_size, file_stream);
+            cv_pe_section_offset_read(&symbol->frame_proc_symbol.exception_handler_offset, msf, msf_stream, out_offset, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->frame_proc_symbol.flags, file_stream);
             break;
         
         case S_CALLSITEINFO:
-            cv_pe_section_offset_read(&symbol.call_site_info_symbol.code_offset, msf, msf_stream, out_offset, file_stream);
-            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.call_site_info_symbol.padding, file_stream);
-            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.call_site_info_symbol.type_index, file_stream);
+            cv_pe_section_offset_read(&symbol->call_site_info_symbol.code_offset, msf, msf_stream, out_offset, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->call_site_info_symbol.padding, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->call_site_info_symbol.type_index, file_stream);
             break;
         
         case S_ENVBLOCK:
-            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.env_block_symbol.flags, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->env_block_symbol.flags, file_stream);
 
-            while (*out_offset < start_offset + symbol.size)
+            while (*out_offset < start_offset + symbol->size)
             {
-                char *string = msf_read_cv_symbol_string(msf, msf_stream, out_offset, symbol.type, file_stream);
+                char *string = msf_read_cv_symbol_string(msf, msf_stream, out_offset, symbol->type, file_stream);
 
                 if (strlen(string) == 0)
                 {
@@ -1255,50 +1291,50 @@ void cv_symbols_read(
                     break;
                 }
 
-                DYNARRAY_PUSH(symbol.env_block_symbol.strings, symbol.env_block_symbol.string_count, string);
+                DYNARRAY_PUSH(symbol->env_block_symbol.strings, symbol->env_block_symbol.string_count, string);
             }
             break;
         
         case S_FILESTATIC:
-            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.file_static_symbol.type_index, file_stream);
-            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.file_static_symbol.module_filename_string_index, file_stream);
-            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.file_static_symbol.flags, file_stream);
-            symbol.file_static_symbol.name = msf_read_cv_symbol_string(msf, msf_stream, out_offset, symbol.type, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->file_static_symbol.type_index, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->file_static_symbol.module_filename_string_index, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->file_static_symbol.flags, file_stream);
+            symbol->file_static_symbol.name = msf_read_cv_symbol_string(msf, msf_stream, out_offset, symbol->type, file_stream);
             break;
         
         case S_CALLERS:
         case S_CALLEES:
-            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.function_list_symbol.count, file_stream);
-            symbol.function_list_symbol.type_indices = malloc(symbol.function_list_symbol.count * sizeof(uint32_t));
-            assert(symbol.function_list_symbol.type_indices);
-            for (uint32_t i = 0; i < symbol.function_list_symbol.count; i++)
-                MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.function_list_symbol.type_indices[i], file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->function_list_symbol.count, file_stream);
+            symbol->function_list_symbol.type_indices = malloc(symbol->function_list_symbol.count * sizeof(uint32_t));
+            assert(symbol->function_list_symbol.type_indices);
+            for (uint32_t i = 0; i < symbol->function_list_symbol.count; i++)
+                MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->function_list_symbol.type_indices[i], file_stream);
             break;
 
         case S_SECTION:
-            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.section_symbol.isec, file_stream);
-            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.section_symbol.align, file_stream);
-            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.section_symbol.bReserved, file_stream);
-            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.section_symbol.rva, file_stream);
-            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.section_symbol.cb, file_stream);
-            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.section_symbol.characteristics, file_stream);
-            symbol.section_symbol.name = msf_read_cv_symbol_string(msf, msf_stream, out_offset, symbol.type, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->section_symbol.isec, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->section_symbol.align, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->section_symbol.bReserved, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->section_symbol.rva, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->section_symbol.cb, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->section_symbol.characteristics, file_stream);
+            symbol->section_symbol.name = msf_read_cv_symbol_string(msf, msf_stream, out_offset, symbol->type, file_stream);
             break;
         
         case S_COFFGROUP:
-            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.coff_group_symbol.cb, file_stream);
-            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.coff_group_symbol.characteristics, file_stream);
-            cv_pe_section_offset_read(&symbol.coff_group_symbol.code_offset, msf, msf_stream, out_offset, file_stream);
-            symbol.coff_group_symbol.name = msf_read_cv_symbol_string(msf, msf_stream, out_offset, symbol.type, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->coff_group_symbol.cb, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->coff_group_symbol.characteristics, file_stream);
+            cv_pe_section_offset_read(&symbol->coff_group_symbol.code_offset, msf, msf_stream, out_offset, file_stream);
+            symbol->coff_group_symbol.name = msf_read_cv_symbol_string(msf, msf_stream, out_offset, symbol->type, file_stream);
             break;
         
         case S_ANNOTATION:
-            cv_pe_section_offset_read(&symbol.annotation_symbol.code_offset, msf, msf_stream, out_offset, file_stream);
-            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol.annotation_symbol.string_count, file_stream);
-            symbol.annotation_symbol.strings = malloc(symbol.annotation_symbol.string_count * sizeof(char *));
-            assert(symbol.annotation_symbol.strings);
-            for (uint16_t i = 0; i < symbol.annotation_symbol.string_count; i++)
-                symbol.annotation_symbol.strings[i] = msf_read_cv_symbol_string(msf, msf_stream, out_offset, symbol.type, file_stream);
+            cv_pe_section_offset_read(&symbol->annotation_symbol.code_offset, msf, msf_stream, out_offset, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->annotation_symbol.string_count, file_stream);
+            symbol->annotation_symbol.strings = malloc(symbol->annotation_symbol.string_count * sizeof(char *));
+            assert(symbol->annotation_symbol.strings);
+            for (uint16_t i = 0; i < symbol->annotation_symbol.string_count; i++)
+                symbol->annotation_symbol.strings[i] = msf_read_cv_symbol_string(msf, msf_stream, out_offset, symbol->type, file_stream);
             break;
         
         //
@@ -1317,13 +1353,11 @@ void cv_symbols_read(
 
         default:
             fprintf(stderr, "%s:%i: ERROR: unhandled cv_symbol_type value: ", __FILE__, __LINE__);
-            cv_symbol_type_print(symbol.type, stderr);
+            cv_symbol_type_print(symbol->type, stderr);
             fprintf(stderr, "\n");
             exit(EXIT_FAILURE);
         }
-        
-        DYNARRAY_PUSH(item->symbols, item->count, symbol);
 
-        *out_offset = start_offset + symbol.size;
+        *out_offset = start_offset + symbol->size;
     }
 }

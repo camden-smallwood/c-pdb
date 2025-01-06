@@ -1184,43 +1184,51 @@ void tpi_symbols_read(
     assert(tpi_header);
     assert(file_stream);
 
+    //
+    // Collect info about where each TPI symbol is located
+    //
+
+    struct tpi_symbol_info
+    {
+        uint32_t offset;
+        uint16_t size;
+    };
+
+    uint32_t symbol_info_count = 0;
+    struct tpi_symbol_info *symbol_info = NULL;
+
     uint32_t offset = tpi_header->header_size;
 
     while (offset < msf_stream->size)
     {
-        symbols->count++;
-        symbols->symbols = realloc(symbols->symbols, symbols->count * sizeof(*symbols->symbols));
-        assert(symbols->symbols);
+        struct tpi_symbol_info info;
+        
+        MSF_STREAM_READ(msf, msf_stream, &offset, info.size, file_stream);
+        assert(info.size >= sizeof(uint16_t));
 
-        struct tpi_symbol *symbol = &symbols->symbols[symbols->count - 1];
-        memset(symbol, 0, sizeof(*symbol));
+        info.offset = offset;
 
-        MSF_STREAM_READ(msf, msf_stream, &offset, symbol->size, file_stream);
-        assert(symbol->size >= sizeof(uint16_t));
+        DYNARRAY_PUSH(symbol_info, symbol_info_count, info);
 
-        uint32_t start_offset = offset;
+        offset += info.size;
+    }
 
-        tpi_symbol_read(symbol, msf, msf_stream, tpi_header, &offset, file_stream);
+    //
+    // Pre-allocate all of the TPI symbols
+    //
 
-        if (offset != start_offset + symbol->size)
-        {
-            uint32_t size_read = offset - start_offset;
+    symbols->count = symbol_info_count;
+    symbols->symbols = calloc(symbols->count, sizeof(*symbols->symbols));
+    assert(symbols->symbols);
 
-            // TODO: remove this check when stuff is read correctly...
-            if (symbol->leaf != LF_POINTER &&
-                symbol->leaf != LF_UNION &&
-                symbol->leaf != LF_STRUCTURE &&
-                symbol->leaf != LF_CLASS &&
-                symbol->leaf != LF_ENUM)
-            {
-                fprintf(stderr, "%s:%i: ERROR: Incorrect TPI symbol data parsing for leaf: ", __FILE__, __LINE__);
-                tpi_leaf_print(symbol->leaf, stderr);
-                fprintf(stderr, "; read %u, expected %u\n", size_read, symbol->size);
-                exit(EXIT_FAILURE);
-            }
-        }
+    //
+    // Read each TPI symbol
+    //
 
-        offset = start_offset + symbol->size;
+    for (uint32_t i = 0; i < symbol_info_count; i++)
+    {
+        offset = symbol_info[i].offset;
+        tpi_symbol_read(&symbols->symbols[i], msf, msf_stream, tpi_header, &offset, file_stream);
     }
 }
 
