@@ -1198,9 +1198,9 @@ void cv_def_range_subfield_register_symbol_print(struct cv_def_range_subfield_re
 
 #define CV_DEF_RANGE_REGISTER_REL_PACKED_DATA_STRUCT \
 STRUCT_DECL(cv_def_range_register_rel_packed_data) \
-    FIELD_PRIMITIVE_BITS(uint16_t, spilledUdtMember, 1, "%u") \
+    FIELD_PRIMITIVE_BITS(uint16_t, spilled_udt_member, 1, "%u") \
     FIELD_PRIMITIVE_BITS(uint16_t, padding, 3, "%u") \
-    FIELD_PRIMITIVE_BITS(uint16_t, offsetParent, CV_OFFSET_PARENT_LENGTH_LIMIT, "%u") \
+    FIELD_PRIMITIVE_BITS(uint16_t, parent_offset, CV_OFFSET_PARENT_LENGTH_LIMIT, "%u") \
 STRUCT_END(cv_def_range_register_rel_packed_data)
 
 CV_DEF_RANGE_REGISTER_REL_PACKED_DATA_STRUCT
@@ -1224,6 +1224,107 @@ CV_DEF_RANGE_REGISTER_REL_SYMBOL_STRUCT
 
 void cv_def_range_register_rel_symbol_dispose(struct cv_def_range_register_rel_symbol *item);
 void cv_def_range_register_rel_symbol_print(struct cv_def_range_register_rel_symbol *item, uint32_t depth, FILE *stream);
+
+/* ---------- CV hlsl register type */
+
+#define CV_HLSL_REGISTER_TYPE_ENUM \
+ENUM_DECL(cv_hlsl_register_type) \
+    ENUM_VALUE(CV_HLSLREG_TEMP, 0) \
+    ENUM_VALUE(CV_HLSLREG_INPUT, 1) \
+    ENUM_VALUE(CV_HLSLREG_OUTPUT, 2) \
+    ENUM_VALUE(CV_HLSLREG_INDEXABLE_TEMP, 3) \
+    ENUM_VALUE(CV_HLSLREG_IMMEDIATE32, 4) \
+    ENUM_VALUE(CV_HLSLREG_IMMEDIATE64, 5) \
+    ENUM_VALUE(CV_HLSLREG_SAMPLER, 6) \
+    ENUM_VALUE(CV_HLSLREG_RESOURCE, 7) \
+    ENUM_VALUE(CV_HLSLREG_CONSTANT_BUFFER, 8) \
+    ENUM_VALUE(CV_HLSLREG_IMMEDIATE_CONSTANT_BUFFER, 9) \
+    ENUM_VALUE(CV_HLSLREG_LABEL, 10) \
+    ENUM_VALUE(CV_HLSLREG_INPUT_PRIMITIVEID, 11) \
+    ENUM_VALUE(CV_HLSLREG_OUTPUT_DEPTH, 12) \
+    ENUM_VALUE(CV_HLSLREG_NULL, 13) \
+    ENUM_VALUE(CV_HLSLREG_RASTERIZER, 14) \
+    ENUM_VALUE(CV_HLSLREG_OUTPUT_COVERAGE_MASK, 15) \
+    ENUM_VALUE(CV_HLSLREG_STREAM, 16) \
+    ENUM_VALUE(CV_HLSLREG_FUNCTION_BODY, 17) \
+    ENUM_VALUE(CV_HLSLREG_FUNCTION_TABLE, 18) \
+    ENUM_VALUE(CV_HLSLREG_INTERFACE, 19) \
+    ENUM_VALUE(CV_HLSLREG_FUNCTION_INPUT, 20) \
+    ENUM_VALUE(CV_HLSLREG_FUNCTION_OUTPUT, 21) \
+    ENUM_VALUE(CV_HLSLREG_OUTPUT_CONTROL_POINT_ID, 22) \
+    ENUM_VALUE(CV_HLSLREG_INPUT_FORK_INSTANCE_ID, 23) \
+    ENUM_VALUE(CV_HLSLREG_INPUT_JOIN_INSTANCE_ID, 24) \
+    ENUM_VALUE(CV_HLSLREG_INPUT_CONTROL_POINT, 25) \
+    ENUM_VALUE(CV_HLSLREG_OUTPUT_CONTROL_POINT, 26) \
+    ENUM_VALUE(CV_HLSLREG_INPUT_PATCH_CONSTANT, 27) \
+    ENUM_VALUE(CV_HLSLREG_INPUT_DOMAIN_POINT, 28) \
+    ENUM_VALUE(CV_HLSLREG_THIS_POINTER, 29) \
+    ENUM_VALUE(CV_HLSLREG_UNORDERED_ACCESS_VIEW, 30) \
+    ENUM_VALUE(CV_HLSLREG_THREAD_GROUP_SHARED_MEMORY, 31) \
+    ENUM_VALUE(CV_HLSLREG_INPUT_THREAD_ID, 32) \
+    ENUM_VALUE(CV_HLSLREG_INPUT_THREAD_GROUP_ID, 33) \
+    ENUM_VALUE(CV_HLSLREG_INPUT_THREAD_ID_IN_GROUP, 34) \
+    ENUM_VALUE(CV_HLSLREG_INPUT_COVERAGE_MASK, 35) \
+    ENUM_VALUE(CV_HLSLREG_INPUT_THREAD_ID_IN_GROUP_FLATTENED, 36) \
+    ENUM_VALUE(CV_HLSLREG_INPUT_GS_INSTANCE_ID, 37) \
+    ENUM_VALUE(CV_HLSLREG_OUTPUT_DEPTH_GREATER_EQUAL, 38) \
+    ENUM_VALUE(CV_HLSLREG_OUTPUT_DEPTH_LESS_EQUAL, 39) \
+    ENUM_VALUE(CV_HLSLREG_CYCLE_COUNTER, 40) \
+ENUM_END(cv_hlsl_register_type)
+
+CV_HLSL_REGISTER_TYPE_ENUM
+
+void cv_hlsl_register_type_print(enum cv_hlsl_register_type item, FILE *stream);
+
+/* ---------- CV def range hlsl packed data */
+
+#define CV_DEF_RANGE_HLSL_PACKED_DATA_STRUCT \
+STRUCT_DECL(cv_def_range_hlsl_packed_data) \
+    FIELD_PRIMITIVE_BITS(uint16_t, register_index_count, 2, "%u") /* 0, 1 or 2, dimensionality of register space */ \
+    FIELD_PRIMITIVE_BITS(uint16_t, spilled_udt_member, 1, "%u") /* this is a spilled member */ \
+    FIELD_PRIMITIVE_BITS(uint16_t, memory_space, 4, "%u") /* memory space */ \
+    FIELD_PRIMITIVE_BITS(uint16_t, padding, 9, "%u") /* for future use */ \
+STRUCT_END(cv_def_range_hlsl_packed_data)
+
+CV_DEF_RANGE_HLSL_PACKED_DATA_STRUCT
+static_assert(sizeof(struct cv_def_range_hlsl_packed_data) == sizeof(uint16_t), "invalid cv_def_range_hlsl_packed_data size");
+
+void cv_def_range_hlsl_packed_data_print(struct cv_def_range_hlsl_packed_data *item, uint32_t depth, FILE *stream);
+
+/* ---------- CV def range hlsl symbol */
+
+#define CV_DEF_RANGE_HLSL_SYMBOL_STRUCT \
+STRUCT_DECL(cv_def_range_hlsl_symbol) \
+    FIELD_PRIMITIVE_FMT(uint16_t, register_type, cv_hlsl_register_type_print) \
+    FIELD_STRUCT(struct cv_def_range_hlsl_packed_data, packed_data, cv_def_range_hlsl_packed_data_print) \
+    FIELD_PRIMITIVE(uint16_t, parent_offset, "%u") \
+    FIELD_PRIMITIVE(uint16_t, parent_size, "%u") \
+    FIELD_STRUCT(struct cv_address_range, range, cv_address_range_print) \
+    FIELD_PRIMITIVE(uint32_t, gap_count, "%u") \
+    FIELD_STRUCT_DYNAMIC_ARRAY(struct cv_address_gap *, gaps, gap_count, cv_address_gap_print) \
+    FIELD_PRIMITIVE_DYNAMIC_ARRAY(uint32_t *, register_indices, packed_data.register_index_count, "%u") \
+STRUCT_END(cv_def_range_hlsl_symbol)
+
+CV_DEF_RANGE_HLSL_SYMBOL_STRUCT
+
+void cv_def_range_hlsl_symbol_dispose(struct cv_def_range_hlsl_symbol *item);
+void cv_def_range_hlsl_symbol_print(struct cv_def_range_hlsl_symbol *item, uint32_t depth, FILE *stream);
+
+/* ---------- CV local dpc group shared symbol */
+
+#define CV_LOCAL_DPC_GROUP_SHARED_SYMBOL_STRUCT \
+STRUCT_DECL(cv_local_dpc_group_shared_symbol) \
+    FIELD_PRIMITIVE(uint32_t, type_index, "%u") \
+    FIELD_STRUCT(struct cv_local_variable_flags, flags, cv_local_variable_flags_print) \
+    FIELD_PRIMITIVE(uint16_t, data_slot, "%u") \
+    FIELD_PRIMITIVE(uint16_t, data_offset, "%u") \
+    FIELD_PRIMITIVE(char *, name, "\"%s\"") \
+STRUCT_END(cv_local_dpc_group_shared_symbol)
+
+CV_LOCAL_DPC_GROUP_SHARED_SYMBOL_STRUCT
+
+void cv_local_dpc_group_shared_symbol_dispose(struct cv_local_dpc_group_shared_symbol *item);
+void cv_local_dpc_group_shared_symbol_print(struct cv_local_dpc_group_shared_symbol *item, uint32_t depth, FILE *stream);
 
 /* ---------- CV symbol */
 
@@ -1271,6 +1372,8 @@ STRUCT_DECL(cv_symbol) \
         FIELD_UNION_FIELD_STRUCT_MULTITAG(struct cv_def_range_frame_pointer_rel_symbol, def_range_frame_pointer_rel_symbol, type, cv_def_range_frame_pointer_rel_symbol_print, S_DEFRANGE_FRAMEPOINTER_REL, S_DEFRANGE_FRAMEPOINTER_REL_FULL_SCOPE) \
         FIELD_UNION_FIELD_STRUCT_MULTITAG(struct cv_def_range_subfield_register_symbol, def_range_subfield_register_symbol, type, cv_def_range_subfield_register_symbol_print, S_DEFRANGE_SUBFIELD_REGISTER) \
         FIELD_UNION_FIELD_STRUCT_MULTITAG(struct cv_def_range_register_rel_symbol, def_range_register_rel_symbol, type, cv_def_range_register_rel_symbol_print, S_DEFRANGE_REGISTER_REL) \
+        FIELD_UNION_FIELD_STRUCT_MULTITAG(struct cv_def_range_hlsl_symbol, def_range_hlsl_symbol, type, cv_def_range_hlsl_symbol_print, S_DEFRANGE_HLSL, S_DEFRANGE_DPC_PTR_TAG) \
+        FIELD_UNION_FIELD_STRUCT_MULTITAG(struct cv_local_dpc_group_shared_symbol, local_dpc_group_shared_symbol, type, cv_local_dpc_group_shared_symbol_print, S_LOCAL_DPC_GROUPSHARED) \
     FIELD_UNION_END() \
 STRUCT_END(cv_symbol)
 

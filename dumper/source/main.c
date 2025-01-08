@@ -337,6 +337,8 @@ static void dbi_module_get_file_path_and_header_paths(
         subsections = dbi_module->c13_lines_subsections;
     }
 
+    uint32_t source_files_found = 0;
+
     for (uint32_t subsection_index = 0; subsection_index < subsection_count; subsection_index++)
     {
         struct dbi_subsection *subsection = &subsections[subsection_index];
@@ -364,16 +366,23 @@ static void dbi_module_get_file_path_and_header_paths(
             {
                 for (size_t j = 0; j < CPP_SOURCE_FILE_EXT_COUNT; j++)
                 {
+                    if (strcasecmp(file_ext, CPP_SOURCE_FILE_EXTS[j]) == 0)
+                        source_files_found++;
+                    else
+                        continue;
+                    
                     // If the file extension is a recognized source file extension, and the file stem
                     // matches the .obj file stem, add it to the headers list
-                    if (strcasecmp(file_ext, CPP_SOURCE_FILE_EXTS[j]) == 0 &&
-                        strcasecmp(file_stem, obj_stem) == 0)
+                    if (strcasecmp(file_stem, obj_stem) == 0)
                     {
                         free(file_path);
                         path_dispose(&path);
+
                         file_path = canonicalize_path(NULL, main_globals.pdb_data.string_table.names_data + entry->header.name_offset, 0);
                         assert(file_path);
+
                         path_from_string(&path, file_path);
+                        
                         *out_file_path = path_to_string(&path, 0);
                         assert(*out_file_path);
                         break;
@@ -403,6 +412,77 @@ static void dbi_module_get_file_path_and_header_paths(
         }
     }
 
+    // HACK: if we didn't find an exact match, but we found a single source file, use that
+    if (!*out_file_path && source_files_found == 1)
+    {
+        subsection_count = dbi_module->c11_lines_subsection_count;
+        subsections = dbi_module->c11_lines_subsections;
+
+        if (subsection_count == 0)
+        {
+            subsection_count = dbi_module->c13_lines_subsection_count;
+            subsections = dbi_module->c13_lines_subsections;
+        }
+
+        for (uint32_t subsection_index = 0; subsection_index < subsection_count; subsection_index++)
+        {
+            struct dbi_subsection *subsection = &subsections[subsection_index];
+            
+            if (subsection->type != DEBUG_S_FILECHKSMS)
+                continue;
+
+            for (uint32_t i = 0; i < subsection->file_checksums.count; i++)
+            {
+                struct dbi_file_checksum *entry = &subsection->file_checksums.entries[i];
+
+                assert(entry->header.name_offset < main_globals.pdb_data.string_table.header.names_size);
+                char *file_path = sanitize_path(main_globals.pdb_data.string_table.names_data + entry->header.name_offset);
+                assert(file_path);
+
+                struct path path;
+                path_from_string(&path, file_path);
+
+                char *file_ext = path_get_extension(&path);
+                
+                if (file_ext)
+                {
+                    for (size_t j = 0; j < CPP_SOURCE_FILE_EXT_COUNT; j++)
+                    {
+                        if (strcasecmp(file_ext, CPP_SOURCE_FILE_EXTS[j]) == 0)
+                        {
+                            free(file_path);
+                            path_dispose(&path);
+
+                            file_path = canonicalize_path(NULL, main_globals.pdb_data.string_table.names_data + entry->header.name_offset, 0);
+                            assert(file_path);
+
+                            path_from_string(&path, file_path);
+                            
+                            *out_file_path = path_to_string(&path, 0);
+                            assert(*out_file_path);
+                            break;
+                        }
+                    }
+                }
+                
+                path_dispose(&path);
+
+                free(file_ext);
+                free(file_path);
+            }
+
+            if (*out_file_path)
+                break;
+
+            if (subsections == dbi_module->c11_lines_subsections && subsection_index == subsection_count - 1)
+            {
+                subsection_count = dbi_module->c13_lines_subsection_count;
+                subsections = dbi_module->c13_lines_subsections;
+                subsection_index = UINT32_MAX;
+            }
+        }
+    }
+
     if (!*out_file_path &&
         strcasecmp(obj_path_string, "* CIL *") != 0 &&
         strcasecmp(obj_path_string, "* Linker *") != 0 &&
@@ -429,9 +509,9 @@ static void dbi_module_get_file_path_and_header_paths(
                 assert(file_path);
 
                 if (printed_count == 0)
-                    fprintf(stderr, ":\n");
+                    fprintf(stderr, " in list:\n");
                 
-                fprintf(stderr, "    [%u]: \"%s\"\n", i, file_path);
+                fprintf(stderr, "    [%u]: \"%s\"\n", printed_count++, file_path);
                 free(file_path);
             }
         }

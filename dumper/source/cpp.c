@@ -1537,7 +1537,7 @@ char *cpp_type_name(
         if (primitive.indirection != TPI_PRIMITIVE_INDIRECTION_NONE)
             string_append(&primitive_name, " *");
         
-        if (declaration_name && strcmp(primitive_name, "...") != 0)
+        if (declaration_name /*&& strcmp(primitive_name, "...") != 0*/)
         {
             if (primitive.indirection == TPI_PRIMITIVE_INDIRECTION_NONE)
                 string_append(&primitive_name, " ");

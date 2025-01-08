@@ -876,6 +876,52 @@ void cv_def_range_register_rel_symbol_print(struct cv_def_range_register_rel_sym
     CV_DEF_RANGE_REGISTER_REL_SYMBOL_STRUCT
 }
 
+void cv_hlsl_register_type_print(enum cv_hlsl_register_type item, FILE *stream)
+{
+    assert(stream);
+
+    CV_HLSL_REGISTER_TYPE_ENUM
+}
+
+void cv_def_range_hlsl_packed_data_print(struct cv_def_range_hlsl_packed_data *item, uint32_t depth, FILE *stream)
+{
+    assert(item);
+    assert(stream);
+
+    CV_DEF_RANGE_HLSL_PACKED_DATA_STRUCT
+}
+
+void cv_def_range_hlsl_symbol_dispose(struct cv_def_range_hlsl_symbol *item)
+{
+    assert(item);
+
+    free(item->gaps);
+    free(item->register_indices);
+}
+
+void cv_def_range_hlsl_symbol_print(struct cv_def_range_hlsl_symbol *item, uint32_t depth, FILE *stream)
+{
+    assert(item);
+    assert(stream);
+
+    CV_DEF_RANGE_HLSL_SYMBOL_STRUCT
+}
+
+void cv_local_dpc_group_shared_symbol_dispose(struct cv_local_dpc_group_shared_symbol *item)
+{
+    assert(item);
+
+    free(item->name);
+}
+
+void cv_local_dpc_group_shared_symbol_print(struct cv_local_dpc_group_shared_symbol *item, uint32_t depth, FILE *stream)
+{
+    assert(item);
+    assert(stream);
+
+    CV_LOCAL_DPC_GROUP_SHARED_SYMBOL_STRUCT
+}
+
 void cv_symbol_dispose(struct cv_symbol *item)
 {
     assert(item);
@@ -1078,6 +1124,15 @@ void cv_symbol_dispose(struct cv_symbol *item)
     
     case S_DEFRANGE_REGISTER_REL:
         cv_def_range_register_rel_symbol_dispose(&item->def_range_register_rel_symbol);
+        break;
+    
+    case S_DEFRANGE_HLSL:
+    case S_DEFRANGE_DPC_PTR_TAG:
+        cv_def_range_hlsl_symbol_dispose(&item->def_range_hlsl_symbol);
+        break;
+    
+    case S_LOCAL_DPC_GROUPSHARED:
+        cv_local_dpc_group_shared_symbol_dispose(&item->local_dpc_group_shared_symbol);
         break;
     
     default:
@@ -1576,6 +1631,49 @@ void cv_symbols_read(
                 MSF_STREAM_READ(msf, msf_stream, out_offset, gap, file_stream);
                 DYNARRAY_PUSH(symbol->def_range_register_rel_symbol.gaps, symbol->def_range_register_rel_symbol.gap_count, gap);
             }
+            break;
+        
+        case S_DEFRANGE_HLSL:
+        case S_DEFRANGE_DPC_PTR_TAG:
+        {
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->def_range_hlsl_symbol.register_type, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->def_range_hlsl_symbol.packed_data, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->def_range_hlsl_symbol.parent_offset, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->def_range_hlsl_symbol.parent_size, file_stream);
+            cv_address_range_read(&symbol->def_range_register_rel_symbol.range, msf, msf_stream, out_offset, file_stream);
+
+            uint32_t size_remaining = (start_offset + symbol->size) - *out_offset;
+
+            uint32_t register_indices_size = symbol->def_range_hlsl_symbol.packed_data.register_index_count * sizeof(uint32_t);
+            assert(register_indices_size <= size_remaining);
+
+            uint32_t gaps_offset = *out_offset;
+            uint32_t gaps_size = size_remaining - register_indices_size;
+
+            while (*out_offset < gaps_offset + gaps_size)
+            {
+                struct cv_address_gap gap;
+                MSF_STREAM_READ(msf, msf_stream, out_offset, gap, file_stream);
+                DYNARRAY_PUSH(symbol->def_range_hlsl_symbol.gaps, symbol->def_range_hlsl_symbol.gap_count, gap);
+            }
+
+            symbol->def_range_hlsl_symbol.register_indices = malloc(register_indices_size);
+            assert(symbol->def_range_hlsl_symbol.register_indices);
+            
+            msf_stream_read_data(msf, msf_stream, *out_offset, register_indices_size, symbol->def_range_hlsl_symbol.register_indices, file_stream);
+            *out_offset += register_indices_size;
+
+            assert(*out_offset = start_offset + symbol->size);
+            break;
+        }
+
+        case S_LOCAL_DPC_GROUPSHARED:
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->local_dpc_group_shared_symbol.type_index, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->local_dpc_group_shared_symbol.flags, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->local_dpc_group_shared_symbol.data_slot, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->local_dpc_group_shared_symbol.data_offset, file_stream);
+            symbol->local_dpc_group_shared_symbol.name = msf_read_cv_symbol_string(msf, msf_stream, out_offset, symbol->type, file_stream);
+            assert(symbol->local_dpc_group_shared_symbol.name);
             break;
         
         default:
