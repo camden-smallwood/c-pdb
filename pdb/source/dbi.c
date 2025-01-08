@@ -240,6 +240,7 @@ void dbi_modules_read(
         // Read C11 lines subsections
         //
 
+        current_offset = module->header.symbols_size;
         uint32_t c11_lines_start_offset = current_offset;
 
         while (current_offset < c11_lines_start_offset + module->header.lines_size)
@@ -253,6 +254,7 @@ void dbi_modules_read(
         // Read C13 lines subsections
         //
 
+        current_offset = module->header.symbols_size + module->header.lines_size;
         uint32_t c13_lines_start_offset = current_offset;
 
         while (current_offset < c13_lines_start_offset + module->header.c13_lines_size)

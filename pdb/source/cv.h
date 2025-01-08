@@ -1062,6 +1062,169 @@ CV_ANNOTATION_SYMBOL_STRUCT
 void cv_annotation_symbol_dispose(struct cv_annotation_symbol *item);
 void cv_annotation_symbol_print(struct cv_annotation_symbol *item, uint32_t depth, FILE *stream);
 
+/* ---------- CV address range */
+
+#define CV_ADDRESS_RANGE_STRUCT \
+STRUCT_DECL(cv_address_range) \
+    FIELD_STRUCT(struct cv_pe_section_offset, start_offset, cv_pe_section_offset_print) \
+    FIELD_PRIMITIVE(uint16_t, length, "%u") \
+STRUCT_END(cv_address_range)
+
+CV_ADDRESS_RANGE_STRUCT
+
+void cv_address_range_print(struct cv_address_range *item, uint32_t depth, FILE *stream);
+void cv_address_range_read(struct cv_address_range *item, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, FILE *file_stream);
+
+/* ---------- CV address gap */
+
+#define CV_ADDRESS_GAP_STRUCT \
+STRUCT_DECL(cv_address_gap) \
+    FIELD_PRIMITIVE(uint16_t, start_offset, "%u") \
+    FIELD_PRIMITIVE(uint16_t, length, "%u") \
+STRUCT_END(cv_address_gap)
+
+CV_ADDRESS_GAP_STRUCT
+
+void cv_address_gap_print(struct cv_address_gap *item, uint32_t depth, FILE *stream);
+
+/* ---------- CV def range symbol */
+
+#define CV_DEF_RANGE_SYMBOL_STRUCT \
+STRUCT_DECL(cv_def_range_symbol) \
+    FIELD_PRIMITIVE(uint32_t, program_index, "%u") \
+    FIELD_STRUCT(struct cv_address_range, range, cv_address_range_print) \
+    FIELD_PRIMITIVE(uint32_t, gap_count, "%u") \
+    FIELD_STRUCT_DYNAMIC_ARRAY(struct cv_address_gap *, gaps, gap_count, cv_address_gap_print) \
+STRUCT_END(cv_def_range_symbol)
+
+CV_DEF_RANGE_SYMBOL_STRUCT
+
+void cv_def_range_symbol_dispose(struct cv_def_range_symbol *item);
+void cv_def_range_symbol_print(struct cv_def_range_symbol *item, uint32_t depth, FILE *stream);
+
+/* ---------- CV def range subfield symbol */
+
+#define CV_DEF_RANGE_SUBFIELD_SYMBOL_STRUCT \
+STRUCT_DECL(cv_def_range_subfield_symbol) \
+    FIELD_PRIMITIVE(uint32_t, program_index, "%u") \
+    FIELD_PRIMITIVE(uint32_t, parent_offset, "%u") \
+    FIELD_STRUCT(struct cv_address_range, range, cv_address_range_print) \
+    FIELD_PRIMITIVE(uint32_t, gap_count, "%u") \
+    FIELD_STRUCT_DYNAMIC_ARRAY(struct cv_address_gap *, gaps, gap_count, cv_address_gap_print) \
+STRUCT_END(cv_def_range_subfield_symbol)
+
+CV_DEF_RANGE_SUBFIELD_SYMBOL_STRUCT
+
+void cv_def_range_subfield_symbol_dispose(struct cv_def_range_subfield_symbol *item);
+void cv_def_range_subfield_symbol_print(struct cv_def_range_subfield_symbol *item, uint32_t depth, FILE *stream);
+
+/* ---------- CV range attributes */
+
+#define CV_RANGE_ATTRIBUTES_STRUCT \
+STRUCT_DECL(cv_range_attributes) \
+    FIELD_PRIMITIVE_BITS(uint16_t, maybe, 1, "%u") \
+    FIELD_PRIMITIVE_BITS(uint16_t, padding, 15, "%u") \
+STRUCT_END(cv_range_attributes)
+
+CV_RANGE_ATTRIBUTES_STRUCT
+static_assert(sizeof(struct cv_range_attributes) == sizeof(uint16_t), "invalid cv_range_attributes size");
+
+void cv_range_attributes_print(struct cv_range_attributes *item, uint32_t depth, FILE *stream);
+
+/* ---------- CV def range register symbol */
+
+#define CV_DEF_RANGE_REGISTER_SYMBOL_STRUCT \
+STRUCT_DECL(cv_def_range_register_symbol) \
+    FIELD_PRIMITIVE(uint16_t, register_index, "%u") \
+    FIELD_STRUCT(struct cv_range_attributes, attributes, cv_range_attributes_print) \
+    FIELD_STRUCT(struct cv_address_range, range, cv_address_range_print) \
+    FIELD_PRIMITIVE(uint32_t, gap_count, "%u") \
+    FIELD_STRUCT_DYNAMIC_ARRAY(struct cv_address_gap *, gaps, gap_count, cv_address_gap_print) \
+STRUCT_END(cv_def_range_register_symbol)
+
+CV_DEF_RANGE_REGISTER_SYMBOL_STRUCT
+
+void cv_def_range_register_symbol_dispose(struct cv_def_range_register_symbol *item);
+void cv_def_range_register_symbol_print(struct cv_def_range_register_symbol *item, uint32_t depth, FILE *stream);
+
+/* ---------- CV def range frame pointer rel symbol */
+
+#define CV_DEF_RANGE_FRAME_POINTER_REL_SYMBOL_STRUCT \
+STRUCT_DECL(cv_def_range_frame_pointer_rel_symbol) \
+    FIELD_PRIMITIVE(int32_t, offset, "%u") \
+    FIELD_STRUCT(struct cv_address_range, range, cv_address_range_print) \
+    FIELD_PRIMITIVE(uint32_t, gap_count, "%u") \
+    FIELD_STRUCT_DYNAMIC_ARRAY(struct cv_address_gap *, gaps, gap_count, cv_address_gap_print) \
+STRUCT_END(cv_def_range_frame_pointer_rel_symbol)
+
+CV_DEF_RANGE_FRAME_POINTER_REL_SYMBOL_STRUCT
+
+void cv_def_range_frame_pointer_rel_symbol_dispose(struct cv_def_range_frame_pointer_rel_symbol *item);
+void cv_def_range_frame_pointer_rel_symbol_print(struct cv_def_range_frame_pointer_rel_symbol *item, uint32_t depth, FILE *stream);
+
+/* ---------- CV def range subfield register packed data */
+
+#define CV_OFFSET_PARENT_LENGTH_LIMIT 12
+
+#define CV_DEF_RANGE_SUBFIELD_REGISTER_PACKED_DATA_STRUCT \
+STRUCT_DECL(cv_def_range_subfield_register_packed_data) \
+    FIELD_PRIMITIVE_BITS(uint32_t, parent_offset, CV_OFFSET_PARENT_LENGTH_LIMIT, "%u") \
+    FIELD_PRIMITIVE_BITS(uint32_t, padding, 20, "%u") \
+STRUCT_END(cv_def_range_subfield_register_packed_data)
+
+CV_DEF_RANGE_SUBFIELD_REGISTER_PACKED_DATA_STRUCT
+static_assert(sizeof(struct cv_def_range_subfield_register_packed_data) == sizeof(uint32_t), "invalid cv_def_range_subfield_register_packed_data size");
+
+void cv_def_range_subfield_register_packed_data_print(struct cv_def_range_subfield_register_packed_data *item, uint32_t depth, FILE *stream);
+
+/* ---------- CV def range subfield register symbol */
+
+#define CV_DEF_RANGE_SUBFIELD_REGISTER_SYMBOL_STRUCT \
+STRUCT_DECL(cv_def_range_subfield_register_symbol) \
+    FIELD_PRIMITIVE(uint16_t, register_index, "%u") \
+    FIELD_STRUCT(struct cv_range_attributes, attributes, cv_range_attributes_print) \
+    FIELD_STRUCT(struct cv_def_range_subfield_register_packed_data, packed_data, cv_def_range_subfield_register_packed_data_print) \
+    FIELD_STRUCT(struct cv_address_range, range, cv_address_range_print) \
+    FIELD_PRIMITIVE(uint32_t, gap_count, "%u") \
+    FIELD_STRUCT_DYNAMIC_ARRAY(struct cv_address_gap *, gaps, gap_count, cv_address_gap_print) \
+STRUCT_END(cv_def_range_subfield_register_symbol)
+
+CV_DEF_RANGE_SUBFIELD_REGISTER_SYMBOL_STRUCT
+
+void cv_def_range_subfield_register_symbol_dispose(struct cv_def_range_subfield_register_symbol *item);
+void cv_def_range_subfield_register_symbol_print(struct cv_def_range_subfield_register_symbol *item, uint32_t depth, FILE *stream);
+
+/* ---------- CV def range register rel packed data */
+
+#define CV_DEF_RANGE_REGISTER_REL_PACKED_DATA_STRUCT \
+STRUCT_DECL(cv_def_range_register_rel_packed_data) \
+    FIELD_PRIMITIVE_BITS(uint16_t, spilledUdtMember, 1, "%u") \
+    FIELD_PRIMITIVE_BITS(uint16_t, padding, 3, "%u") \
+    FIELD_PRIMITIVE_BITS(uint16_t, offsetParent, CV_OFFSET_PARENT_LENGTH_LIMIT, "%u") \
+STRUCT_END(cv_def_range_register_rel_packed_data)
+
+CV_DEF_RANGE_REGISTER_REL_PACKED_DATA_STRUCT
+static_assert(sizeof(struct cv_def_range_register_rel_packed_data) == sizeof(uint16_t), "invalid cv_def_range_register_rel_packed_data size");
+
+void cv_def_range_register_rel_packed_data_print(struct cv_def_range_register_rel_packed_data *item, uint32_t depth, FILE *stream);
+
+/* ---------- CV def range register rel symbol */
+
+#define CV_DEF_RANGE_REGISTER_REL_SYMBOL_STRUCT \
+STRUCT_DECL(cv_def_range_register_rel_symbol) \
+    FIELD_PRIMITIVE(uint16_t, base_register_index, "%u") \
+    FIELD_STRUCT(struct cv_def_range_register_rel_packed_data, packed_data, cv_def_range_register_rel_packed_data_print) \
+    FIELD_PRIMITIVE(uint32_t, base_offset, "%u") \
+    FIELD_STRUCT(struct cv_address_range, range, cv_address_range_print) \
+    FIELD_PRIMITIVE(uint32_t, gap_count, "%u") \
+    FIELD_STRUCT_DYNAMIC_ARRAY(struct cv_address_gap *, gaps, gap_count, cv_address_gap_print) \
+STRUCT_END(cv_def_range_register_rel_symbol)
+
+CV_DEF_RANGE_REGISTER_REL_SYMBOL_STRUCT
+
+void cv_def_range_register_rel_symbol_dispose(struct cv_def_range_register_rel_symbol *item);
+void cv_def_range_register_rel_symbol_print(struct cv_def_range_register_rel_symbol *item, uint32_t depth, FILE *stream);
+
 /* ---------- CV symbol */
 
 #define CV_SYMBOL_STRUCT \
@@ -1102,6 +1265,12 @@ STRUCT_DECL(cv_symbol) \
         FIELD_UNION_FIELD_STRUCT_MULTITAG(struct cv_section_symbol, section_symbol, type, cv_section_symbol_print, S_SECTION) \
         FIELD_UNION_FIELD_STRUCT_MULTITAG(struct cv_coff_group_symbol, coff_group_symbol, type, cv_coff_group_symbol_print, S_COFFGROUP) \
         FIELD_UNION_FIELD_STRUCT_MULTITAG(struct cv_annotation_symbol, annotation_symbol, type, cv_annotation_symbol_print, S_ANNOTATION) \
+        FIELD_UNION_FIELD_STRUCT_MULTITAG(struct cv_def_range_symbol, def_range_symbol, type, cv_def_range_symbol_print, S_DEFRANGE) \
+        FIELD_UNION_FIELD_STRUCT_MULTITAG(struct cv_def_range_subfield_symbol, def_range_subfield_symbol, type, cv_def_range_subfield_symbol_print, S_DEFRANGE_SUBFIELD) \
+        FIELD_UNION_FIELD_STRUCT_MULTITAG(struct cv_def_range_register_symbol, def_range_register_symbol, type, cv_def_range_register_symbol_print, S_DEFRANGE_REGISTER) \
+        FIELD_UNION_FIELD_STRUCT_MULTITAG(struct cv_def_range_frame_pointer_rel_symbol, def_range_frame_pointer_rel_symbol, type, cv_def_range_frame_pointer_rel_symbol_print, S_DEFRANGE_FRAMEPOINTER_REL, S_DEFRANGE_FRAMEPOINTER_REL_FULL_SCOPE) \
+        FIELD_UNION_FIELD_STRUCT_MULTITAG(struct cv_def_range_subfield_register_symbol, def_range_subfield_register_symbol, type, cv_def_range_subfield_register_symbol_print, S_DEFRANGE_SUBFIELD_REGISTER) \
+        FIELD_UNION_FIELD_STRUCT_MULTITAG(struct cv_def_range_register_rel_symbol, def_range_register_rel_symbol, type, cv_def_range_register_rel_symbol_print, S_DEFRANGE_REGISTER_REL) \
     FIELD_UNION_END() \
 STRUCT_END(cv_symbol)
 

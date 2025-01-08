@@ -878,20 +878,17 @@ void tpi_symbol_read(
     {
         struct tpi_array *item = &symbol->array;
         MSF_STREAM_READ(msf, msf_stream, out_offset, item->header, file_stream);
-
+   
         if (symbol->leaf == LF_STRIDED_ARRAY)
             MSF_STREAM_READ(msf, msf_stream, out_offset, item->stride, file_stream);
-
+        
         while (*out_offset < end_offset)
         {
             uint64_t dimension = msf_read_tpi_unsigned(msf, msf_stream, out_offset, file_stream);
             assert(dimension <= UINT32_MAX);
             assert(*out_offset < msf_stream->size);
 
-            uint32_t index = item->dimension_count++;
-            item->dimensions = realloc(item->dimensions, item->dimension_count * sizeof(*item->dimensions));
-            assert(item->dimensions);
-            item->dimensions[index] = dimension;
+            DYNARRAY_PUSH(item->dimensions, item->dimension_count, dimension);
 
             uint8_t next = 0;
             msf_stream_read_data(msf, msf_stream, *out_offset, sizeof(next), &next, file_stream);
@@ -902,6 +899,8 @@ void tpi_symbol_read(
                 break;
             }
         }
+
+        assert(item->dimension_count);
 
         msf_stream_read_padding(msf, msf_stream, end_offset, out_offset, file_stream);
         assert(*out_offset < msf_stream->size);
@@ -1228,6 +1227,7 @@ void tpi_symbols_read(
     for (uint32_t i = 0; i < symbol_info_count; i++)
     {
         offset = symbol_info[i].offset;
+        symbols->symbols[i].size = symbol_info[i].size;
         tpi_symbol_read(&symbols->symbols[i], msf, msf_stream, tpi_header, &offset, file_stream);
     }
 }

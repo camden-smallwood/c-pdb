@@ -729,6 +729,153 @@ void cv_annotation_symbol_print(struct cv_annotation_symbol *item, uint32_t dept
     CV_ANNOTATION_SYMBOL_STRUCT
 }
 
+void cv_address_range_print(struct cv_address_range *item, uint32_t depth, FILE *stream)
+{
+    assert(item);
+    assert(stream);
+
+    CV_ADDRESS_RANGE_STRUCT
+}
+
+void cv_address_range_read(
+    struct cv_address_range *item,
+    struct msf *msf,
+    struct msf_stream *msf_stream,
+    uint32_t *out_offset,
+    FILE *file_stream)
+{
+    assert(item);
+    assert(msf);
+    assert(msf_stream);
+    assert(out_offset);
+    assert(file_stream);
+
+    cv_pe_section_offset_read(&item->start_offset, msf, msf_stream, out_offset, file_stream);
+    MSF_STREAM_READ(msf, msf_stream, out_offset, item->length, file_stream);
+}
+
+void cv_address_gap_print(struct cv_address_gap *item, uint32_t depth, FILE *stream)
+{
+    assert(item);
+    assert(stream);
+
+    CV_ADDRESS_GAP_STRUCT
+}
+
+void cv_def_range_symbol_dispose(struct cv_def_range_symbol *item)
+{
+    assert(item);
+
+    free(item->gaps);
+}
+
+void cv_def_range_symbol_print(struct cv_def_range_symbol *item, uint32_t depth, FILE *stream)
+{
+    assert(item);
+    assert(stream);
+
+    CV_DEF_RANGE_SYMBOL_STRUCT
+}
+
+void cv_def_range_subfield_symbol_dispose(struct cv_def_range_subfield_symbol *item)
+{
+    assert(item);
+
+    free(item->gaps);
+}
+
+void cv_def_range_subfield_symbol_print(struct cv_def_range_subfield_symbol *item, uint32_t depth, FILE *stream)
+{
+    assert(item);
+    assert(stream);
+
+    CV_DEF_RANGE_SUBFIELD_SYMBOL_STRUCT
+}
+
+void cv_range_attributes_print(struct cv_range_attributes *item, uint32_t depth, FILE *stream)
+{
+    assert(item);
+    assert(stream);
+
+    CV_RANGE_ATTRIBUTES_STRUCT
+}
+
+void cv_def_range_register_symbol_dispose(struct cv_def_range_register_symbol *item)
+{
+    assert(item);
+
+    free(item->gaps);
+}
+
+void cv_def_range_register_symbol_print(struct cv_def_range_register_symbol *item, uint32_t depth, FILE *stream)
+{
+    assert(item);
+    assert(stream);
+
+    CV_DEF_RANGE_REGISTER_SYMBOL_STRUCT
+}
+
+void cv_def_range_frame_pointer_rel_symbol_dispose(struct cv_def_range_frame_pointer_rel_symbol *item)
+{
+    assert(item);
+
+    free(item->gaps);
+}
+
+void cv_def_range_frame_pointer_rel_symbol_print(struct cv_def_range_frame_pointer_rel_symbol *item, uint32_t depth, FILE *stream)
+{
+    assert(item);
+    assert(stream);
+
+    CV_DEF_RANGE_FRAME_POINTER_REL_SYMBOL_STRUCT
+}
+
+void cv_def_range_subfield_register_packed_data_print(struct cv_def_range_subfield_register_packed_data *item, uint32_t depth, FILE *stream)
+{
+    assert(item);
+    assert(stream);
+
+    CV_DEF_RANGE_SUBFIELD_REGISTER_PACKED_DATA_STRUCT
+}
+
+void cv_def_range_subfield_register_symbol_dispose(struct cv_def_range_subfield_register_symbol *item)
+{
+    assert(item);
+
+    free(item->gaps);
+}
+
+void cv_def_range_subfield_register_symbol_print(struct cv_def_range_subfield_register_symbol *item, uint32_t depth, FILE *stream)
+{
+    assert(item);
+    assert(stream);
+
+    CV_DEF_RANGE_SUBFIELD_REGISTER_SYMBOL_STRUCT
+}
+
+void cv_def_range_register_rel_packed_data_print(struct cv_def_range_register_rel_packed_data *item, uint32_t depth, FILE *stream)
+{
+    assert(item);
+    assert(stream);
+
+    CV_DEF_RANGE_REGISTER_REL_PACKED_DATA_STRUCT
+}
+
+void cv_def_range_register_rel_symbol_dispose(struct cv_def_range_register_rel_symbol *item)
+{
+    assert(item);
+
+    free(item->gaps);
+}
+
+void cv_def_range_register_rel_symbol_print(struct cv_def_range_register_rel_symbol *item, uint32_t depth, FILE *stream)
+{
+    assert(item);
+    assert(stream);
+
+    CV_DEF_RANGE_REGISTER_REL_SYMBOL_STRUCT
+}
+
 void cv_symbol_dispose(struct cv_symbol *item)
 {
     assert(item);
@@ -908,12 +1055,29 @@ void cv_symbol_dispose(struct cv_symbol *item)
         cv_annotation_symbol_dispose(&item->annotation_symbol);
         break;
     
+    case S_DEFRANGE:
+        cv_def_range_symbol_dispose(&item->def_range_symbol);
+        break;
+    
+    case S_DEFRANGE_SUBFIELD:
+        cv_def_range_subfield_symbol_dispose(&item->def_range_subfield_symbol);
+        break;
+    
     case S_DEFRANGE_REGISTER:
-    case S_DEFRANGE_REGISTER_REL:
+        cv_def_range_register_symbol_dispose(&item->def_range_register_symbol);
+        break;
+    
     case S_DEFRANGE_FRAMEPOINTER_REL:
     case S_DEFRANGE_FRAMEPOINTER_REL_FULL_SCOPE:
+        cv_def_range_frame_pointer_rel_symbol_dispose(&item->def_range_frame_pointer_rel_symbol);
+        break;
+
     case S_DEFRANGE_SUBFIELD_REGISTER:
-        // TODO
+        cv_def_range_subfield_register_symbol_dispose(&item->def_range_subfield_register_symbol);
+        break;
+    
+    case S_DEFRANGE_REGISTER_REL:
+        cv_def_range_register_rel_symbol_dispose(&item->def_range_register_rel_symbol);
         break;
     
     default:
@@ -1006,12 +1170,13 @@ void cv_symbols_read(
     // Read each CV symbol
     //
 
-    for (uint32_t i = 0; i < symbol_info_count; i++)
+    for (uint32_t symbol_index = 0; symbol_index < symbol_info_count; symbol_index++)
     {
-        *out_offset = symbol_info[i].offset;
+        *out_offset = symbol_info[symbol_index].offset;
         uint32_t start_offset = *out_offset;
 
-        struct cv_symbol *symbol = &item->symbols[i];
+        struct cv_symbol *symbol = &item->symbols[symbol_index];
+        symbol->size = symbol_info[symbol_index].size;
 
         MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->type, file_stream);
 
@@ -1337,20 +1502,82 @@ void cv_symbols_read(
                 symbol->annotation_symbol.strings[i] = msf_read_cv_symbol_string(msf, msf_stream, out_offset, symbol->type, file_stream);
             break;
         
-        //
-        // TODO: investigate these:
-        //
-
+        case S_DEFRANGE:
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->def_range_symbol.program_index, file_stream);
+            cv_address_range_read(&symbol->def_range_symbol.range, msf, msf_stream, out_offset, file_stream);
+            while (*out_offset < start_offset + symbol->size)
+            {
+                struct cv_address_gap gap;
+                MSF_STREAM_READ(msf, msf_stream, out_offset, gap, file_stream);
+                DYNARRAY_PUSH(symbol->def_range_symbol.gaps, symbol->def_range_symbol.gap_count, gap);
+            }
+            break;
+        
+        case S_DEFRANGE_SUBFIELD:
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->def_range_subfield_symbol.program_index, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->def_range_subfield_symbol.parent_offset, file_stream);
+            cv_address_range_read(&symbol->def_range_subfield_symbol.range, msf, msf_stream, out_offset, file_stream);
+            while (*out_offset < start_offset + symbol->size)
+            {
+                struct cv_address_gap gap;
+                MSF_STREAM_READ(msf, msf_stream, out_offset, gap, file_stream);
+                DYNARRAY_PUSH(symbol->def_range_subfield_symbol.gaps, symbol->def_range_subfield_symbol.gap_count, gap);
+            }
+            break;
+        
         case S_DEFRANGE_REGISTER:
-        case S_DEFRANGE_REGISTER_REL:
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->def_range_register_symbol.register_index, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->def_range_register_symbol.attributes, file_stream);
+            cv_address_range_read(&symbol->def_range_register_symbol.range, msf, msf_stream, out_offset, file_stream);
+            while (*out_offset < start_offset + symbol->size)
+            {
+                struct cv_address_gap gap;
+                MSF_STREAM_READ(msf, msf_stream, out_offset, gap, file_stream);
+                DYNARRAY_PUSH(symbol->def_range_register_symbol.gaps, symbol->def_range_register_symbol.gap_count, gap);
+            }
+            break;
+        
         case S_DEFRANGE_FRAMEPOINTER_REL:
         case S_DEFRANGE_FRAMEPOINTER_REL_FULL_SCOPE:
-        case S_DEFRANGE_SUBFIELD_REGISTER:
-            // TODO: remove this VVV
-            // cv_symbol_print(&symbol, 0, stdout);
-            // printf("\n");
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->def_range_frame_pointer_rel_symbol.offset, file_stream);
+            if (symbol->type == S_DEFRANGE_FRAMEPOINTER_REL)
+            {
+                cv_address_range_read(&symbol->def_range_frame_pointer_rel_symbol.range, msf, msf_stream, out_offset, file_stream);
+                while (*out_offset < start_offset + symbol->size)
+                {
+                    struct cv_address_gap gap;
+                    MSF_STREAM_READ(msf, msf_stream, out_offset, gap, file_stream);
+                    DYNARRAY_PUSH(symbol->def_range_frame_pointer_rel_symbol.gaps, symbol->def_range_frame_pointer_rel_symbol.gap_count, gap);
+                }
+            }
             break;
 
+        case S_DEFRANGE_SUBFIELD_REGISTER:
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->def_range_subfield_register_symbol.register_index, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->def_range_subfield_register_symbol.attributes, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->def_range_subfield_register_symbol.packed_data, file_stream);
+            cv_address_range_read(&symbol->def_range_subfield_register_symbol.range, msf, msf_stream, out_offset, file_stream);
+            while (*out_offset < start_offset + symbol->size)
+            {
+                struct cv_address_gap gap;
+                MSF_STREAM_READ(msf, msf_stream, out_offset, gap, file_stream);
+                DYNARRAY_PUSH(symbol->def_range_subfield_register_symbol.gaps, symbol->def_range_subfield_register_symbol.gap_count, gap);
+            }
+            break;
+        
+        case S_DEFRANGE_REGISTER_REL:
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->def_range_register_rel_symbol.base_register_index, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->def_range_register_rel_symbol.packed_data, file_stream);
+            MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->def_range_register_rel_symbol.base_offset, file_stream);
+            cv_address_range_read(&symbol->def_range_register_rel_symbol.range, msf, msf_stream, out_offset, file_stream);
+            while (*out_offset < start_offset + symbol->size)
+            {
+                struct cv_address_gap gap;
+                MSF_STREAM_READ(msf, msf_stream, out_offset, gap, file_stream);
+                DYNARRAY_PUSH(symbol->def_range_register_rel_symbol.gaps, symbol->def_range_register_rel_symbol.gap_count, gap);
+            }
+            break;
+        
         default:
             fprintf(stderr, "%s:%i: ERROR: unhandled cv_symbol_type value: ", __FILE__, __LINE__);
             cv_symbol_type_print(symbol->type, stderr);

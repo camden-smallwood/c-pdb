@@ -409,7 +409,32 @@ static void dbi_module_get_file_path_and_header_paths(
         strcasecmp(obj_path_string, "* Linker Generated Manifest RES *") != 0 &&
         (obj_ext && strcasecmp(obj_ext, "exp") != 0))
     {
-        fprintf(stderr, "WARNING: Failed to find source file of \"%s\"\n", obj_path_string);
+        fprintf(stderr, "WARNING: Failed to find source file of \"%s\":\n", obj_path_string);
+
+        for (uint32_t subsection_index = 0; subsection_index < subsection_count; subsection_index++)
+        {
+            struct dbi_subsection *subsection = &subsections[subsection_index];
+            
+            // TODO: remove this VVV
+            dbi_subsection_print(subsection, 0, stderr);
+            fprintf(stderr, "\n");
+            
+            if (subsection->type != DEBUG_S_FILECHKSMS)
+                continue;
+
+            for (uint32_t i = 0; i < subsection->file_checksums.count; i++)
+            {
+                struct dbi_file_checksum *entry = &subsection->file_checksums.entries[i];
+
+                assert(entry->header.name_offset < main_globals.pdb_data.string_table.header.names_size);
+                char *file_path = sanitize_path(main_globals.pdb_data.string_table.names_data + entry->header.name_offset);
+                assert(file_path);
+
+                fprintf(stderr, "    [%u]: \"%s\"\n", i, file_path);
+
+                free(file_path);
+            }
+        }
     }
 
     path_dispose(&obj_path);
@@ -923,7 +948,7 @@ static void process_modules(void)
     for (uint32_t dbi_module_index = 0; dbi_module_index < main_globals.pdb_data.modules.count; dbi_module_index++)
     {
         struct dbi_module *dbi_module = &main_globals.pdb_data.modules.modules[dbi_module_index];
-        
+
         char *file_path = NULL;
         
         size_t header_path_count = 0;

@@ -201,11 +201,11 @@ void ipi_symbols_read(
     // Read each IPI symbol
     //
 
-    for (uint32_t i = 0; i < symbol_info_count; i++)
+    for (uint32_t symbol_index = 0; symbol_index < symbol_info_count; symbol_index++)
     {
-        offset = symbol_info[i].offset;
+        offset = symbol_info[symbol_index].offset;
         
-        struct ipi_symbol *symbol = &symbols->symbols[i];
+        struct ipi_symbol *symbol = &symbols->symbols[symbol_index];
 
         MSF_STREAM_READ(msf, msf_stream, &offset, symbol->type, file_stream);
 
