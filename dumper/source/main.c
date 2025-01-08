@@ -409,15 +409,13 @@ static void dbi_module_get_file_path_and_header_paths(
         strcasecmp(obj_path_string, "* Linker Generated Manifest RES *") != 0 &&
         (obj_ext && strcasecmp(obj_ext, "exp") != 0))
     {
-        fprintf(stderr, "WARNING: Failed to find source file of \"%s\":\n", obj_path_string);
+        fprintf(stderr, "WARNING: Failed to find source file of \"%s\"", obj_path_string);
+
+        uint32_t printed_count = 0;
 
         for (uint32_t subsection_index = 0; subsection_index < subsection_count; subsection_index++)
         {
             struct dbi_subsection *subsection = &subsections[subsection_index];
-            
-            // TODO: remove this VVV
-            dbi_subsection_print(subsection, 0, stderr);
-            fprintf(stderr, "\n");
             
             if (subsection->type != DEBUG_S_FILECHKSMS)
                 continue;
@@ -430,11 +428,15 @@ static void dbi_module_get_file_path_and_header_paths(
                 char *file_path = sanitize_path(main_globals.pdb_data.string_table.names_data + entry->header.name_offset);
                 assert(file_path);
 
+                if (printed_count == 0)
+                    fprintf(stderr, ":\n");
+                
                 fprintf(stderr, "    [%u]: \"%s\"\n", i, file_path);
-
                 free(file_path);
             }
         }
+
+        fprintf(stderr, "\n");
     }
 
     path_dispose(&obj_path);
@@ -615,6 +617,7 @@ static void process_symbol_records(void)
         case S_UDT_ST:
         case S_COBOLUDT:
         case S_COBOLUDT_ST:
+        {
             // HACK: insert user defined types into the last known module
             //       we do this because we don't know where else to put them :shrug:
             if (prev_module_path)
@@ -622,13 +625,28 @@ static void process_symbol_records(void)
                 char *module_path = strdup(prev_module_path);
                 assert(module_path);
 
-                free(prev_module_path);
-                prev_module_path = NULL;
-
                 struct cpp_module *module = cpp_module_find_or_create(module_path);
-                cpp_module_add_type_definition(module, &main_globals.pdb_data, symbol->user_defined_type_symbol.type_index, 0);
+                
+                char *type_name = cpp_type_name(
+                    &main_globals.pdb_data,
+                    symbol->user_defined_type_symbol.type_index,
+                    symbol->user_defined_type_symbol.name,
+                    0,
+                    NULL,
+                    0);
+                assert(type_name);
+
+                struct cpp_module_member member = {
+                    .type = CPP_MODULE_MEMBER_TYPE_TYPEDEF,
+                    .typedef_ = {
+                        .type_name = type_name,
+                    },
+                };
+
+                DYNARRAY_PUSH(module->members, module->member_count, member);
             }
             break;
+        }
 
         case S_PROCREF:
         case S_PROCREF_ST:
@@ -643,8 +661,12 @@ static void process_symbol_records(void)
                 
                 if (module_path)
                 {
+                    if (prev_module_path)
+                        free(prev_module_path);
+                    
                     prev_module_path = strdup(module_path);
                     assert(prev_module_path);
+
                     free(module_path);
                 }
             }
@@ -745,14 +767,21 @@ static void process_symbol_records(void)
                 
                 if (module_path)
                 {
+                    if (prev_module_path)
+                        free(prev_module_path);
+                    
                     prev_module_path = strdup(module_path);
                     assert(prev_module_path);
+                    
                     free(module_path);
                     break;
                 }
             }
         }
     }
+
+    if (prev_module_path)
+        free(prev_module_path);
 }
 
 static uint32_t process_scoped_symbols(struct dbi_module *dbi_module, uint32_t start_index, uint16_t scope_end_symbol_type);
@@ -1075,8 +1104,6 @@ static void process_modules(void)
             case S_COBOLUDT:
             case S_COBOLUDT_ST:
             {
-                uint32_t underlying_type_index = cv_symbol->user_defined_type_symbol.type_index;
-
                 char *type_name = cpp_type_name(
                     &main_globals.pdb_data,
                     cv_symbol->user_defined_type_symbol.type_index,
@@ -1090,10 +1117,6 @@ static void process_modules(void)
                     .type = CPP_MODULE_MEMBER_TYPE_TYPEDEF,
                     .typedef_ = {
                         .type_name = type_name,
-                        .underlying_type_index = underlying_type_index,
-                        .containing_class_type_index = UINT32_MAX,
-                        .field_attributes = {},
-                        .pointer_attributes = {},
                     },
                 };
 

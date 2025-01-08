@@ -813,13 +813,6 @@ void cpp_class_add_members(struct cpp_class *item, struct pdb_data *pdb, uint32_
 
                 string_append(&member.typedef_.type_name, symbol->nested_type.name);
                 
-                member.typedef_.underlying_type_index = symbol->nested_type.header.nested_type_index;
-                
-                memcpy(
-                    &member.typedef_.field_attributes,
-                    &symbol->nested_type.header.attributes,
-                    sizeof(member.typedef_.field_attributes));
-                
                 DYNARRAY_PUSH(item->members, item->member_count, member);
                 break;
             }
@@ -952,20 +945,6 @@ void cpp_class_add_members(struct cpp_class *item, struct pdb_data *pdb, uint32_
                 member.typedef_.type_name = cpp_type_name(pdb, nested_symbol->pointer.header.underlying_type_index, symbol->nested_type.name, 0, NULL, 1);
                 assert(member.typedef_.type_name);
 
-                member.typedef_.underlying_type_index = nested_symbol->pointer.header.underlying_type_index;
-
-                memcpy(
-                    &member.typedef_.field_attributes,
-                    &symbol->nested_type.header.attributes,
-                    sizeof(member.typedef_.field_attributes));
-
-                memcpy(
-                    &member.typedef_.pointer_attributes,
-                    &nested_symbol->pointer.header.attributes,
-                    sizeof(member.typedef_.pointer_attributes));
-                
-                member.typedef_.containing_class_type_index = nested_symbol->pointer.containing_class_type_index;
-
                 DYNARRAY_PUSH(item->members, item->member_count, member);
                 break;
             }
@@ -980,13 +959,6 @@ void cpp_class_add_members(struct cpp_class *item, struct pdb_data *pdb, uint32_
                 member.typedef_.type_name = cpp_type_name(pdb, symbol->nested_type.header.nested_type_index, symbol->nested_type.name, 0, NULL, 1);
                 assert(member.typedef_.type_name);
                 
-                member.typedef_.underlying_type_index = nested_symbol->pointer.header.underlying_type_index;
-
-                memcpy(
-                    &member.typedef_.field_attributes,
-                    &symbol->nested_type.header.attributes,
-                    sizeof(member.typedef_.field_attributes));
-
                 DYNARRAY_PUSH(item->members, item->member_count, member);
                 break;
             }
@@ -1002,13 +974,6 @@ void cpp_class_add_members(struct cpp_class *item, struct pdb_data *pdb, uint32_
 
                 member.typedef_.type_name = cpp_type_name(pdb, symbol->nested_type.header.nested_type_index, symbol->nested_type.name, 0, NULL, 1);
                 assert(member.typedef_.type_name);
-
-                member.typedef_.underlying_type_index = symbol->nested_type.header.nested_type_index;
-
-                memcpy(
-                    &member.typedef_.field_attributes,
-                    &symbol->nested_type.header.attributes,
-                    sizeof(member.typedef_.field_attributes));
 
                 DYNARRAY_PUSH(item->members, item->member_count, member);
                 break;

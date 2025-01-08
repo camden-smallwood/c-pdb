@@ -82,12 +82,6 @@ void cpp_procedure_print(struct cpp_procedure *item, uint32_t depth, FILE *strea
 struct cpp_typedef
 {
     char *type_name;
-    
-    uint32_t underlying_type_index;
-    uint32_t containing_class_type_index;
-
-    struct tpi_field_attributes field_attributes;
-    struct tpi_pointer_attributes pointer_attributes;
 };
 
 void cpp_typedef_dispose(struct cpp_typedef *item);
