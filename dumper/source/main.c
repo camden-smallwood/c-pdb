@@ -14,6 +14,8 @@
 #include "utils.h"
 #include "path.h"
 
+/* ---------- private prototypes */
+
 static void main_initialize(int argc, const char **argv);
 static void main_dispose(void);
 static void process_global_types(void);
@@ -22,6 +24,8 @@ static void process_user_defined_type_ids(void);
 static void process_symbol_records(void);
 static void process_modules(void);
 static void export_cpp_modules(void);
+
+/* ---------- public code */
 
 int main(int argc, const char *argv[])
 {
@@ -40,6 +44,8 @@ int main(int argc, const char *argv[])
     exit(EXIT_SUCCESS);
 }
 
+/* ---------- private variables */
+
 struct
 {
     const char *pdb_path;
@@ -50,6 +56,8 @@ struct
     uint32_t module_count;
     struct cpp_module *modules;
 } static main_globals;
+
+/* ---------- private code */
 
 static void main_initialize(int argc, const char **argv)
 {
@@ -534,6 +542,28 @@ static char *dbi_module_get_file_path(struct dbi_module *dbi_module)
     return file_path;
 }
 
+char *cv_pe_section_offset_to_module_path(struct cv_pe_section_offset *code_offset)
+{
+    assert(code_offset);
+
+    for (uint32_t contribution_index = 0; contribution_index < main_globals.pdb_data.section_contributions.count; contribution_index++)
+    {
+        struct dbi_section_contribution *contribution = &main_globals.pdb_data.section_contributions.entries[contribution_index];
+
+        if ((code_offset->section_index == contribution->section_index) &&
+            (code_offset->memory_offset >= contribution->offset) &&
+            (code_offset->memory_offset < contribution->offset + contribution->size))
+        {
+            assert(contribution->module_index < main_globals.pdb_data.modules.count);
+            struct dbi_module *contributing_module = &main_globals.pdb_data.modules.modules[contribution->module_index];
+
+            return dbi_module_get_file_path(contributing_module);
+        }
+    }
+
+    return NULL;
+}
+
 static void process_global_types(void)
 {
     //
@@ -684,73 +714,96 @@ static void process_user_defined_type_ids(void)
 
 static void process_symbol_records(void)
 {
-    char *prev_module_path = NULL;
+    struct cpp_module *cpp_module = NULL;
+
+    //
+    // NOTE:
+    // We insert public constants and public user-defined types into the last known module.
+    // We do this because there's no other known way to determine where they should go.
+    //
 
     for (uint32_t symbol_record_index = 0; symbol_record_index < main_globals.pdb_data.symbol_records.count; symbol_record_index++)
     {
         struct cv_symbol *symbol = &main_globals.pdb_data.symbol_records.symbols[symbol_record_index];
-        struct cv_pe_section_offset *code_offset = NULL;
 
         switch (symbol->type)
         {
-        case S_UDT:
-        case S_UDT_ST:
-        case S_COBOLUDT:
-        case S_COBOLUDT_ST:
+        case S_PUB32:
+        case S_PUB32_ST:
         {
-            // HACK: insert user defined types into the last known module
-            //       we do this because we don't know where else to put them :shrug:
-            if (prev_module_path)
-            {
-                char *module_path = strdup(prev_module_path);
-                assert(module_path);
+            //
+            // TODO:
+            // These appear to be public symbol references...
+            // We should verify if they should be included here or not.
+            //
 
-                struct cpp_module *module = cpp_module_find_or_create(module_path);
-                
-                char *type_name = cpp_type_name(
-                    &main_globals.pdb_data,
-                    symbol->user_defined_type_symbol.type_index,
-                    symbol->user_defined_type_symbol.name,
-                    0,
-                    NULL,
-                    0);
-                assert(type_name);
+            char *module_path = cv_pe_section_offset_to_module_path(&symbol->public_symbol.code_offset);
 
-                struct cpp_module_member member = {
-                    .type = CPP_MODULE_MEMBER_TYPE_TYPEDEF,
-                    .typedef_ = {
-                        .type_name = type_name,
-                    },
-                };
-
-                DYNARRAY_PUSH(module->members, module->member_count, member);
-            }
+            if (!module_path)
+                break;
+            
+            cpp_module = cpp_module_find_or_create(module_path);
+            assert(cpp_module);
+            
+            //
+            // TODO: do we need to do anything else?
+            //
             break;
         }
 
-        case S_PROCREF:
-        case S_PROCREF_ST:
-        case S_LPROCREF:
-        case S_LPROCREF_ST:
-            if (symbol->procedure_reference_symbol.module_index)
-            {
-                assert(symbol->procedure_reference_symbol.module_index < main_globals.pdb_data.modules.count);
-                struct dbi_module *referenced_module = &main_globals.pdb_data.modules.modules[symbol->procedure_reference_symbol.module_index];
+        case S_CONSTANT:
+        case S_CONSTANT_ST:
+        case S_MANCONSTANT:
+        {
+            //
+            // TODO:
+            // These appear to be constant references...
+            // We should verify if they should be included here or not.
+            //
 
-                char *module_path = dbi_module_get_file_path(referenced_module);
-                
-                if (module_path)
-                {
-                    if (prev_module_path)
-                        free(prev_module_path);
-                    
-                    prev_module_path = strdup(module_path);
-                    assert(prev_module_path);
+            // if (!cpp_module)
+            //     break;
+            
+            // char *type_name = cpp_type_name(
+            //     &main_globals.pdb_data,
+            //     symbol->constant_symbol.type_index,
+            //     symbol->constant_symbol.name,
+            //     0,
+            //     NULL,
+            //     0);
+            // assert(type_name);
+            
+            // char *value_string = tpi_enumerate_variant_to_string(&symbol->constant_symbol.value);
+            // assert(value_string);
 
-                    free(module_path);
-                }
-            }
+            // size_t type_name_length = strlen(type_name);
+            // size_t value_string_length = strlen(value_string);
+            // size_t result_length = type_name_length + /* = */3 + value_string_length + /*;\0*/2;
+
+            // // HACK: only prepend with "const" if it doesn't already start with "const"
+            // int prepend = 0;
+            // if (!string_starts_with(type_name, "const "))
+            // {
+            //     result_length += /*const */6;
+            //     prepend = 1;
+            // }
+
+            // char *result = malloc(result_length);
+            // assert(result);
+
+            // sprintf(result, "%s%s = %s;", prepend ? "const " : "", type_name, value_string);
+
+            // free(value_string);
+            // free(type_name);
+
+            // struct cpp_module_member member = {
+            //     .type = CPP_MODULE_MEMBER_TYPE_CONSTANT,
+            //     .constant = result,
+            // };
+
+            // DYNARRAY_PUSH(cpp_module->members, cpp_module->member_count, member);
             break;
+        }
 
         case S_LDATA32:
         case S_LDATA32_ST:
@@ -760,108 +813,133 @@ static void process_symbol_records(void)
         case S_LMANDATA_ST:
         case S_GMANDATA:
         case S_GMANDATA_ST:
-            code_offset = &symbol->data_symbol.code_offset;
-            break;
+        {
+            char *module_path = cv_pe_section_offset_to_module_path(&symbol->data_symbol.code_offset);
+            
+            if (!module_path)
+                break;
+            
+            cpp_module = cpp_module_find_or_create(module_path);
+            assert(cpp_module);
 
-        case S_PUB32:
-        case S_PUB32_ST:
-            code_offset = &symbol->public_symbol.code_offset;
-            break;
+            char *type_name = cpp_type_name(
+                &main_globals.pdb_data,
+                symbol->data_symbol.type_index,
+                symbol->data_symbol.name,
+                0,
+                NULL,
+                0);
+            assert(type_name);
 
-        case S_LPROC32:
-        case S_LPROC32_ST:
-        case S_GPROC32:
-        case S_GPROC32_ST:
-        case S_LPROC32_ID:
-        case S_GPROC32_ID:
-        case S_LPROC32_DPC:
-        case S_LPROC32_DPC_ID:
-            code_offset = &symbol->procedure_symbol.code_offset;
+            size_t type_name_length = strlen(type_name);
+            size_t result_length = type_name_length + /*;\0*/ 2;
+
+            char *result = malloc(result_length);
+            assert(result);
+
+            sprintf(result, "%s;", type_name);
+            
+            struct cpp_module_member member = {
+                .type = CPP_MODULE_MEMBER_TYPE_DATA,
+                .data = result,
+            };
+
+            DYNARRAY_PUSH(cpp_module->members, cpp_module->member_count, member);
             break;
+        }
 
         case S_LTHREAD32:
         case S_LTHREAD32_ST:
         case S_GTHREAD32:
         case S_GTHREAD32_ST:
-            code_offset = &symbol->thread_storage_symbol.code_offset;
+        {
+            char *module_path = cv_pe_section_offset_to_module_path(&symbol->thread_storage_symbol.code_offset);
+            
+            if (!module_path)
+                break;
+
+            cpp_module = cpp_module_find_or_create(module_path);
+            assert(cpp_module);
+
+            char *type_name = cpp_type_name(
+                &main_globals.pdb_data,
+                symbol->thread_storage_symbol.type_index,
+                symbol->thread_storage_symbol.name,
+                0,
+                NULL,
+                0);
+            assert(type_name);            
+
+            size_t type_name_length = strlen(type_name);
+            size_t result_length = /*thread_local */13 + type_name_length + /*;\0*/2;
+            
+            char *result = malloc(result_length);
+            assert(result);
+
+            sprintf(result, "thread_local %s;", type_name);
+
+            free(type_name);
+
+            struct cpp_module_member member = {
+                .type = CPP_MODULE_MEMBER_TYPE_CONSTANT,
+                .constant = result,
+            };
+
+            DYNARRAY_PUSH(cpp_module->members, cpp_module->member_count, member);
             break;
+        }
         
-        case S_TRAMPOLINE:
-            code_offset = &symbol->trampoline_symbol.target_offset;
-            break;
-        
-        case S_LABEL32:
-        case S_LABEL32_ST:
-            code_offset = &symbol->label_symbol.section_offset;
-            break;
-        
-        case S_BLOCK32:
-        case S_BLOCK32_ST:
-            code_offset = &symbol->block_symbol.section_offset;
-            break;
-        
-        case S_THUNK32:
-        case S_THUNK32_ST:
-            code_offset = &symbol->thunk_symbol.section_offset;
-            break;
-        
-        case S_SEPCODE:
-            code_offset = &symbol->separated_code_symbol.section_offset;
-            break;
-        
-        case S_FRAMEPROC:
-            code_offset = &symbol->frame_proc_symbol.exception_handler_offset;
-            break;
-        
-        case S_CALLSITEINFO:
-            code_offset = &symbol->call_site_info_symbol.code_offset;
-            break;
-        
-        case S_COFFGROUP:
-            code_offset = &symbol->coff_group_symbol.code_offset;
-            break;
-        
-        case S_ANNOTATION:
-            code_offset = &symbol->annotation_symbol.code_offset;
-            break;
-        
-        default:
+        case S_UDT:
+        case S_UDT_ST:
+        case S_COBOLUDT:
+        case S_COBOLUDT_ST:
+        {
+            //
+            // HACK: insert public user defined types into the last known module
+            //       we do this because we don't know where else to put them :shrug:
+            //
+
+            if (!cpp_module)
+                break;
+            
+            char *type_name = cpp_type_name(
+                &main_globals.pdb_data,
+                symbol->user_defined_type_symbol.type_index,
+                symbol->user_defined_type_symbol.name,
+                0,
+                NULL,
+                0);
+            assert(type_name);
+
+            struct cpp_module_member member = {
+                .type = CPP_MODULE_MEMBER_TYPE_TYPEDEF,
+                .typedef_ = {
+                    .type_name = type_name,
+                },
+            };
+
+            DYNARRAY_PUSH(cpp_module->members, cpp_module->member_count, member);
             break;
         }
 
-        if (!code_offset)
-            continue;
+        case S_PROCREF:
+        case S_PROCREF_ST:
+        case S_LPROCREF:
+        case S_LPROCREF_ST:
+            // TODO: Should we use the referenced module?
+            break;
+        
+        case S_ANNOTATIONREF:
+            // TODO: Should we use the referenced module?
+            break;
 
-        for (uint32_t contribution_index = 0; contribution_index < main_globals.pdb_data.section_contributions.count; contribution_index++)
-        {
-            struct dbi_section_contribution *contribution = &main_globals.pdb_data.section_contributions.entries[contribution_index];
-
-            if ((code_offset->section_index == contribution->section_index) &&
-                (code_offset->memory_offset >= contribution->offset) &&
-                (code_offset->memory_offset < contribution->offset + contribution->size))
-            {
-                assert(contribution->module_index < main_globals.pdb_data.modules.count);
-                struct dbi_module *contributing_module = &main_globals.pdb_data.modules.modules[contribution->module_index];
-
-                char *module_path = dbi_module_get_file_path(contributing_module);
-                
-                if (module_path)
-                {
-                    if (prev_module_path)
-                        free(prev_module_path);
-                    
-                    prev_module_path = strdup(module_path);
-                    assert(prev_module_path);
-                    
-                    free(module_path);
-                    break;
-                }
-            }
+        default:
+            fprintf(stderr, "%s:%i: ERROR: Unhandled cv_symbol_type value: ", __FILE__, __LINE__);
+            cv_symbol_type_print(symbol->type, stderr);
+            fprintf(stderr, "\n");
+            exit(EXIT_FAILURE);
         }
     }
-
-    if (prev_module_path)
-        free(prev_module_path);
 }
 
 static uint32_t process_scoped_symbols(struct dbi_module *dbi_module, uint32_t start_index, uint16_t scope_end_symbol_type);
@@ -1057,6 +1135,9 @@ static void process_modules(void)
     for (uint32_t dbi_module_index = 0; dbi_module_index < main_globals.pdb_data.modules.count; dbi_module_index++)
     {
         struct dbi_module *dbi_module = &main_globals.pdb_data.modules.modules[dbi_module_index];
+
+        //
+        // Get the file path and header 
 
         char *file_path = NULL;
         
@@ -1264,14 +1345,42 @@ static void process_modules(void)
                     NULL,
                     0);
                 assert(type_name);
-                size_t type_name_length = strlen(type_name);
 
+                size_t type_name_length = strlen(type_name);
                 size_t result_length = type_name_length + /*;\0*/2;
+
                 char *result = malloc(result_length);
                 assert(result);
+
                 sprintf(result, "%s;", type_name);
 
                 free(type_name);
+
+                //
+                // HACK: Don't add the variable if it was already added...
+                //
+
+                int exists = 0;
+
+                for (uint32_t i = 0; i < cpp_module->member_count; i++)
+                {
+                    struct cpp_module_member *member = &cpp_module->members[i];
+
+                    if (member->type != CPP_MODULE_MEMBER_TYPE_DATA)
+                        continue;
+                    
+                    if (strcmp(result, member->data) == 0)
+                    {
+                        exists = 1;
+                        break;
+                    }
+                }
+
+                if (exists)
+                {
+                    free(result);
+                    break;
+                }
                 
                 struct cpp_module_member member = {
                     .type = CPP_MODULE_MEMBER_TYPE_DATA,
@@ -1295,14 +1404,42 @@ static void process_modules(void)
                     NULL,
                     0);
                 assert(type_name);
-                size_t type_name_length = strlen(type_name);
 
+                size_t type_name_length = strlen(type_name);
                 size_t result_length = /*thread_local */13 + type_name_length + /*;\0*/2;
+
                 char *result = malloc(result_length);
                 assert(result);
+
                 sprintf(result, "thread_local %s;", type_name);
 
                 free(type_name);
+
+                //
+                // HACK: Don't add the thread_local variable if it was already added...
+                //
+
+                int exists = 0;
+
+                for (uint32_t i = 0; i < cpp_module->member_count; i++)
+                {
+                    struct cpp_module_member *member = &cpp_module->members[i];
+
+                    if (member->type != CPP_MODULE_MEMBER_TYPE_THREAD_STORAGE)
+                        continue;
+                    
+                    if (strcmp(result, member->data) == 0)
+                    {
+                        exists = 1;
+                        break;
+                    }
+                }
+
+                if (exists)
+                {
+                    free(result);
+                    break;
+                }
 
                 struct cpp_module_member member = {
                     .type = CPP_MODULE_MEMBER_TYPE_THREAD_STORAGE,
