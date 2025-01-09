@@ -737,7 +737,7 @@ static void process_symbol_records(void)
             // We should verify if they should be included here or not.
             //
 
-            char *module_path = cv_pe_section_offset_to_module_path(&symbol->public_symbol.code_offset);
+            char *module_path = cv_pe_section_offset_to_module_path(&symbol->public_.code_offset);
 
             if (!module_path)
                 break;
@@ -766,14 +766,14 @@ static void process_symbol_records(void)
             
             // char *type_name = cpp_type_name(
             //     &main_globals.pdb_data,
-            //     symbol->constant_symbol.type_index,
-            //     symbol->constant_symbol.name,
+            //     symbol->constant.type_index,
+            //     symbol->constant.name,
             //     0,
             //     NULL,
             //     0);
             // assert(type_name);
             
-            // char *value_string = tpi_enumerate_variant_to_string(&symbol->constant_symbol.value);
+            // char *value_string = tpi_enumerate_variant_to_string(&symbol->constant.value);
             // assert(value_string);
 
             // size_t type_name_length = strlen(type_name);
@@ -814,7 +814,7 @@ static void process_symbol_records(void)
         case S_GMANDATA:
         case S_GMANDATA_ST:
         {
-            char *module_path = cv_pe_section_offset_to_module_path(&symbol->data_symbol.code_offset);
+            char *module_path = cv_pe_section_offset_to_module_path(&symbol->data.code_offset);
             
             if (!module_path)
                 break;
@@ -824,8 +824,8 @@ static void process_symbol_records(void)
 
             char *type_name = cpp_type_name(
                 &main_globals.pdb_data,
-                symbol->data_symbol.type_index,
-                symbol->data_symbol.name,
+                symbol->data.type_index,
+                symbol->data.name,
                 0,
                 NULL,
                 0);
@@ -853,7 +853,7 @@ static void process_symbol_records(void)
         case S_GTHREAD32:
         case S_GTHREAD32_ST:
         {
-            char *module_path = cv_pe_section_offset_to_module_path(&symbol->thread_storage_symbol.code_offset);
+            char *module_path = cv_pe_section_offset_to_module_path(&symbol->thread_storage.code_offset);
             
             if (!module_path)
                 break;
@@ -863,8 +863,8 @@ static void process_symbol_records(void)
 
             char *type_name = cpp_type_name(
                 &main_globals.pdb_data,
-                symbol->thread_storage_symbol.type_index,
-                symbol->thread_storage_symbol.name,
+                symbol->thread_storage.type_index,
+                symbol->thread_storage.name,
                 0,
                 NULL,
                 0);
@@ -904,8 +904,8 @@ static void process_symbol_records(void)
             
             char *type_name = cpp_type_name(
                 &main_globals.pdb_data,
-                symbol->user_defined_type_symbol.type_index,
-                symbol->user_defined_type_symbol.name,
+                symbol->user_defined_type.type_index,
+                symbol->user_defined_type.name,
                 0,
                 NULL,
                 0);
@@ -1137,7 +1137,8 @@ static void process_modules(void)
         struct dbi_module *dbi_module = &main_globals.pdb_data.modules.modules[dbi_module_index];
 
         //
-        // Get the file path and header 
+        // Get the module's file path and header paths
+        //
 
         char *file_path = NULL;
         
@@ -1153,6 +1154,10 @@ static void process_modules(void)
             free(header_paths);
             continue;
         }
+
+        //
+        // Add the header paths to the C++ module
+        //
 
         struct cpp_module *cpp_module = cpp_module_find_or_create(file_path);
         assert(cpp_module);
@@ -1195,6 +1200,10 @@ static void process_modules(void)
         
         free(header_paths);
 
+        //
+        // Add each of the module's symbols to the C++ module
+        //
+
         for (uint32_t symbol_index = 0; symbol_index < dbi_module->symbols.count; symbol_index++)
         {
             struct cv_symbol *cv_symbol = &dbi_module->symbols.symbols[symbol_index];
@@ -1214,8 +1223,8 @@ static void process_modules(void)
 
                 char *signature = cpp_type_name(
                     &main_globals.pdb_data,
-                    cv_symbol->procedure_symbol.type_index,
-                    cv_symbol->procedure_symbol.name,
+                    cv_symbol->procedure.type_index,
+                    cv_symbol->procedure.name,
                     0, // TODO
                     NULL, // TODO
                     0);
@@ -1226,7 +1235,7 @@ static void process_modules(void)
                     .procedure = {
                         .address = 0, // TODO
                         .line = 0, // TODO
-                        .type_index = cv_symbol->procedure_symbol.type_index,
+                        .type_index = cv_symbol->procedure.type_index,
                         .signature = signature,
                         .body = NULL, // TODO
                     }
@@ -1248,7 +1257,7 @@ static void process_modules(void)
             case S_UNAMESPACE:
             case S_UNAMESPACE_ST:
             {
-                char *using_namespace = strdup(cv_symbol->using_namespace_symbol.name);
+                char *using_namespace = strdup(cv_symbol->using_namespace.name);
                 assert(using_namespace);
 
                 struct cpp_module_member member = {
@@ -1267,8 +1276,8 @@ static void process_modules(void)
             {
                 char *type_name = cpp_type_name(
                     &main_globals.pdb_data,
-                    cv_symbol->user_defined_type_symbol.type_index,
-                    cv_symbol->user_defined_type_symbol.name,
+                    cv_symbol->user_defined_type.type_index,
+                    cv_symbol->user_defined_type.name,
                     0,
                     NULL,
                     0);
@@ -1291,15 +1300,15 @@ static void process_modules(void)
             {
                 char *type_name = cpp_type_name(
                     &main_globals.pdb_data,
-                    cv_symbol->constant_symbol.type_index,
-                    cv_symbol->constant_symbol.name,
+                    cv_symbol->constant.type_index,
+                    cv_symbol->constant.name,
                     0,
                     NULL,
                     0);
                 assert(type_name);
                 size_t type_name_length = strlen(type_name);
 
-                char *value_string = tpi_enumerate_variant_to_string(&cv_symbol->constant_symbol.value);
+                char *value_string = tpi_enumerate_variant_to_string(&cv_symbol->constant.value);
                 assert(value_string);
                 size_t value_string_length = strlen(value_string);
 
@@ -1339,8 +1348,8 @@ static void process_modules(void)
             {
                 char *type_name = cpp_type_name(
                     &main_globals.pdb_data,
-                    cv_symbol->data_symbol.type_index,
-                    cv_symbol->data_symbol.name,
+                    cv_symbol->data.type_index,
+                    cv_symbol->data.name,
                     0,
                     NULL,
                     0);
@@ -1398,8 +1407,8 @@ static void process_modules(void)
             {
                 char *type_name = cpp_type_name(
                     &main_globals.pdb_data,
-                    cv_symbol->thread_storage_symbol.type_index,
-                    cv_symbol->thread_storage_symbol.name,
+                    cv_symbol->thread_storage.type_index,
+                    cv_symbol->thread_storage.name,
                     0,
                     NULL,
                     0);
