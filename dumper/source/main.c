@@ -51,6 +51,8 @@ struct
     const char *pdb_path;
     const char *output_path;
 
+    uint64_t base_address;
+
     struct pdb_data pdb_data;
 
     uint32_t module_count;
@@ -59,18 +61,22 @@ struct
 
 /* ---------- private code */
 
+#include <inttypes.h>
 static void main_initialize(int argc, const char **argv)
 {
     memset(&main_globals, 0, sizeof(main_globals));
 
-    if (argc != 3)
+    if (argc < 3 || argc > 4)
     {
-        fprintf(stderr, "Usage: dumper <pdb-file> <output-dir>\n");
+        fprintf(stderr, "Usage: dumper <pdb-file> <output-dir> [base-address]\n");
         exit(EXIT_FAILURE);
     }
 
     main_globals.pdb_path = argv[1];
     main_globals.output_path = argv[2];
+
+    if (argc >= 4)
+        sscanf(argv[3], "%" SCNx64, &main_globals.base_address);
 
     FILE *pdb_file = fopen(main_globals.pdb_path, "r");
 
@@ -524,6 +530,9 @@ static void dbi_module_get_file_path_and_header_paths(
             }
         }
 
+        if (printed_count == 0)
+            fprintf(stderr, ": file list is empty");
+
         fprintf(stderr, "\n");
     }
 
@@ -562,6 +571,53 @@ char *cv_pe_section_offset_to_module_path(struct cv_pe_section_offset *code_offs
     }
 
     return NULL;
+}
+
+uint64_t cv_pe_section_offset_to_pe_address(struct cv_pe_section_offset *offset)
+{
+    assert(offset);
+
+    uint32_t section_header_count = main_globals.pdb_data.address_map.original_section_header_count;
+    struct dbi_section_header *section_headers = main_globals.pdb_data.address_map.original_section_headers;
+
+    uint32_t omap_record_count = main_globals.pdb_data.address_map.omap_from_src_record_count;
+    struct dbi_omap_record *omap_records = main_globals.pdb_data.address_map.omap_from_src_records;
+
+    if (section_header_count == 0)
+    {
+        section_header_count = main_globals.pdb_data.address_map.section_header_count;
+        section_headers = main_globals.pdb_data.address_map.section_headers;
+
+        omap_record_count = 0;
+        omap_records = NULL;
+    }
+
+    assert(offset->section_index <= main_globals.pdb_data.address_map.section_header_count);
+
+    if (offset->section_index == 0)
+    {
+        assert(offset->memory_offset == 0);
+        return 0;
+    }
+
+    uint32_t result = section_headers[offset->section_index - 1].virtual_address + offset->memory_offset;
+
+    for (uint32_t i = 0; i < omap_record_count; i++)
+    {
+        struct dbi_omap_record *record = &omap_records[i];
+        
+        if (result != record->source_address)
+            continue;
+        
+        if (record->target_address == 0)
+            break;
+        
+        assert(record->source_address <= result);
+        result = (result - record->source_address) + record->target_address;
+        break;
+    }
+
+    return main_globals.base_address + (uint64_t)result;
 }
 
 static void process_global_types(void)
@@ -667,6 +723,18 @@ static void process_build_info_ids(void)
 
 static void process_user_defined_type_ids(void)
 {
+    char **id_to_module_paths = calloc(main_globals.pdb_data.ipi_symbols.count, sizeof(char *));
+    assert(id_to_module_paths);
+
+    struct string_offset_to_module_path
+    {
+        uint32_t string_offset;
+        char *module_path;
+    };
+
+    uint32_t string_offset_to_module_path_count = 0;
+    struct string_offset_to_module_path *string_offset_to_module_paths = NULL;
+
     for (uint32_t id_index = main_globals.pdb_data.ipi_header.minimum_index; id_index < main_globals.pdb_data.ipi_header.maximum_index; id_index++)
     {
         struct ipi_symbol *symbol = ipi_symbol_get(&main_globals.pdb_data.ipi_header, &main_globals.pdb_data.ipi_symbols, id_index);
@@ -681,14 +749,63 @@ static void process_user_defined_type_ids(void)
 
         if (symbol->type == LF_UDT_SRC_LINE)
         {
-            module_path = ipi_string_id_to_string(&main_globals.pdb_data.ipi_header, &main_globals.pdb_data.ipi_symbols, symbol->udt_src_line.file_id_index);
+            uint32_t absolute_id_index = ipi_index_to_absolute_index(
+                &main_globals.pdb_data.ipi_header,
+                &main_globals.pdb_data.ipi_symbols,
+                symbol->udt_src_line.file_id_index);
+
+            assert(absolute_id_index != UINT32_MAX);
+            
+            if (!id_to_module_paths[absolute_id_index])
+            {
+                char *old_module_path = ipi_string_id_to_string(
+                    &main_globals.pdb_data.ipi_header,
+                    &main_globals.pdb_data.ipi_symbols,
+                    symbol->udt_src_line.file_id_index);
+                
+                id_to_module_paths[absolute_id_index] = canonicalize_path(NULL, old_module_path, 0);
+                assert(id_to_module_paths[absolute_id_index]);
+
+                free(old_module_path);
+            }
+            
+            module_path = strdup(id_to_module_paths[absolute_id_index]);
+            assert(module_path);
+
             udt_type_index = symbol->udt_src_line.udt_type_index;
             line = symbol->udt_src_line.line;
         }
         else if (symbol->type == LF_UDT_MOD_SRC_LINE)
         {
-            assert(symbol->udt_mod_src_line.file_string_offset < main_globals.pdb_data.string_table.header.names_size);
-            module_path = strdup(main_globals.pdb_data.string_table.names_data + symbol->udt_mod_src_line.file_string_offset);
+            struct string_offset_to_module_path *entry = NULL;
+
+            for (uint32_t i = 0; i < string_offset_to_module_path_count; i++)
+            {
+                if (string_offset_to_module_paths[i].string_offset == symbol->udt_mod_src_line.file_string_offset)
+                {
+                    entry = &string_offset_to_module_paths[i];
+                    break;
+                }
+            }
+
+            if (!entry)
+            {
+                assert(symbol->udt_mod_src_line.file_string_offset < main_globals.pdb_data.string_table.header.names_size);
+                module_path = canonicalize_path(NULL, main_globals.pdb_data.string_table.names_data + symbol->udt_mod_src_line.file_string_offset, 0);
+                assert(module_path);
+
+                struct string_offset_to_module_path new_entry = {
+                    .string_offset = symbol->udt_mod_src_line.file_string_offset,
+                    .module_path = module_path,
+                };
+
+                DYNARRAY_PUSH(string_offset_to_module_paths, string_offset_to_module_path_count, new_entry);
+                entry = &string_offset_to_module_paths[string_offset_to_module_path_count - 1];
+            }
+
+            module_path = strdup(entry->module_path);
+            assert(module_path);
+            
             udt_type_index = symbol->udt_mod_src_line.udt_type_index;
             line = symbol->udt_mod_src_line.line;
         }
@@ -700,16 +817,19 @@ static void process_user_defined_type_ids(void)
             exit(EXIT_FAILURE);
         }
 
-        assert(module_path);
-
-        char *old_module_path = module_path;
-        module_path = canonicalize_path(NULL, module_path, 0);
-        assert(module_path);
-        free(old_module_path);
-
         struct cpp_module *module = cpp_module_find_or_create(module_path);
         cpp_module_add_type_definition(module, &main_globals.pdb_data, udt_type_index, line);
     }
+
+    for (uint32_t i = 0; i < main_globals.pdb_data.ipi_symbols.count; i++)
+        free(id_to_module_paths[i]);
+    
+    free(id_to_module_paths);
+    
+    for (uint32_t i = 0; i < string_offset_to_module_path_count; i++)
+        free(string_offset_to_module_paths[i].module_path);
+    
+    free(string_offset_to_module_paths);
 }
 
 static void process_symbol_records(void)
@@ -1233,7 +1353,7 @@ static void process_modules(void)
                 struct cpp_module_member member = {
                     .type = CPP_MODULE_MEMBER_TYPE_PROCEDURE,
                     .procedure = {
-                        .address = 0, // TODO
+                        .address = cv_pe_section_offset_to_pe_address(&cv_symbol->procedure.code_offset),
                         .line = 0, // TODO
                         .type_index = cv_symbol->procedure.type_index,
                         .signature = signature,

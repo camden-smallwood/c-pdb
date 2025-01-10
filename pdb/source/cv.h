@@ -535,44 +535,49 @@ void cv_compiler_version_read(struct cv_compiler_version *item, uint32_t symbol_
 
 /* ---------- CV compile flags */
 
-#define CV_COMPILE_FLAGS_ENUM \
-ENUM_DECL(cv_compile_flags) \
-    ENUM_VALUE(CV_COMPILE_FLAG_EDIT_AND_CONTINUE, 1 << 0) \
-    ENUM_VALUE(CV_COMPILE_FLAG_NO_DEBUG_INFO, 1 << 1) \
-    ENUM_VALUE(CV_COMPILE_FLAG_LINK_TIME_CODEGEN, 1 << 2) \
-    ENUM_VALUE(CV_COMPILE_FLAG_NO_DATA_ALIGN, 1 << 3) \
-    ENUM_VALUE(CV_COMPILE_FLAG_MANAGED, 1 << 4) \
-    ENUM_VALUE(CV_COMPILE_FLAG_SECURITY_CHECKS, 1 << 5) \
-    ENUM_VALUE(CV_COMPILE_FLAG_HOT_PATCH, 1 << 6) \
-    ENUM_VALUE(CV_COMPILE_FLAG_CVTCIL, 1 << 7) \
-    ENUM_VALUE(CV_COMPILE_FLAG_MSIL_MODULE, 1 << 8) \
-    ENUM_VALUE(CV_COMPILE_FLAG_SDL, 1 << 9) \
-    ENUM_VALUE(CV_COMPILE_FLAG_PGO, 1 << 10) \
-    ENUM_VALUE(CV_COMPILE_FLAG_EXP_MODULE, 1 << 11) \
-ENUM_END(cv_compile_flags)
+/* ---------- CV compile flags */
 
-CV_COMPILE_FLAGS_ENUM
+#define CV_COMPILE_FLAGS_STRUCT \
+STRUCT_DECL(cv_compile_flags) \
+    FIELD_PRIMITIVE_BITS_FMT(uint32_t, language, 8, cv_source_language_print) /* language index */ \
+    FIELD_PRIMITIVE_BITS(uint32_t, edit_and_continue, 1, "%u") /* compiled for E/C */ \
+    FIELD_PRIMITIVE_BITS(uint32_t, no_debug_info, 1, "%u") /* not compiled with debug info */ \
+    FIELD_PRIMITIVE_BITS(uint32_t, link_time_codegen, 1, "%u") /* compiled with LTCG */ \
+    FIELD_PRIMITIVE_BITS(uint32_t, no_data_align, 1, "%u") /* compiled with -Bzalign */ \
+    FIELD_PRIMITIVE_BITS(uint32_t, managed_present, 1, "%u") /* managed code/data present */ \
+    FIELD_PRIMITIVE_BITS(uint32_t, security_checks, 1, "%u") /* compiled with /GS */ \
+    FIELD_PRIMITIVE_BITS(uint32_t, hot_patch, 1, "%u") /* compiled with /hotpatch */ \
+    FIELD_PRIMITIVE_BITS(uint32_t, cvtcil, 1, "%u") /* converted with CVTCIL */ \
+    FIELD_PRIMITIVE_BITS(uint32_t, msil_module, 1, "%u") /* MSIL netmodule */ \
+    FIELD_PRIMITIVE_BITS(uint32_t, sdl, 1, "%u") /* compiled with /sdl */ \
+    FIELD_PRIMITIVE_BITS(uint32_t, pgo, 1, "%u") /* compiled with /ltcg:pgo or pgu */ \
+    FIELD_PRIMITIVE_BITS(uint32_t, exp, 1, "%u") /* .exp module */ \
+    FIELD_PRIMITIVE_BITS(uint32_t, pad, 12, "%u") /* reserved, must be 0 */ \
+STRUCT_END(cv_compile_flags)
 
-void cv_compile_flags_print(enum cv_compile_flags flags, FILE *stream);
+CV_COMPILE_FLAGS_STRUCT
+static_assert(sizeof(struct cv_compile_flags) == sizeof(uint32_t), "invalid cv_compile_flags size");
+
+void cv_compile_flags_print(struct cv_compile_flags *item, uint32_t depth, FILE *stream);
 
 /* ---------- CV compile flags symbol */
 
 #define CV_COMPILE_FLAGS_SYMBOL_STRUCT \
 STRUCT_DECL(cv_compile_flags_symbol) \
-    FIELD_PRIMITIVE_FMT(uint8_t, language, cv_source_language_print) \
-    FIELD_PRIMITIVE(uint16_t, flags, "%u") \
-    FIELD_PRIMITIVE(uint8_t, padding, "%u") \
+    FIELD_STRUCT(struct cv_compile_flags, flags, cv_compile_flags_print) \
     FIELD_PRIMITIVE_FMT(uint16_t, cpu_type, cv_cpu_type_print) \
     FIELD_STRUCT(struct cv_compiler_version, frontend_version, cv_compiler_version_print) \
     FIELD_STRUCT(struct cv_compiler_version, backend_version, cv_compiler_version_print) \
     FIELD_PRIMITIVE(char *, version_string, "\"%s\"") \
+    FIELD_PRIMITIVE(uint32_t, string_count, "%u") \
+    FIELD_PRIMITIVE_DYNAMIC_ARRAY(char **, strings, string_count, "\"%s\"") \
 STRUCT_END(cv_compile_flags_symbol)
 
 CV_COMPILE_FLAGS_SYMBOL_STRUCT
 
 void cv_compile_flags_symbol_dispose(struct cv_compile_flags_symbol *item);
 void cv_compile_flags_symbol_print(struct cv_compile_flags_symbol *item, uint32_t depth, FILE *stream);
-void cv_compile_flags_symbol_read(struct cv_compile_flags_symbol *item, uint16_t symbol_type, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, FILE *file_stream);
+void cv_compile_flags_symbol_read(struct cv_compile_flags_symbol *item, uint16_t symbol_type, uint32_t symbol_size, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, FILE *file_stream);
 
 /* ---------- CV using namespace symbol */
 
@@ -915,7 +920,7 @@ void cv_cookie_type_print(enum cv_cookie_type item, FILE *stream);
 STRUCT_DECL(cv_frame_cookie_symbol) \
     FIELD_PRIMITIVE(int32_t, frame_relative_offset, "%i") \
     FIELD_PRIMITIVE(uint16_t, register_index, "%u") \
-    FIELD_PRIMITIVE_FMT(uint16_t, cookie_type, cv_cookie_type_print) \
+    FIELD_PRIMITIVE_FMT(uint8_t, cookie_type, cv_cookie_type_print) \
     FIELD_PRIMITIVE(uint8_t, flags, "%u") \
 STRUCT_END(cv_frame_cookie_symbol)
 
@@ -1101,7 +1106,7 @@ CV_ANNOTATION_SYMBOL_STRUCT
 
 void cv_annotation_symbol_dispose(struct cv_annotation_symbol *item);
 void cv_annotation_symbol_print(struct cv_annotation_symbol *item, uint32_t depth, FILE *stream);
-void cv_annotation_symbol_read(struct cv_annotation_symbol *item, uint16_t symbol_type, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, FILE *file_stream);
+void cv_annotation_symbol_read(struct cv_annotation_symbol *item, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, FILE *file_stream);
 
 /* ---------- CV address range */
 

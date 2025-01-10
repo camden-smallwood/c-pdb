@@ -189,7 +189,7 @@ void cpp_procedure_print(struct cpp_procedure *item, uint32_t depth, FILE *strea
     }
     else
     {
-        fprintf(stream, "; // 0x%llu", item->address);
+        fprintf(stream, "; // 0x%llx", item->address);
     }
 }
 

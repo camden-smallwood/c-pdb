@@ -1230,6 +1230,12 @@ void tpi_symbols_read(
         symbols->symbols[i].size = symbol_info[i].size;
         tpi_symbol_read(&symbols->symbols[i], msf, msf_stream, tpi_header, &offset, file_stream);
     }
+
+    //
+    // Cleanup
+    //
+
+    free(symbol_info);
 }
 
 void tpi_symbols_dispose(struct tpi_symbols *symbols)

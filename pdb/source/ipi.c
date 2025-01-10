@@ -296,6 +296,12 @@ void ipi_symbols_read(
             exit(EXIT_FAILURE);
         }
     }
+
+    //
+    // Cleanup
+    //
+
+    free(symbol_info);
 }
 
 void ipi_symbols_dispose(struct ipi_symbols *symbols)

@@ -447,16 +447,23 @@ void cv_compiler_version_read(
         MSF_STREAM_READ(msf, msf_stream, out_offset, item->qfe, file_stream);
 }
 
-void cv_compile_flags_print(enum cv_compile_flags item, FILE *stream)
+void cv_compile_flags_print(struct cv_compile_flags *item, uint32_t depth, FILE *stream)
 {
     assert(stream);
 
-    CV_COMPILE_FLAGS_ENUM
+    CV_COMPILE_FLAGS_STRUCT
 }
 
 void cv_compile_flags_symbol_dispose(struct cv_compile_flags_symbol *item)
 {
     assert(item);
+
+    free(item->version_string);
+
+    for (uint32_t i = 0; i < item->string_count; i++)
+        free(item->strings[i]);
+    
+    free(item->strings);
 }
 
 void cv_compile_flags_symbol_print(struct cv_compile_flags_symbol *item, uint32_t depth, FILE *stream)
@@ -470,6 +477,7 @@ void cv_compile_flags_symbol_print(struct cv_compile_flags_symbol *item, uint32_
 void cv_compile_flags_symbol_read(
     struct cv_compile_flags_symbol *item,
     uint16_t symbol_type,
+    uint32_t symbol_size,
     struct msf *msf,
     struct msf_stream *msf_stream,
     uint32_t *out_offset,
@@ -481,13 +489,60 @@ void cv_compile_flags_symbol_read(
     assert(out_offset);
     assert(file_stream);
 
-    MSF_STREAM_READ(msf, msf_stream, out_offset, item->language, file_stream);
+    uint32_t start_offset = *out_offset;
+
     MSF_STREAM_READ(msf, msf_stream, out_offset, item->flags, file_stream);
-    MSF_STREAM_READ(msf, msf_stream, out_offset, item->padding, file_stream);
     MSF_STREAM_READ(msf, msf_stream, out_offset, item->cpu_type, file_stream);
     cv_compiler_version_read(&item->frontend_version, symbol_type, msf, msf_stream, out_offset, file_stream);
     cv_compiler_version_read(&item->backend_version, symbol_type, msf, msf_stream, out_offset, file_stream);
     item->version_string = msf_read_cv_symbol_string(msf, msf_stream, out_offset, symbol_type, file_stream);
+    
+    item->string_count = 0;
+    item->strings = NULL;
+
+    if (symbol_type == S_COMPILE2)
+    {
+        //
+        // NOTE:
+        // S_COMPILE2 symbols have an optional block of zero terminated strings.
+        // This block is terminated with a double zero.
+        //
+
+        while (*out_offset < start_offset + symbol_size)
+        {
+            uint8_t byte = 0;
+            MSF_STREAM_READ(msf, msf_stream, out_offset, byte, file_stream);
+
+            if (byte == 0)
+            {
+                MSF_STREAM_READ(msf, msf_stream, out_offset, byte, file_stream);
+
+                if (byte == 0)
+                    break;
+                else
+                    *out_offset -= 2;
+            }
+            else
+            {
+                *out_offset -= 1;
+            }
+
+            char *string = msf_read_cv_symbol_string(msf, msf_stream, out_offset, symbol_type, file_stream);
+            assert(string);
+
+            DYNARRAY_PUSH(item->strings, item->string_count, string);
+        }
+    }
+    
+    // HACK: idk why there can be extra zero bytes after, but we're gonna skip 'em...
+    while (*out_offset < start_offset + symbol_size)
+    {
+        uint8_t byte = 0;
+        MSF_STREAM_READ(msf, msf_stream, out_offset, byte, file_stream);
+        if (byte)
+            printf("file position: %li\n", ftell(file_stream) - 1);
+        assert(byte == 0);
+    }
 }
 
 void cv_using_namespace_symbol_dispose(struct cv_using_namespace_symbol *item)
@@ -1292,6 +1347,7 @@ void cv_env_block_symbol_read(
 
         DYNARRAY_PUSH(item->strings, item->string_count, string);
     }
+
 }
 
 void cv_local_variable_flags_print(struct cv_local_variable_flags *item, uint32_t depth, FILE *stream)
@@ -1423,7 +1479,6 @@ void cv_annotation_symbol_print(struct cv_annotation_symbol *item, uint32_t dept
 
 void cv_annotation_symbol_read(
     struct cv_annotation_symbol *item,
-    uint16_t symbol_type,
     struct msf *msf,
     struct msf_stream *msf_stream,
     uint32_t *out_offset,
@@ -1442,7 +1497,12 @@ void cv_annotation_symbol_read(
     assert(item->strings);
 
     for (uint16_t i = 0; i < item->string_count; i++)
-        item->strings[i] = msf_read_cv_symbol_string(msf, msf_stream, out_offset, symbol_type, file_stream);
+    {
+        uint32_t length = 0;
+        item->strings[i] = msf_stream_read_cstring(msf, msf_stream, *out_offset, &length, file_stream);
+        assert(item->strings[i]);
+        *out_offset += length;
+    }
 }
 
 void cv_address_range_print(struct cv_address_range *item, uint32_t depth, FILE *stream)
@@ -2389,7 +2449,7 @@ void cv_symbols_read(
         case S_COMPILE2:
         case S_COMPILE2_ST:
         case S_COMPILE3:
-            cv_compile_flags_symbol_read(&symbol->compile_flags, symbol->type, msf, msf_stream, out_offset, file_stream);
+            cv_compile_flags_symbol_read(&symbol->compile_flags, symbol->type, size_remaining, msf, msf_stream, out_offset, file_stream);
             break;
 
         case S_UNAMESPACE:
@@ -2492,7 +2552,7 @@ void cv_symbols_read(
             break;
         
         case S_ANNOTATION:
-            cv_annotation_symbol_read(&symbol->annotation, symbol->type, msf, msf_stream, out_offset, file_stream);
+            cv_annotation_symbol_read(&symbol->annotation, msf, msf_stream, out_offset, file_stream);
             break;
         
         case S_DEFRANGE:
@@ -2549,6 +2609,23 @@ void cv_symbols_read(
             exit(EXIT_FAILURE);
         }
 
-        *out_offset = start_offset + symbol->size;
+        uint32_t padding = 4 - (*out_offset % 4);
+
+        if (padding < 4)
+            *out_offset += padding;
+
+        if (*out_offset != start_offset + symbol->size)
+        {
+            fprintf(stderr, "%s:%i: ERROR: Invalid cv_symbol read function for type ", __FILE__, __LINE__);
+            cv_symbol_type_print(symbol->type, stderr);
+            fprintf(stderr, ": read %u bytes, expected %u bytes\n", *out_offset - start_offset, symbol->size);
+            exit(EXIT_FAILURE);
+        }
     }
+
+    //
+    // Cleanup
+    //
+
+    free(symbol_info);
 }
