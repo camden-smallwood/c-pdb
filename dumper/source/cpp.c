@@ -1719,25 +1719,22 @@ char *cpp_type_name(
         string_append(&type_name, "(");
 
         struct tpi_symbol *argument_list_symbol = tpi_symbol_get(&pdb->tpi_header, &pdb->tpi_symbols, symbol->procedure.argument_list_type_index);
+        assert(argument_list_symbol);
+        assert(argument_list_symbol->leaf == LF_ARGLIST);
 
-        if (argument_list_symbol)
-        {        
-            assert(argument_list_symbol->leaf == LF_ARGLIST);
-
-            for (uint32_t i = 0; i < argument_list_symbol->argument_list.count; i++)
-            {
-                if (i > 0)
-                    string_append(&type_name, ", ");
-                
-                char *argument_name = cpp_type_name(
-                    pdb,
-                    argument_list_symbol->argument_list.type_indices[i],
-                    i < argument_count ? arguments[i] : NULL,
-                    0, NULL,
-                    1);
-                
-                string_append(&type_name, argument_name);
-            }
+        for (uint32_t i = 0; i < argument_list_symbol->argument_list.count; i++)
+        {
+            if (i > 0)
+                string_append(&type_name, ", ");
+            
+            char *argument_name = cpp_type_name(
+                pdb,
+                argument_list_symbol->argument_list.type_indices[i],
+                i < argument_count ? arguments[i] : NULL,
+                0, NULL,
+                1);
+            
+            string_append(&type_name, argument_name);
         }
 
         string_append(&type_name, ")");
@@ -1842,7 +1839,7 @@ uint64_t cpp_type_size(struct pdb_data *pdb, uint32_t type_index)
             case DBI_MACHINE_TYPE_X86:
             case DBI_MACHINE_TYPE_POWER_PC:
             case DBI_MACHINE_TYPE_POWER_PC_FP:
-            case DBI_MACHINE_TYPE_POWER_PC_ALTIVEC:
+            case DBI_MACHINE_TYPE_POWER_PC_BE:
                 return 4;
             
             case DBI_MACHINE_TYPE_AMD64:
@@ -1969,7 +1966,7 @@ uint64_t cpp_type_size(struct pdb_data *pdb, uint32_t type_index)
         case DBI_MACHINE_TYPE_X86:
         case DBI_MACHINE_TYPE_POWER_PC:
         case DBI_MACHINE_TYPE_POWER_PC_FP:
-        case DBI_MACHINE_TYPE_POWER_PC_ALTIVEC:
+        case DBI_MACHINE_TYPE_POWER_PC_BE:
             return 4;
         
         case DBI_MACHINE_TYPE_AMD64:

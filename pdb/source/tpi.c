@@ -207,6 +207,13 @@ void tpi_procedure_attributes_print(struct tpi_procedure_attributes *item, uint3
     TPI_PROCEDURE_ATTRIBUTES_STRUCT
 }
 
+void cv_call_type_print(enum cv_call_type item, FILE *stream)
+{
+    assert(stream);
+
+    CV_CALL_TYPE_ENUM
+}
+
 void tpi_procedure_print(struct tpi_procedure *item, uint32_t depth, FILE *stream)
 {
     assert(item);
@@ -837,7 +844,11 @@ void tpi_symbol_read(
     }
 
     case LF_PROCEDURE:
-        MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->procedure, file_stream);
+        MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->procedure.return_type_index, file_stream);
+        MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->procedure.calling_convention, file_stream);
+        MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->procedure.attributes, file_stream);
+        MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->procedure.parameter_count, file_stream);
+        MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->procedure.argument_list_type_index, file_stream);
         break;
 
     case LF_MODIFIER:

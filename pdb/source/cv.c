@@ -2054,6 +2054,30 @@ void cv_pogo_data_symbol_read(
     MSF_STREAM_READ(msf, msf_stream, out_offset, item->final_static_instruction_count, file_stream);
 }
 
+void cv_arm_switch_table_symbol_print(struct cv_arm_switch_table_symbol *item, uint32_t depth, FILE *stream)
+{
+    assert(item);
+    assert(stream);
+
+    CV_ARM_SWITCH_TABLE_SYMBOL_STRUCT
+}
+
+void cv_arm_switch_table_symbol_read(
+    struct cv_arm_switch_table_symbol *item,
+    struct msf *msf,
+    struct msf_stream *msf_stream,
+    uint32_t *out_offset,
+    FILE *file_stream)
+{
+    assert(item);
+    assert(msf);
+    assert(msf_stream);
+    assert(out_offset);
+    assert(file_stream);
+
+    MSF_STREAM_READ(msf, msf_stream, out_offset, *item, file_stream);
+}
+
 void cv_symbol_dispose(struct cv_symbol *item)
 {
     assert(item);
@@ -2275,6 +2299,9 @@ void cv_symbol_dispose(struct cv_symbol *item)
     case S_POGODATA:
         break;
     
+    case S_ARMSWITCHTABLE:
+        break;
+
     default:
         fprintf(stderr, "%s:%i: ERROR: unhandled cv_symbol_type value: ", __FILE__, __LINE__);
         cv_symbol_type_print(item->type, stderr);
@@ -2600,6 +2627,10 @@ void cv_symbols_read(
         
         case S_POGODATA:
             cv_pogo_data_symbol_read(&symbol->pogo_data, msf, msf_stream, out_offset, file_stream);
+            break;
+        
+        case S_ARMSWITCHTABLE:
+            cv_arm_switch_table_symbol_read(&symbol->arm_switch_table, msf, msf_stream, out_offset, file_stream);
             break;
         
         default:

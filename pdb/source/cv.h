@@ -1436,6 +1436,26 @@ CV_POGO_DATA_SYMBOL_STRUCT
 void cv_pogo_data_symbol_print(struct cv_pogo_data_symbol *item, uint32_t depth, FILE *stream);
 void cv_pogo_data_symbol_read(struct cv_pogo_data_symbol *item, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, FILE *file_stream);
 
+/* ---------- CV arm switch table symbol */
+
+#define CV_ARM_SWITCH_TABLE_SYMBOL_STRUCT \
+STRUCT_DECL(cv_arm_switch_table_symbol) \
+    FIELD_PRIMITIVE(uint32_t, offset_base, "%u") /* Section-relative offset to the base for switch offsets */ \
+    FIELD_PRIMITIVE(uint16_t, sect_base, "%u") /* Section index of the base for switch offsets */ \
+    FIELD_PRIMITIVE(uint16_t, switch_type, "%u") /* type of each entry */ \
+    FIELD_PRIMITIVE(uint32_t, offset_branch, "%u") /* Section-relative offset to the table branch instruction */ \
+    FIELD_PRIMITIVE(uint32_t, offset_table, "%u") /* Section-relative offset to the start of the table */ \
+    FIELD_PRIMITIVE(uint16_t, sect_branch, "%u") /* Section index of the table branch instruction */ \
+    FIELD_PRIMITIVE(uint16_t, sect_table, "%u") /* Section index of the table */ \
+    FIELD_PRIMITIVE(uint32_t, c_entries, "%u") /* number of switch table entries */ \
+STRUCT_END(cv_arm_switch_table_symbol)
+
+CV_ARM_SWITCH_TABLE_SYMBOL_STRUCT
+static_assert(sizeof(struct cv_arm_switch_table_symbol) == 24, "invalid cv_arm_switch_table_symbol size");
+
+void cv_arm_switch_table_symbol_print(struct cv_arm_switch_table_symbol *item, uint32_t depth, FILE *stream);
+void cv_arm_switch_table_symbol_read(struct cv_arm_switch_table_symbol *item, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, FILE *file_stream);
+
 /* ---------- CV symbol */
 
 #define CV_SYMBOL_STRUCT \
@@ -1486,6 +1506,7 @@ STRUCT_DECL(cv_symbol) \
         FIELD_UNION_FIELD_STRUCT_MULTITAG(struct cv_dpc_symbol_tag_map_symbol, dpc_symbol_tag_map, type, cv_dpc_symbol_tag_map_symbol_print, S_DPC_SYM_TAG_MAP) \
         FIELD_UNION_FIELD_STRUCT_MULTITAG(struct cv_function_list_symbol, function_list, type, cv_function_list_symbol_print, S_CALLERS, S_CALLEES) \
         FIELD_UNION_FIELD_STRUCT_MULTITAG(struct cv_pogo_data_symbol, pogo_data, type, cv_pogo_data_symbol_print, S_POGODATA) \
+        FIELD_UNION_FIELD_STRUCT_MULTITAG(struct cv_arm_switch_table_symbol, arm_switch_table, type, cv_arm_switch_table_symbol_print, S_ARMSWITCHTABLE) \
     FIELD_UNION_END() \
 STRUCT_END(cv_symbol)
 
