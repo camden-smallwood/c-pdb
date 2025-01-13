@@ -290,6 +290,8 @@ ENUM_DECL(cv_symbol_type)                                      \
     ENUM_VALUE(S_LDATA_HLSL32, 0x1163)                         \
     ENUM_VALUE(S_GDATA_HLSL32_EX, 0x1164)                      \
     ENUM_VALUE(S_LDATA_HLSL32_EX, 0x1165)                      \
+    ENUM_VALUE(S_REF_MINIPDB2, 0x1167)                         \
+    ENUM_VALUE(S_INLINEES, 0x1168)                             \
 ENUM_END(cv_symbol_type)
 
 CV_SYMBOL_TYPE_ENUM
@@ -993,6 +995,20 @@ CV_CALL_SITE_INFO_SYMBOL_STRUCT
 void cv_call_site_info_symbol_print(struct cv_call_site_info_symbol *item, uint32_t depth, FILE *stream);
 void cv_call_site_info_symbol_read(struct cv_call_site_info_symbol *item, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, FILE *file_stream);
 
+/* ---------- CV heap alloc site symbol */
+
+#define CV_HEAP_ALLOC_SITE_SYMBOL_STRUCT \
+STRUCT_DECL(cv_heap_alloc_site_symbol) \
+    FIELD_STRUCT(struct cv_pe_section_offset, code_offset, cv_pe_section_offset_print) /* offset of call site */ \
+    FIELD_PRIMITIVE(uint16_t, instruction_size, "%u") /* length of heap allocation call instruction */ \
+    FIELD_PRIMITIVE(uint32_t, type_index, "%u") /* type index describing function signature */ \
+STRUCT_END(cv_heap_alloc_site_symbol)
+
+CV_HEAP_ALLOC_SITE_SYMBOL_STRUCT
+
+void cv_heap_alloc_site_symbol_print(struct cv_heap_alloc_site_symbol *item, uint32_t depth, FILE *stream);
+void cv_heap_alloc_site_symbol_read(struct cv_heap_alloc_site_symbol *item, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, FILE *file_stream);
+
 /* ---------- CV env block flags */
 
 #define CV_ENV_BLOCK_FLAGS_STRUCT \
@@ -1490,6 +1506,7 @@ STRUCT_DECL(cv_symbol) \
         FIELD_UNION_FIELD_STRUCT_MULTITAG(struct cv_frame_cookie_symbol, frame_cookie, type, cv_frame_cookie_symbol_print, S_FRAMECOOKIE) \
         FIELD_UNION_FIELD_STRUCT_MULTITAG(struct cv_frame_proc_symbol, frame_proc, type, cv_frame_proc_symbol_print, S_FRAMEPROC) \
         FIELD_UNION_FIELD_STRUCT_MULTITAG(struct cv_call_site_info_symbol, call_site_info, type, cv_call_site_info_symbol_print, S_CALLSITEINFO) \
+        FIELD_UNION_FIELD_STRUCT_MULTITAG(struct cv_heap_alloc_site_symbol, heap_alloc_site, type, cv_heap_alloc_site_symbol_print, S_HEAPALLOCSITE) \
         FIELD_UNION_FIELD_STRUCT_MULTITAG(struct cv_env_block_symbol, env_block, type, cv_env_block_symbol_print, S_ENVBLOCK) \
         FIELD_UNION_FIELD_STRUCT_MULTITAG(struct cv_file_static_symbol, file_static, type, cv_file_static_symbol_print, S_FILESTATIC) \
         FIELD_UNION_FIELD_STRUCT_MULTITAG(struct cv_section_symbol, section, type, cv_section_symbol_print, S_SECTION) \
@@ -1504,7 +1521,7 @@ STRUCT_DECL(cv_symbol) \
         FIELD_UNION_FIELD_STRUCT_MULTITAG(struct cv_def_range_hlsl_symbol, def_range_hlsl, type, cv_def_range_hlsl_symbol_print, S_DEFRANGE_HLSL, S_DEFRANGE_DPC_PTR_TAG) \
         FIELD_UNION_FIELD_STRUCT_MULTITAG(struct cv_local_dpc_group_shared_symbol, local_dpc_group_shared, type, cv_local_dpc_group_shared_symbol_print, S_LOCAL_DPC_GROUPSHARED) \
         FIELD_UNION_FIELD_STRUCT_MULTITAG(struct cv_dpc_symbol_tag_map_symbol, dpc_symbol_tag_map, type, cv_dpc_symbol_tag_map_symbol_print, S_DPC_SYM_TAG_MAP) \
-        FIELD_UNION_FIELD_STRUCT_MULTITAG(struct cv_function_list_symbol, function_list, type, cv_function_list_symbol_print, S_CALLERS, S_CALLEES) \
+        FIELD_UNION_FIELD_STRUCT_MULTITAG(struct cv_function_list_symbol, function_list, type, cv_function_list_symbol_print, S_CALLERS, S_CALLEES, S_INLINEES) \
         FIELD_UNION_FIELD_STRUCT_MULTITAG(struct cv_pogo_data_symbol, pogo_data, type, cv_pogo_data_symbol_print, S_POGODATA) \
         FIELD_UNION_FIELD_STRUCT_MULTITAG(struct cv_arm_switch_table_symbol, arm_switch_table, type, cv_arm_switch_table_symbol_print, S_ARMSWITCHTABLE) \
     FIELD_UNION_END() \

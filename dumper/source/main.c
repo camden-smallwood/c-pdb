@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -61,7 +62,6 @@ struct
 
 /* ---------- private code */
 
-#include <inttypes.h>
 static void main_initialize(int argc, const char **argv)
 {
     memset(&main_globals, 0, sizeof(main_globals));
@@ -577,6 +577,12 @@ uint64_t cv_pe_section_offset_to_pe_address(struct cv_pe_section_offset *offset)
 {
     assert(offset);
 
+    if (offset->section_index == 0)
+    {
+        assert(offset->memory_offset == 0);
+        return 0;
+    }
+
     uint32_t section_header_count = main_globals.pdb_data.address_map.original_section_header_count;
     struct dbi_section_header *section_headers = main_globals.pdb_data.address_map.original_section_headers;
 
@@ -592,13 +598,7 @@ uint64_t cv_pe_section_offset_to_pe_address(struct cv_pe_section_offset *offset)
         omap_records = NULL;
     }
 
-    assert(offset->section_index <= main_globals.pdb_data.address_map.section_header_count);
-
-    if (offset->section_index == 0)
-    {
-        assert(offset->memory_offset == 0);
-        return 0;
-    }
+    assert(offset->section_index <= section_header_count);
 
     uint32_t result = section_headers[offset->section_index - 1].virtual_address + offset->memory_offset;
 
@@ -610,9 +610,8 @@ uint64_t cv_pe_section_offset_to_pe_address(struct cv_pe_section_offset *offset)
             continue;
         
         if (record->target_address == 0)
-            break;
+            continue;
         
-        assert(record->source_address <= result);
         result = (result - record->source_address) + record->target_address;
         break;
     }

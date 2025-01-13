@@ -1059,7 +1059,7 @@ STRUCT_END(tpi_class)
 
 TPI_CLASS_STRUCT
 
-void tpi_class_read(struct tpi_class *item, uint32_t leaf, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, uint32_t end_offset, FILE *file_stream);
+void tpi_class_read(struct tpi_class *item, uint32_t leaf, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, FILE *file_stream);
 void tpi_class_dispose(struct tpi_class *item);
 void tpi_class_print(struct tpi_class *item, uint32_t depth, FILE *stream);
 

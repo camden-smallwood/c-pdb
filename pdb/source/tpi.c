@@ -255,6 +255,13 @@ void tpi_enumerate_variant_read(
     uint16_t variant_leaf;
     MSF_STREAM_READ(msf, msf_stream, out_offset, variant_leaf, file_stream);
 
+    if (variant_leaf < LF_NUMERIC)
+    {
+        variant->type = TPI_ENUMERATE_VARIANT_UINT16;
+        variant->uint16 = variant_leaf;
+        return;
+    }
+
     switch (variant_leaf)
     {
     case LF_CHAR:
@@ -291,15 +298,8 @@ void tpi_enumerate_variant_read(
         variant->type = TPI_ENUMERATE_VARIANT_UINT64;
         MSF_STREAM_READ(msf, msf_stream, out_offset, variant->uint64, file_stream);
         break;
-
+    
     default:
-        if (variant_leaf < LF_NUMERIC)
-        {
-            variant->type = TPI_ENUMERATE_VARIANT_UINT16;
-            variant->uint16 = variant_leaf;
-            break;
-        }
-
         fprintf(stderr, "%s:%i: ERROR: Unhandled variant leaf type: ", __FILE__, __LINE__);
         tpi_leaf_print(variant_leaf, stderr);
         fprintf(stderr, "\n");
@@ -685,7 +685,6 @@ void tpi_class_read(
     struct msf *msf,
     struct msf_stream *msf_stream,
     uint32_t *out_offset,
-    uint32_t end_offset,
     FILE *file_stream)
 {
     assert(item);
@@ -720,8 +719,6 @@ void tpi_class_read(
 
     if (item->header.properties.hasuniquename)
         item->unique_name = msf_read_tpi_lf_string(msf, msf_stream, out_offset, leaf, file_stream);
-
-    msf_stream_read_padding(msf, msf_stream, end_offset, out_offset, file_stream);
 }
 
 void tpi_class_dispose(struct tpi_class *item)
@@ -768,7 +765,7 @@ void tpi_symbol_read(
     case LF_STRUCTURE_ST:
     case LF_STRUCTURE19:
     case LF_INTERFACE:
-        tpi_class_read(&symbol->class_, symbol->leaf, msf, msf_stream, out_offset, end_offset, file_stream);
+        tpi_class_read(&symbol->class_, symbol->leaf, msf, msf_stream, out_offset, file_stream);
         break;
 
     case LF_MEMBER:
@@ -853,7 +850,6 @@ void tpi_symbol_read(
 
     case LF_MODIFIER:
         MSF_STREAM_READ(msf, msf_stream, out_offset, symbol->modifier, file_stream);
-        msf_stream_read_padding(msf, msf_stream, end_offset, out_offset, file_stream);
         break;
 
     case LF_ENUM:
@@ -865,9 +861,6 @@ void tpi_symbol_read(
 
         if (item->header.properties.hasuniquename)
             item->unique_name = msf_read_tpi_lf_string(msf, msf_stream, out_offset, symbol->leaf, file_stream);
-
-        // TODO: is this correct?
-        msf_stream_read_padding(msf, msf_stream, end_offset, out_offset, file_stream);
         break;
     }
 
@@ -889,7 +882,7 @@ void tpi_symbol_read(
     {
         struct tpi_array *item = &symbol->array;
         MSF_STREAM_READ(msf, msf_stream, out_offset, item->header, file_stream);
-   
+        
         if (symbol->leaf == LF_STRIDED_ARRAY)
             MSF_STREAM_READ(msf, msf_stream, out_offset, item->stride, file_stream);
         
@@ -912,9 +905,6 @@ void tpi_symbol_read(
         }
 
         assert(item->dimension_count);
-
-        msf_stream_read_padding(msf, msf_stream, end_offset, out_offset, file_stream);
-        assert(*out_offset < msf_stream->size);
         break;
     }
 
@@ -929,8 +919,6 @@ void tpi_symbol_read(
 
         if (item->header.properties.hasuniquename)
             item->unique_name = msf_read_tpi_lf_string(msf, msf_stream, out_offset, symbol->leaf, file_stream);
-
-        msf_stream_read_padding(msf, msf_stream, end_offset, out_offset, file_stream);
         break;
     }
 
@@ -989,8 +977,6 @@ void tpi_symbol_read(
 
                 tpi_symbol_read(&item->fields[item->count - 1], msf, msf_stream, tpi_header, out_offset, file_stream);
             }
-
-            msf_stream_read_padding(msf, msf_stream, end_offset, out_offset, file_stream);
         }
         break;
     }
@@ -1041,14 +1027,19 @@ void tpi_symbol_read(
         exit(EXIT_FAILURE);
     }
 
-    // if (*out_offset > end_offset)
-    // {
-    //     fprintf(stderr, "%s:%i: ERROR: Incorrect TPI symbol data parsing for leaf: ", __FILE__, __LINE__);
-    //     tpi_leaf_print(symbol->leaf, stderr);
-    //     uint32_t size_read = *out_offset - start_offset;
-    //     fprintf(stderr, "; read %u, expected %u\n", size_read, symbol->size);
-    //     exit(EXIT_FAILURE);
-    // }
+    uint32_t padding = 4 - (*out_offset % 4);
+
+    if (padding < 4)
+        *out_offset += padding;
+
+    if (*out_offset > end_offset)
+    {
+        fprintf(stderr, "%s:%i: ERROR: Incorrect TPI symbol data parsing for leaf: ", __FILE__, __LINE__);
+        tpi_leaf_print(symbol->leaf, stderr);
+        uint32_t size_read = *out_offset - start_offset;
+        fprintf(stderr, "; read %u, expected %u\n", size_read, symbol->size);
+        exit(EXIT_FAILURE);
+    }
 }
 
 void tpi_symbol_dispose(struct tpi_symbol *symbol)
@@ -1220,7 +1211,7 @@ void tpi_symbols_read(
 
         DYNARRAY_PUSH(symbol_info, symbol_info_count, info);
 
-        offset += info.size;
+        offset = info.offset + info.size;
     }
 
     //

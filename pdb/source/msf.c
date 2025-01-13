@@ -479,33 +479,6 @@ uint32_t msf_stream_read_compressed_unsigned(
     exit(EXIT_FAILURE);
 }
 
-void msf_stream_read_padding(
-    struct msf *msf,
-    struct msf_stream *msf_stream,
-    uint32_t end_offset,
-    uint32_t *out_offset,
-    FILE *file_stream)
-{
-    assert(msf);
-    assert(msf_stream);
-    assert(out_offset);
-    assert(file_stream);
-
-    while (*out_offset < end_offset)
-    {
-        uint8_t padding = 0;
-        msf_stream_read_data(msf, msf_stream, *out_offset, sizeof(padding), &padding, file_stream);
-
-        if (padding < 0xf0)
-            break;
-        
-        *out_offset += sizeof(padding);
-
-        if (padding > 0xf0)
-            *out_offset += ((uint32_t)(padding & 0x0f)) - 1;
-    }
-}
-
 uint64_t msf_read_tpi_unsigned(
     struct msf *msf,
     struct msf_stream *msf_stream,

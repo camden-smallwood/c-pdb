@@ -143,7 +143,6 @@ void msf_stream_read_data(struct msf *msf, struct msf_stream *stream, uint32_t o
 char *msf_stream_read_cstring(struct msf *msf, struct msf_stream *stream, uint32_t offset, uint32_t *out_length, FILE *file_stream);
 char *msf_stream_read_u8_pascal_string(struct msf *msf, struct msf_stream *msf_stream, uint32_t offset, uint32_t *out_length, FILE *file_stream);
 uint32_t msf_stream_read_compressed_unsigned(struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, FILE *file_stream);
-void msf_stream_read_padding(struct msf *msf, struct msf_stream *msf_stream, uint32_t end_offset, uint32_t *out_offset, FILE *file_stream);
 
 uint64_t msf_read_tpi_unsigned(struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, FILE *file_stream);
 char *msf_read_tpi_lf_string(struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, uint16_t leaf, FILE *file_stream);

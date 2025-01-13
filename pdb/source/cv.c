@@ -1291,6 +1291,32 @@ void cv_call_site_info_symbol_read(
     MSF_STREAM_READ(msf, msf_stream, out_offset, item->type_index, file_stream);
 }
 
+void cv_heap_alloc_site_symbol_print(struct cv_heap_alloc_site_symbol *item, uint32_t depth, FILE *stream)
+{
+    assert(item);
+    assert(stream);
+
+    CV_HEAP_ALLOC_SITE_SYMBOL_STRUCT
+}
+
+void cv_heap_alloc_site_symbol_read(
+    struct cv_heap_alloc_site_symbol *item,
+    struct msf *msf,
+    struct msf_stream *msf_stream,
+    uint32_t *out_offset,
+    FILE *file_stream)
+{
+    assert(item);
+    assert(msf);
+    assert(msf_stream);
+    assert(out_offset);
+    assert(file_stream);
+
+    cv_pe_section_offset_read(&item->code_offset, msf, msf_stream, out_offset, file_stream);
+    MSF_STREAM_READ(msf, msf_stream, out_offset, item->instruction_size, file_stream);
+    MSF_STREAM_READ(msf, msf_stream, out_offset, item->type_index, file_stream);
+}
+
 void cv_env_block_flags_print(struct cv_env_block_flags *item, uint32_t depth, FILE *stream)
 {
     assert(item);
@@ -2233,7 +2259,10 @@ void cv_symbol_dispose(struct cv_symbol *item)
 
     case S_CALLSITEINFO:
         break;
-
+    
+    case S_HEAPALLOCSITE:
+        break;
+    
     case S_ENVBLOCK:
         cv_env_block_symbol_dispose(&item->env_block);
         break;
@@ -2293,6 +2322,7 @@ void cv_symbol_dispose(struct cv_symbol *item)
     
     case S_CALLERS:
     case S_CALLEES:
+    case S_INLINEES:
         cv_function_list_symbol_dispose(&item->function_list);
         break;
     
@@ -2301,7 +2331,7 @@ void cv_symbol_dispose(struct cv_symbol *item)
     
     case S_ARMSWITCHTABLE:
         break;
-
+    
     default:
         fprintf(stderr, "%s:%i: ERROR: unhandled cv_symbol_type value: ", __FILE__, __LINE__);
         cv_symbol_type_print(item->type, stderr);
@@ -2562,6 +2592,10 @@ void cv_symbols_read(
             cv_call_site_info_symbol_read(&symbol->call_site_info, msf, msf_stream, out_offset, file_stream);
             break;
         
+        case S_HEAPALLOCSITE:
+            cv_heap_alloc_site_symbol_read(&symbol->heap_alloc_site, msf, msf_stream, out_offset, file_stream);
+            break;
+        
         case S_ENVBLOCK:
             cv_env_block_symbol_read(&symbol->env_block, symbol->type, size_remaining, msf, msf_stream, out_offset, file_stream);
             break;
@@ -2622,6 +2656,7 @@ void cv_symbols_read(
         
         case S_CALLERS:
         case S_CALLEES:
+        case S_INLINEES:
             cv_function_list_symbol_read(&symbol->function_list, msf, msf_stream, out_offset, file_stream);
             break;
         
@@ -2634,6 +2669,7 @@ void cv_symbols_read(
             break;
         
         default:
+            printf("file position: %li\n", ftell(file_stream));
             fprintf(stderr, "%s:%i: ERROR: unhandled cv_symbol_type value: ", __FILE__, __LINE__);
             cv_symbol_type_print(symbol->type, stderr);
             fprintf(stderr, "\n");
