@@ -5,6 +5,7 @@ struct path
 {
     size_t component_count;
     char **components;
+    int has_protocol;
 };
 
 void path_dispose(struct path *path);

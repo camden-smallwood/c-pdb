@@ -25,6 +25,15 @@
         }                                                     \
     } while (0)
 
+/* ---------- min/max macros */
+
+#ifndef __min
+#define __min(a,b) (((a) < (b)) ? (a) : (b))
+#endif
+#ifndef __max
+#define __max(a,b) (((a) > (b)) ? (a) : (b))
+#endif
+
 /* ---------- string functions */
 
 char *string_append(char **string, char *suffix);
