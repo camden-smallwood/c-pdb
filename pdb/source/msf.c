@@ -338,6 +338,7 @@ void msf_stream_initialize(struct msf *msf, struct msf_stream *stream, uint32_t 
 {
     stream->size = size;
     stream->page_count = msf_get_page_count_for_size(msf, size);
+    stream->page_indices = NULL;
 
     if (stream->page_count)
     {
