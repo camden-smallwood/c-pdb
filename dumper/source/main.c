@@ -78,7 +78,7 @@ static void main_initialize(int argc, const char **argv)
     if (argc >= 4)
         sscanf(argv[3], "%" SCNx64, &main_globals.base_address);
 
-    FILE *pdb_file = fopen(main_globals.pdb_path, "r");
+    FILE *pdb_file = fopen(main_globals.pdb_path, "rb");
 
     if (!pdb_file)
     {
