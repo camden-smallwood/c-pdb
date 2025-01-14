@@ -6,6 +6,7 @@
 
 #ifdef _WIN32
 #include <direct.h>
+#define strcasecmp stricmp
 #else
 #include <sys/stat.h>
 #endif
