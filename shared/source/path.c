@@ -1,6 +1,7 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 #include "path.h"
 #include "utils.h"
 
@@ -12,6 +13,51 @@ void path_dispose(struct path *path)
         free(path->components[i]);
     
     free(path->components);
+}
+
+static char* next_path_token(char* string, char** next_token, int skip_token, int* has_protocol)
+{
+    if (next_token)
+        *next_token = NULL;
+    if (has_protocol)
+        *has_protocol = 0;
+
+    char* current_protocol = strchr(string, ':');
+    char* current_forward = strchr(string, '/');
+    char* current_back = strchr(string, '\\');
+
+    char* token = NULL;
+    if (current_protocol)
+    {
+        token = string;
+
+        if (next_token)
+        {
+            char* after_protocol = current_protocol + 1;
+            *next_token = next_path_token(after_protocol, NULL, 0, NULL);
+        }
+        if (has_protocol)
+            *has_protocol = 1;
+    }
+    else
+    {
+        if (current_forward && current_back)
+            token = __min(current_forward, current_back);
+        else
+            token = current_forward ? current_forward : current_back;
+        if (token)
+        {
+            if (next_token)
+            {
+                char* after_token = token + 1;
+                *next_token = next_path_token(after_token, NULL, 0, NULL);
+            }
+            if (skip_token)
+                token++;
+        }
+    }
+   
+    return token;
 }
 
 void path_from_string(struct path *path, char *string)
@@ -29,12 +75,14 @@ void path_from_string(struct path *path, char *string)
 
     while (current)
     {
-        current = strchr(current, '/');
+        char* next;
+        int has_protocol;
+        current = next_path_token(current, &next, 1, &has_protocol);
+        if (has_protocol)
+            path->has_protocol = 1;
         if (!current)
             break;
-        current++;
 
-        char *next = strchr(current, '/');
         size_t length = next ? (next - current) : (total_length - (current - string));
 
         char *component = calloc(length + 1, sizeof(char));
@@ -71,7 +119,8 @@ char *path_to_string(struct path *path, int is_dir)
 
     for (size_t i = 0; i < path->component_count; i++)
     {
-        string_append(&result, "/");
+        if(!path->has_protocol || i > 0)
+            string_append(&result, "/");
         string_append(&result, path->components[i]);
     }
 
