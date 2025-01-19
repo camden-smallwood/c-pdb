@@ -77,8 +77,8 @@ struct
 
     struct pdb_data pdb_data;
 
-    uint32_t module_count;
-    struct cpp_module *modules;
+    uint32_t cpp_module_count;
+    struct cpp_module *cpp_modules;
 
     uint32_t sanitized_path_count;
     struct sanitized_path *sanitized_paths;
@@ -143,9 +143,9 @@ static void main_dispose(void)
         free(main_globals.sanitized_paths[i].path);
     free(main_globals.sanitized_paths);
 
-    for (uint32_t i = 0; i < main_globals.module_count; i++)
-        cpp_module_dispose(&main_globals.modules[i]);
-    free(main_globals.modules);
+    for (uint32_t i = 0; i < main_globals.cpp_module_count; i++)
+        cpp_module_dispose(&main_globals.cpp_modules[i]);
+    free(main_globals.cpp_modules);
 
     pdb_data_dispose(&main_globals.pdb_data);
 }
@@ -361,11 +361,11 @@ static struct cpp_module *cpp_module_find(char *module_path)
 
     struct cpp_module *module = NULL;
 
-    for (uint32_t i = 0; i < main_globals.module_count; i++)
+    for (uint32_t i = 0; i < main_globals.cpp_module_count; i++)
     {
-        if (strcasecmp(module_path, main_globals.modules[i].path) == 0)
+        if (strcasecmp(module_path, main_globals.cpp_modules[i].path) == 0)
         {
-            module = &main_globals.modules[i];
+            module = &main_globals.cpp_modules[i];
             break;
         }
     }
@@ -382,9 +382,9 @@ static struct cpp_module *cpp_module_create(char *module_path)
 
     new_module.path = module_path;
 
-    DYNARRAY_PUSH(main_globals.modules, main_globals.module_count, new_module);
+    DYNARRAY_PUSH(main_globals.cpp_modules, main_globals.cpp_module_count, new_module);
 
-    return &main_globals.modules[main_globals.module_count - 1];
+    return &main_globals.cpp_modules[main_globals.cpp_module_count - 1];
 }
 
 static inline struct cpp_module *cpp_module_find_or_create(char *module_path)
@@ -641,7 +641,7 @@ static struct dbi_module_paths *dbi_module_get_paths(uint32_t module_index)
     return &main_globals.dbi_module_paths[main_globals.dbi_module_path_count - 1];
 }
 
-char *cv_pe_section_offset_to_module_path(struct cv_pe_section_offset *code_offset)
+static char *cv_pe_section_offset_to_module_path(struct cv_pe_section_offset *code_offset)
 {
     assert(code_offset);
 
@@ -669,7 +669,7 @@ char *cv_pe_section_offset_to_module_path(struct cv_pe_section_offset *code_offs
     return NULL;
 }
 
-uint64_t cv_pe_section_offset_to_pe_address(struct cv_pe_section_offset *offset)
+static uint64_t cv_pe_section_offset_to_pe_address(struct cv_pe_section_offset *offset)
 {
     assert(offset);
 
@@ -715,7 +715,7 @@ uint64_t cv_pe_section_offset_to_pe_address(struct cv_pe_section_offset *offset)
     return main_globals.base_address + (uint64_t)result;
 }
 
-char *ipi_string_id_to_string(uint32_t index)
+static char *ipi_string_id_to_string(uint32_t index)
 {
     for (uint32_t i = 0; i < main_globals.string_id_string_count; i++)
     {
@@ -779,7 +779,7 @@ static void process_global_types(void)
     for (uint32_t i = main_globals.pdb_data.tpi_header.minimum_index; i < main_globals.pdb_data.tpi_header.maximum_index; i++)
         cpp_module_add_type_definition(&module, &main_globals.pdb_data, i, 0);
 
-    DYNARRAY_PUSH(main_globals.modules, main_globals.module_count, module);
+    DYNARRAY_PUSH(main_globals.cpp_modules, main_globals.cpp_module_count, module);
 }
 
 static void process_build_info_ids(void)
@@ -1770,9 +1770,9 @@ static void process_modules(void)
 
 static void export_cpp_modules(void)
 {
-    for (uint32_t i = 0; i < main_globals.module_count; i++)
+    for (uint32_t i = 0; i < main_globals.cpp_module_count; i++)
     {
-        struct cpp_module *module = &main_globals.modules[i];
+        struct cpp_module *module = &main_globals.cpp_modules[i];
 
         create_file_path_dirs(module->path);
 
