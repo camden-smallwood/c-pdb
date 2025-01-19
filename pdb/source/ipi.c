@@ -348,34 +348,3 @@ struct ipi_symbol *ipi_symbol_get(struct tpi_header *ipi_header, struct ipi_symb
     
     return &ipi_symbols->symbols[absolute_index];
 }
-
-char *ipi_string_id_to_string(struct tpi_header *ipi_header, struct ipi_symbols *ipi_symbols, uint32_t index)
-{
-    assert(ipi_header);
-    assert(ipi_symbols);
-
-    struct ipi_symbol *argument_symbol = ipi_symbol_get(ipi_header, ipi_symbols, index);
-
-    assert(argument_symbol);
-    assert(argument_symbol->type == LF_STRING_ID);
-
-    char *string = calloc(1, sizeof(char));
-    assert(string);
-
-    struct ipi_symbol *substrings_symbol = ipi_symbol_get(ipi_header, ipi_symbols, argument_symbol->string_id.substrings_index);
-    
-    if (substrings_symbol)
-    {
-        assert(substrings_symbol->type = LF_SUBSTR_LIST);
-
-        for (uint32_t i = 0; i < substrings_symbol->substr_list.count; i++)
-        {
-            char *substring = ipi_string_id_to_string(ipi_header, ipi_symbols, substrings_symbol->substr_list.substring_indices[i]);
-            string_append(&string, substring);
-        }
-    }
-
-    string_append(&string, argument_symbol->string_id.string);
-
-    return string;
-}

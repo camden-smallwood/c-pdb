@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.5.0)
+cmake_minimum_required(VERSION 3.10.0)
 project(pdb)
 
 file(GLOB_RECURSE SHARED_C_SOURCE_FILES "${CMAKE_CURRENT_SOURCE_DIR}/shared/source/*.c")

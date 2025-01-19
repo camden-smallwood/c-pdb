@@ -142,4 +142,3 @@ void ipi_symbols_print(struct ipi_symbols *symbols, uint32_t depth, FILE *stream
 
 uint32_t ipi_index_to_absolute_index(struct tpi_header *ipi_header, struct ipi_symbols *ipi_symbols, uint32_t index);
 struct ipi_symbol *ipi_symbol_get(struct tpi_header *ipi_header, struct ipi_symbols *ipi_symbols, uint32_t index);
-char *ipi_string_id_to_string(struct tpi_header *ipi_header, struct ipi_symbols *ipi_symbols, uint32_t index);

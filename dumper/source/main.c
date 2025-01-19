@@ -48,6 +48,26 @@ int main(int argc, const char *argv[])
 
 /* ---------- private variables */
 
+struct sanitized_path
+{
+    uint32_t string_table_offset;
+    char *path;
+};
+
+struct string_id_string
+{
+    uint32_t id_index;
+    char *string;
+};
+
+struct dbi_module_paths
+{
+    uint32_t module_index;
+    uint32_t path_count;
+    uint32_t source_file_index;
+    char **paths;
+};
+
 struct
 {
     const char *pdb_path;
@@ -59,6 +79,15 @@ struct
 
     uint32_t module_count;
     struct cpp_module *modules;
+
+    uint32_t sanitized_path_count;
+    struct sanitized_path *sanitized_paths;
+
+    uint32_t string_id_string_count;
+    struct string_id_string *string_id_strings;
+
+    uint32_t dbi_module_path_count;
+    struct dbi_module_paths *dbi_module_paths;
 } static main_globals;
 
 /* ---------- private code */
@@ -94,9 +123,28 @@ static void main_initialize(int argc, const char **argv)
 
 static void main_dispose(void)
 {
+    for (uint32_t i = 0; i < main_globals.dbi_module_path_count; i++)
+    {
+        struct dbi_module_paths *entry = &main_globals.dbi_module_paths[i];
+
+        for (uint32_t j = 0; j < entry->path_count; j++)
+            free(entry->paths[j]);
+        
+        free(entry->paths);
+    }
+
+    free(main_globals.dbi_module_paths);
+
+    for (uint32_t i = 0; i < main_globals.string_id_string_count; i++)
+        free(main_globals.string_id_strings[i].string);
+    free(main_globals.string_id_strings);
+
+    for (uint32_t i = 0; i < main_globals.sanitized_path_count; i++)
+        free(main_globals.sanitized_paths[i].path);
+    free(main_globals.sanitized_paths);
+
     for (uint32_t i = 0; i < main_globals.module_count; i++)
         cpp_module_dispose(&main_globals.modules[i]);
-
     free(main_globals.modules);
 
     pdb_data_dispose(&main_globals.pdb_data);
@@ -163,6 +211,62 @@ static char *sanitize_path(char *path)
 
     char c = '\0';
     DYNARRAY_PUSH(result, result_length, c);
+
+    return result;
+}
+
+static char *sanitize_path_from_string_table(uint32_t string_table_offset)
+{
+    assert(string_table_offset < main_globals.pdb_data.string_table.header.names_size);
+
+    for (uint32_t i = 0; i < main_globals.sanitized_path_count; i++)
+    {
+        struct sanitized_path *entry = &main_globals.sanitized_paths[i];
+
+        if (entry->string_table_offset == string_table_offset)
+            return strdup(entry->path);
+    }
+
+    char *path = main_globals.pdb_data.string_table.names_data + string_table_offset;
+    char *substring = strchr(path, ':');
+
+    if (substring)
+        path = substring + 1;
+
+    size_t path_length = strlen(path);
+
+    size_t result_length = 0;
+    char *result = NULL;
+
+    int was_slash = 0;
+
+    for (size_t i = 0; i < path_length; i++)
+    {
+        char c = path[i];
+
+        if (c == '\\')
+            c = '/';
+
+        if (c == '/' && was_slash)
+            continue;
+
+        was_slash = 0;
+
+        DYNARRAY_PUSH(result, result_length, c);
+
+        if (c == '/')
+            was_slash = 1;
+    }
+
+    char c = '\0';
+    DYNARRAY_PUSH(result, result_length, c);
+
+    struct sanitized_path new_entry = {
+        .string_table_offset = string_table_offset,
+        .path = strdup(result),
+    };
+    assert(new_entry.path);
+    DYNARRAY_PUSH(main_globals.sanitized_paths, main_globals.sanitized_path_count, new_entry);
 
     return result;
 }
@@ -314,25 +418,26 @@ static const char *const CPP_SOURCE_FILE_EXTS[] = {
 static const size_t CPP_SOURCE_FILE_EXT_COUNT =
     sizeof(CPP_SOURCE_FILE_EXTS) / sizeof(CPP_SOURCE_FILE_EXTS[0]);
 
-static void dbi_module_get_file_path_and_header_paths(
-    struct dbi_module *dbi_module,
-    char **out_file_path,
-    size_t *out_header_path_count,
-    char ***out_header_paths)
+static struct dbi_module_paths *dbi_module_get_paths(uint32_t module_index)
 {
-    assert(dbi_module);
+    assert(module_index < main_globals.pdb_data.modules.count);
 
-    assert(out_file_path);
-    *out_file_path = NULL;
-
-    if (out_header_path_count || out_header_paths)
+    for (uint32_t i = 0; i < main_globals.dbi_module_path_count; i++)
     {
-        assert(out_header_path_count);
-        *out_header_path_count = 0;
+        struct dbi_module_paths *entry = &main_globals.dbi_module_paths[i];
 
-        assert(out_header_paths);
-        *out_header_paths = NULL;
+        if (entry->module_index == module_index)
+            return entry;
     }
+
+    struct dbi_module *dbi_module = &main_globals.pdb_data.modules.modules[module_index];
+
+    struct dbi_module_paths new_entry = {
+        .module_index = module_index,
+        .path_count = 0,
+        .paths = NULL,
+        .source_file_index = UINT32_MAX,
+    };
 
     char *obj_path_string = sanitize_path(dbi_module->module_name);
     assert(obj_path_string);
@@ -352,7 +457,11 @@ static void dbi_module_get_file_path_and_header_paths(
         subsections = dbi_module->c13_lines_subsections;
     }
 
-    uint32_t source_files_found = 0;
+    // struct dbi_subsection *found_subsections = NULL;
+    // uint32_t found_subsection_count = 0;
+    // uint32_t found_subsection_index = UINT32_MAX;
+    // uint32_t found_file_checksum_index = UINT32_MAX;
+    // uint32_t source_files_found = 0;
 
     for (uint32_t subsection_index = 0; subsection_index < subsection_count; subsection_index++)
     {
@@ -361,12 +470,11 @@ static void dbi_module_get_file_path_and_header_paths(
         if (subsection->type != DEBUG_S_FILECHKSMS)
             continue;
 
-        for (uint32_t i = 0; i < subsection->file_checksums.count; i++)
+        for (uint32_t file_index = 0; file_index < subsection->file_checksums.count; file_index++)
         {
-            struct dbi_file_checksum *entry = &subsection->file_checksums.entries[i];
+            struct dbi_file_checksum *entry = &subsection->file_checksums.entries[file_index];
 
-            assert(entry->header.name_offset < main_globals.pdb_data.string_table.header.names_size);
-            char *file_path = sanitize_path(main_globals.pdb_data.string_table.names_data + entry->header.name_offset);
+            char *file_path = sanitize_path_from_string_table(entry->header.name_offset);
             assert(file_path);
 
             struct path path;
@@ -376,16 +484,22 @@ static void dbi_module_get_file_path_and_header_paths(
             assert(file_stem);
 
             char *file_ext = path_get_extension(&path);
+
+            int is_source_file = 0;
             
             if (file_ext)
             {
-                for (size_t j = 0; j < CPP_SOURCE_FILE_EXT_COUNT; j++)
+                for (size_t ext_index = 0; ext_index < CPP_SOURCE_FILE_EXT_COUNT; ext_index++)
                 {
-                    if (strcasecmp(file_ext, CPP_SOURCE_FILE_EXTS[j]) == 0)
-                        source_files_found++;
-                    else
+                    if (strcasecmp(file_ext, CPP_SOURCE_FILE_EXTS[ext_index]) != 0)
                         continue;
                     
+                    // found_subsections = subsections;
+                    // found_subsection_count = subsection_count;
+                    // found_file_checksum_index = file_index;
+                    // found_subsection_index = subsection_index;
+                    // source_files_found++;
+
                     // If the file extension is a recognized source file extension, and the file stem
                     // matches the .obj file stem, add it to the headers list
                     if (strcasecmp(file_stem, obj_stem) == 0)
@@ -398,18 +512,24 @@ static void dbi_module_get_file_path_and_header_paths(
 
                         path_from_string(&path, file_path);
                         
-                        *out_file_path = path_to_string(&path, 0);
-                        assert(*out_file_path);
-                        break;
+                        char *source_file_path = path_to_string(&path, 0);
+                        assert(*source_file_path);
+
+                        is_source_file = 1;
+                        new_entry.source_file_index = new_entry.path_count;
+                        DYNARRAY_PUSH(new_entry.paths, new_entry.path_count, source_file_path);
                     }
+
+                    // We already found the file extension, so no point in checking other extensions
+                    break;
                 }
             }
             
-            if (!*out_file_path && out_header_path_count && out_header_paths)
+            if (!is_source_file)
             {
                 char *header_path = path_to_string(&path, 0);
                 assert(header_path);
-                DYNARRAY_PUSH(*out_header_paths, *out_header_path_count, header_path);
+                DYNARRAY_PUSH(new_entry.paths, new_entry.path_count, header_path);
             }
 
             path_dispose(&path);
@@ -427,78 +547,53 @@ static void dbi_module_get_file_path_and_header_paths(
         }
     }
 
-    // HACK: if we didn't find an exact match, but we found a single source file, use that
-    if (!*out_file_path && source_files_found == 1)
+    /*// HACK: if we didn't find an exact match, but we found a single source file, use that
+    if (new_entry.source_file_index == UINT32_MAX && source_files_found == 1)
     {
-        subsection_count = dbi_module->c11_lines_subsection_count;
-        subsections = dbi_module->c11_lines_subsections;
+        assert(found_subsections);
+        assert(found_subsection_index < found_subsection_count);
 
-        if (subsection_count == 0)
+        struct dbi_subsection *subsection = &found_subsections[found_subsection_index];
+        assert(found_file_checksum_index < subsection->file_checksums.count);
+
+        struct dbi_file_checksum *entry = &subsection->file_checksums.entries[found_file_checksum_index];
+
+        char *file_path = sanitize_path_from_string_table(entry->header.name_offset);
+        assert(file_path);
+
+        struct path path;
+        path_from_string(&path, file_path);
+
+        char *file_ext = path_get_extension(&path);
+        
+        if (file_ext)
         {
-            subsection_count = dbi_module->c13_lines_subsection_count;
-            subsections = dbi_module->c13_lines_subsections;
-        }
-
-        for (uint32_t subsection_index = 0; subsection_index < subsection_count; subsection_index++)
-        {
-            struct dbi_subsection *subsection = &subsections[subsection_index];
-            
-            if (subsection->type != DEBUG_S_FILECHKSMS)
-                continue;
-
-            for (uint32_t i = 0; i < subsection->file_checksums.count; i++)
+            for (size_t j = 0; j < CPP_SOURCE_FILE_EXT_COUNT; j++)
             {
-                struct dbi_file_checksum *entry = &subsection->file_checksums.entries[i];
-
-                assert(entry->header.name_offset < main_globals.pdb_data.string_table.header.names_size);
-                char *file_path = sanitize_path(main_globals.pdb_data.string_table.names_data + entry->header.name_offset);
-                assert(file_path);
-
-                struct path path;
-                path_from_string(&path, file_path);
-
-                char *file_ext = path_get_extension(&path);
-                
-                if (file_ext)
+                if (strcasecmp(file_ext, CPP_SOURCE_FILE_EXTS[j]) == 0)
                 {
-                    for (size_t j = 0; j < CPP_SOURCE_FILE_EXT_COUNT; j++)
-                    {
-                        if (strcasecmp(file_ext, CPP_SOURCE_FILE_EXTS[j]) == 0)
-                        {
-                            free(file_path);
-                            path_dispose(&path);
+                    free(file_path);
+                    path_dispose(&path);
 
-                            file_path = canonicalize_path(NULL, main_globals.pdb_data.string_table.names_data + entry->header.name_offset, 0);
-                            assert(file_path);
+                    file_path = canonicalize_path(NULL, main_globals.pdb_data.string_table.names_data + entry->header.name_offset, 0);
+                    assert(file_path);
 
-                            path_from_string(&path, file_path);
-                            
-                            *out_file_path = path_to_string(&path, 0);
-                            assert(*out_file_path);
-                            break;
-                        }
-                    }
+                    path_from_string(&path, file_path);
+                    
+                    *out_file_path = path_to_string(&path, 0);
+                    assert(*out_file_path);
+                    break;
                 }
-                
-                path_dispose(&path);
-
-                free(file_ext);
-                free(file_path);
-            }
-
-            if (*out_file_path)
-                break;
-
-            if (subsections == dbi_module->c11_lines_subsections && subsection_index == subsection_count - 1)
-            {
-                subsection_count = dbi_module->c13_lines_subsection_count;
-                subsections = dbi_module->c13_lines_subsections;
-                subsection_index = UINT32_MAX;
             }
         }
-    }
+        
+        path_dispose(&path);
 
-    if (!*out_file_path &&
+        free(file_ext);
+        free(file_path);
+    }*/
+
+    /*if (!*out_file_path &&
         strcasecmp(obj_path_string, "* CIL *") != 0 &&
         strcasecmp(obj_path_string, "* Linker *") != 0 &&
         strcasecmp(obj_path_string, "* Linker Generated Manifest RES *") != 0 &&
@@ -519,8 +614,7 @@ static void dbi_module_get_file_path_and_header_paths(
             {
                 struct dbi_file_checksum *entry = &subsection->file_checksums.entries[i];
 
-                assert(entry->header.name_offset < main_globals.pdb_data.string_table.header.names_size);
-                char *file_path = sanitize_path(main_globals.pdb_data.string_table.names_data + entry->header.name_offset);
+                char *file_path = sanitize_path_from_string_table(entry->header.name_offset);
                 assert(file_path);
 
                 if (printed_count == 0)
@@ -535,21 +629,16 @@ static void dbi_module_get_file_path_and_header_paths(
             fprintf(stderr, ": file list is empty");
 
         fprintf(stderr, "\n");
-    }
+    }*/
 
     path_dispose(&obj_path);
 
     free(obj_ext);
     free(obj_stem);
     free(obj_path_string);
-}
 
-static char *dbi_module_get_file_path(struct dbi_module *dbi_module)
-{
-    char *file_path = NULL;
-    dbi_module_get_file_path_and_header_paths(dbi_module, &file_path, NULL, NULL);
-
-    return file_path;
+    DYNARRAY_PUSH(main_globals.dbi_module_paths, main_globals.dbi_module_path_count, new_entry);
+    return &main_globals.dbi_module_paths[main_globals.dbi_module_path_count - 1];
 }
 
 char *cv_pe_section_offset_to_module_path(struct cv_pe_section_offset *code_offset)
@@ -564,10 +653,16 @@ char *cv_pe_section_offset_to_module_path(struct cv_pe_section_offset *code_offs
             (code_offset->memory_offset >= contribution->offset) &&
             (code_offset->memory_offset < contribution->offset + contribution->size))
         {
-            assert(contribution->module_index < main_globals.pdb_data.modules.count);
-            struct dbi_module *contributing_module = &main_globals.pdb_data.modules.modules[contribution->module_index];
+            struct dbi_module_paths *paths = dbi_module_get_paths(contribution->module_index);
+            assert(paths);
 
-            return dbi_module_get_file_path(contributing_module);
+            if (paths->source_file_index == UINT32_MAX)
+                return NULL;
+            
+            char *result = strdup(paths->paths[paths->source_file_index]);
+            assert(result);
+
+            return result;
         }
     }
 
@@ -620,6 +715,48 @@ uint64_t cv_pe_section_offset_to_pe_address(struct cv_pe_section_offset *offset)
     return main_globals.base_address + (uint64_t)result;
 }
 
+char *ipi_string_id_to_string(uint32_t index)
+{
+    for (uint32_t i = 0; i < main_globals.string_id_string_count; i++)
+    {
+        struct string_id_string *entry = &main_globals.string_id_strings[i];
+
+        if (entry->id_index == index)
+            return entry->string;
+    }
+    
+    struct ipi_symbol *argument_symbol = ipi_symbol_get(&main_globals.pdb_data.ipi_header, &main_globals.pdb_data.ipi_symbols, index);
+
+    assert(argument_symbol);
+    assert(argument_symbol->type == LF_STRING_ID);
+
+    char *string = calloc(1, sizeof(char));
+    assert(string);
+
+    struct ipi_symbol *substrings_symbol = ipi_symbol_get(&main_globals.pdb_data.ipi_header, &main_globals.pdb_data.ipi_symbols, argument_symbol->string_id.substrings_index);
+    
+    if (substrings_symbol)
+    {
+        assert(substrings_symbol->type = LF_SUBSTR_LIST);
+
+        for (uint32_t i = 0; i < substrings_symbol->substr_list.count; i++)
+        {
+            char *substring = ipi_string_id_to_string(substrings_symbol->substr_list.substring_indices[i]);
+            string_append(&string, substring);
+        }
+    }
+
+    string_append(&string, argument_symbol->string_id.string);
+
+    struct string_id_string new_entry = {
+        .id_index = index,
+        .string = string,
+    };
+    DYNARRAY_PUSH(main_globals.string_id_strings, main_globals.string_id_string_count, new_entry);
+
+    return string;
+}
+
 static void process_global_types(void)
 {
     //
@@ -658,7 +795,7 @@ static void process_build_info_ids(void)
         char **arguments = malloc(symbol->build_info.argument_count * sizeof(char *));
 
         for (uint32_t i = 0; i < symbol->build_info.argument_count; i++)
-            arguments[i] = ipi_string_id_to_string(&main_globals.pdb_data.ipi_header, &main_globals.pdb_data.ipi_symbols, symbol->build_info.argument_id_indices[i]);
+            arguments[i] = ipi_string_id_to_string(symbol->build_info.argument_id_indices[i]);
 
         char *root_path = NULL;
         char *compiler_path = NULL;
@@ -714,9 +851,6 @@ static void process_build_info_ids(void)
             assert(module->args_string);
         }
 
-        for (uint32_t i = 0; i < symbol->build_info.argument_count; i++)
-            free(arguments[i]);
-
         free(arguments);
     }
 }
@@ -758,15 +892,10 @@ static void process_user_defined_type_ids(void)
             
             if (!id_to_module_paths[absolute_id_index])
             {
-                char *old_module_path = ipi_string_id_to_string(
-                    &main_globals.pdb_data.ipi_header,
-                    &main_globals.pdb_data.ipi_symbols,
-                    symbol->udt_src_line.file_id_index);
+                char *old_module_path = ipi_string_id_to_string(symbol->udt_src_line.file_id_index);
                 
                 id_to_module_paths[absolute_id_index] = canonicalize_path(NULL, old_module_path, 0);
                 assert(id_to_module_paths[absolute_id_index]);
-
-                free(old_module_path);
             }
             
             module_path = strdup(id_to_module_paths[absolute_id_index]);
@@ -857,13 +986,13 @@ static void process_symbol_records(void)
             // We should verify if they should be included here or not.
             //
 
-            char *module_path = cv_pe_section_offset_to_module_path(&symbol->public_.code_offset);
+            // char *module_path = cv_pe_section_offset_to_module_path(&symbol->public_.code_offset);
 
-            if (!module_path)
-                break;
+            // if (!module_path)
+            //     break;
             
-            cpp_module = cpp_module_find_or_create(module_path);
-            assert(cpp_module);
+            // cpp_module = cpp_module_find_or_create(module_path);
+            // assert(cpp_module);
             
             //
             // TODO: do we need to do anything else?
@@ -1260,19 +1389,29 @@ static void process_modules(void)
         // Get the module's file path and header paths
         //
 
+        struct dbi_module_paths *paths = dbi_module_get_paths(dbi_module_index);
+
+        if (paths->source_file_index == UINT32_MAX)
+            continue;
+
         char *file_path = NULL;
         
         size_t header_path_count = 0;
         char **header_paths = NULL;
 
-        dbi_module_get_file_path_and_header_paths(dbi_module, &file_path, &header_path_count, &header_paths);
-
-        if (!file_path)
+        for (uint32_t i = 0; i < paths->path_count; i++)
         {
-            for (size_t i = 0; i < header_path_count; i++)
-                free(header_paths[i]);
-            free(header_paths);
-            continue;
+            if (i == paths->source_file_index)
+            {
+                file_path = strdup(paths->paths[i]);
+                assert(file_path);
+            }
+            else
+            {
+                char *header_path = strdup(paths->paths[i]);
+                assert(header_path);
+                DYNARRAY_PUSH(header_paths, header_path_count, header_path);
+            }
         }
 
         //

@@ -1,6 +1,19 @@
 #pragma once
 #include <stdint.h>
 #include <stdio.h>
+#include <time.h>
+
+/* ---------- timing macros */
+
+#define TIMED(x) \
+    do \
+    { \
+        clock_t start_time = clock(); \
+        x; \
+        clock_t end_time = clock(); \
+        double cpu_time_used = ((double) (end_time - start_time)) / CLOCKS_PER_SEC; \
+        printf("Took %f seconds:\n    " #x "\n", cpu_time_used); \
+    } while(0)
 
 /* ---------- dynamic array macros */
 

@@ -539,8 +539,6 @@ void cv_compile_flags_symbol_read(
     {
         uint8_t byte = 0;
         MSF_STREAM_READ(msf, msf_stream, out_offset, byte, file_stream);
-        if (byte)
-            printf("file position: %li\n", ftell(file_stream) - 1);
         assert(byte == 0);
     }
 }
@@ -2669,7 +2667,6 @@ void cv_symbols_read(
             break;
         
         default:
-            printf("file position: %li\n", ftell(file_stream));
             fprintf(stderr, "%s:%i: ERROR: unhandled cv_symbol_type value: ", __FILE__, __LINE__);
             cv_symbol_type_print(symbol->type, stderr);
             fprintf(stderr, "\n");
