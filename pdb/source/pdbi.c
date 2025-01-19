@@ -15,7 +15,7 @@ void pdb_header_print(struct pdb_header *item, uint32_t depth, FILE *stream)
     PDB_HEADER_STRUCT
 }
 
-void pdb_header_read(struct pdb_header *header, struct msf *msf, FILE *stream)
+void pdb_header_read(struct pdb_header *header, struct msf *msf, struct memory_stream *stream)
 {
     msf_stream_read_data(msf, &msf->streams[MSF_STREAM_PDB], 0, sizeof(*header), header, stream);
 }
@@ -28,10 +28,7 @@ void pdb_named_stream_print(struct pdb_named_stream *item, uint32_t depth, FILE 
     PDB_NAMED_STREAM_STRUCT
 }
 
-void pdb_info_read(
-    struct pdb_info *info,
-    struct msf *msf,
-    FILE *stream)
+void pdb_info_read(struct pdb_info *info, struct msf *msf, struct memory_stream *stream)
 {
     assert(info);
     assert(msf);
@@ -118,7 +115,7 @@ void pdb_string_table_header_print(struct pdb_string_table_header *item, uint32_
     PDB_STRING_TABLE_HEADER_STRUCT
 }
 
-void pdb_string_table_read(struct pdb_string_table *table, struct msf *msf, struct pdb_info *pdb_info, FILE *stream)
+void pdb_string_table_read(struct pdb_string_table *table, struct msf *msf, struct pdb_info *pdb_info, struct memory_stream *stream)
 {
     assert(table);
     assert(msf);

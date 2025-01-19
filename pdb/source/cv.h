@@ -4,6 +4,8 @@
 #include <stdio.h>
 #include "msf.h"
 #include "tpi.h"
+
+#include "memory_stream.h"
 #include "macros_decl.h"
 
 /* ---------- CV signatures */
@@ -309,7 +311,7 @@ STRUCT_END(cv_pe_section_offset)
 CV_PE_SECTION_OFFSET_STRUCT
 
 void cv_pe_section_offset_print(struct cv_pe_section_offset *item, uint32_t depth, FILE *stream);
-void cv_pe_section_offset_read(struct cv_pe_section_offset *item, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, FILE *file_stream);
+void cv_pe_section_offset_read(struct cv_pe_section_offset *item, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, struct memory_stream *file_stream);
 
 /* ---------- CV obj name symbol */
 
@@ -323,7 +325,7 @@ CV_OBJ_NAME_SYMBOL_STRUCT
 
 void cv_obj_name_symbol_dispose(struct cv_obj_name_symbol *item);
 void cv_obj_name_symbol_print(struct cv_obj_name_symbol *item, uint32_t depth, FILE *stream);
-void cv_obj_name_symbol_read(struct cv_obj_name_symbol *item, uint16_t symbol_type, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, FILE *file_stream);
+void cv_obj_name_symbol_read(struct cv_obj_name_symbol *item, uint16_t symbol_type, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, struct memory_stream *file_stream);
 
 /* ---------- CV register variable symbol */
 
@@ -338,7 +340,7 @@ CV_REGISTER_VARIABLE_SYMBOL_STRUCT
 
 void cv_register_variable_symbol_dispose(struct cv_register_variable_symbol *item);
 void cv_register_variable_symbol_print(struct cv_register_variable_symbol *item, uint32_t depth, FILE *stream);
-void cv_register_variable_symbol_read(struct cv_register_variable_symbol *item, uint16_t symbol_type, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, FILE *file_stream);
+void cv_register_variable_symbol_read(struct cv_register_variable_symbol *item, uint16_t symbol_type, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, struct memory_stream *file_stream);
 
 /* ---------- CV constant symbol */
 
@@ -353,7 +355,7 @@ CV_CONSTANT_SYMBOL_STRUCT
 
 void cv_constant_symbol_dispose(struct cv_constant_symbol *item);
 void cv_constant_symbol_print(struct cv_constant_symbol *item, uint32_t depth, FILE *stream);
-void cv_constant_symbol_read(struct cv_constant_symbol *item, uint16_t symbol_type, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, FILE *file_stream);
+void cv_constant_symbol_read(struct cv_constant_symbol *item, uint16_t symbol_type, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, struct memory_stream *file_stream);
 
 /* ---------- CV user defined type symbol */
 
@@ -367,7 +369,7 @@ CV_USER_DEFINED_TYPE_SYMBOL_STRUCT
 
 void cv_user_defined_type_symbol_dispose(struct cv_user_defined_type_symbol *item);
 void cv_user_defined_type_symbol_print(struct cv_user_defined_type_symbol *item, uint32_t depth, FILE *stream);
-void cv_user_defined_type_symbol_read(struct cv_user_defined_type_symbol *item, uint16_t symbol_type, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, FILE *file_stream);
+void cv_user_defined_type_symbol_read(struct cv_user_defined_type_symbol *item, uint16_t symbol_type, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, struct memory_stream *file_stream);
 
 /* ---------- CV multi register entry */
 
@@ -381,7 +383,7 @@ CV_MULTI_REGISTER_ENTRY_STRUCT
 
 void cv_multi_register_entry_dispose(struct cv_multi_register_entry *entry);
 void cv_multi_register_entry_print(struct cv_multi_register_entry *entry, uint32_t depth, FILE *stream);
-void cv_multi_register_entry_read(struct cv_multi_register_entry *item, uint16_t symbol_type, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, FILE *file_stream);
+void cv_multi_register_entry_read(struct cv_multi_register_entry *item, uint16_t symbol_type, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, struct memory_stream *file_stream);
 
 /* ---------- CV multi register variable symbol */
 
@@ -396,7 +398,7 @@ CV_MULTI_REGISTER_VARIABLE_SYMBOL_STRUCT
 
 void cv_multi_register_variable_symbol_dispose(struct cv_multi_register_variable_symbol *item);
 void cv_multi_register_variable_symbol_print(struct cv_multi_register_variable_symbol *item, uint32_t depth, FILE *stream);
-void cv_multi_register_variable_symbol_read(struct cv_multi_register_variable_symbol *item, uint16_t symbol_type, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, FILE *file_stream);
+void cv_multi_register_variable_symbol_read(struct cv_multi_register_variable_symbol *item, uint16_t symbol_type, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, struct memory_stream *file_stream);
 
 /* ---------- CV data symbol */
 
@@ -411,7 +413,7 @@ CV_DATA_SYMBOL_STRUCT
 
 void cv_data_symbol_dispose(struct cv_data_symbol *item);
 void cv_data_symbol_print(struct cv_data_symbol *item, uint32_t depth, FILE *stream);
-void cv_data_symbol_read(struct cv_data_symbol *item, uint16_t symbol_type, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, FILE *file_stream);
+void cv_data_symbol_read(struct cv_data_symbol *item, uint16_t symbol_type, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, struct memory_stream *file_stream);
 
 /* ---------- CV public symbol flags */
 
@@ -438,7 +440,7 @@ CV_PUBLIC_SYMBOL_STRUCT
 
 void cv_public_symbol_dispose(struct cv_public_symbol *item);
 void cv_public_symbol_print(struct cv_public_symbol *item, uint32_t depth, FILE *stream);
-void cv_public_symbol_read(struct cv_public_symbol *item, uint16_t symbol_type, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, FILE *file_stream);
+void cv_public_symbol_read(struct cv_public_symbol *item, uint16_t symbol_type, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, struct memory_stream *file_stream);
 
 /* ---------- CV procedure flags */
 
@@ -476,7 +478,7 @@ CV_PROCEDURE_SYMBOL_STRUCT
 
 void cv_procedure_symbol_dispose(struct cv_procedure_symbol *item);
 void cv_procedure_symbol_print(struct cv_procedure_symbol *item, uint32_t depth, FILE *stream);
-void cv_procedure_symbol_read(struct cv_procedure_symbol *item, uint16_t symbol_type, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, FILE *file_stream);
+void cv_procedure_symbol_read(struct cv_procedure_symbol *item, uint16_t symbol_type, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, struct memory_stream *file_stream);
 
 /* ---------- CV thread storage symbol */
 
@@ -491,7 +493,7 @@ CV_THREAD_STORAGE_SYMBOL_STRUCT
 
 void cv_thread_storage_symbol_dispose(struct cv_thread_storage_symbol *item);
 void cv_thread_storage_symbol_print(struct cv_thread_storage_symbol *item, uint32_t depth, FILE *stream);
-void cv_thread_storage_symbol_read(struct cv_thread_storage_symbol *item, uint16_t symbol_type, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, FILE *file_stream);
+void cv_thread_storage_symbol_read(struct cv_thread_storage_symbol *item, uint16_t symbol_type, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, struct memory_stream *file_stream);
 
 /* ---------- CV source language */
 
@@ -533,7 +535,7 @@ STRUCT_END(cv_compiler_version)
 CV_COMPILER_VERSION_STRUCT
 
 void cv_compiler_version_print(struct cv_compiler_version *item, uint32_t depth, FILE *stream);
-void cv_compiler_version_read(struct cv_compiler_version *item, uint32_t symbol_type, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, FILE *file_stream);
+void cv_compiler_version_read(struct cv_compiler_version *item, uint32_t symbol_type, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, struct memory_stream *file_stream);
 
 /* ---------- CV compile flags */
 
@@ -579,7 +581,7 @@ CV_COMPILE_FLAGS_SYMBOL_STRUCT
 
 void cv_compile_flags_symbol_dispose(struct cv_compile_flags_symbol *item);
 void cv_compile_flags_symbol_print(struct cv_compile_flags_symbol *item, uint32_t depth, FILE *stream);
-void cv_compile_flags_symbol_read(struct cv_compile_flags_symbol *item, uint16_t symbol_type, uint32_t symbol_size, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, FILE *file_stream);
+void cv_compile_flags_symbol_read(struct cv_compile_flags_symbol *item, uint16_t symbol_type, uint32_t symbol_size, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, struct memory_stream *file_stream);
 
 /* ---------- CV using namespace symbol */
 
@@ -592,7 +594,7 @@ CV_USING_NAMESPACE_SYMBOL_STRUCT
 
 void cv_using_namespace_symbol_dispose(struct cv_using_namespace_symbol *item);
 void cv_using_namespace_symbol_print(struct cv_using_namespace_symbol *item, uint32_t depth, FILE *stream);
-void cv_using_namespace_symbol_read(struct cv_using_namespace_symbol *item, uint16_t symbol_type, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, FILE *file_stream);
+void cv_using_namespace_symbol_read(struct cv_using_namespace_symbol *item, uint16_t symbol_type, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, struct memory_stream *file_stream);
 
 /* ---------- CV procedure reference symbol */
 
@@ -608,7 +610,7 @@ CV_PROCEDURE_REFERENCE_SYMBOL_STRUCT
 
 void cv_procedure_reference_symbol_dispose(struct cv_procedure_reference_symbol *item);
 void cv_procedure_reference_symbol_print(struct cv_procedure_reference_symbol *item, uint32_t depth, FILE *stream);
-void cv_procedure_reference_symbol_read(struct cv_procedure_reference_symbol *item, uint16_t symbol_type, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, FILE *file_stream);
+void cv_procedure_reference_symbol_read(struct cv_procedure_reference_symbol *item, uint16_t symbol_type, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, struct memory_stream *file_stream);
 
 /* ---------- CV data reference symbol */
 
@@ -624,7 +626,7 @@ CV_DATA_REFERENCE_SYMBOL_STRUCT
 
 void cv_data_reference_symbol_dispose(struct cv_data_reference_symbol *item);
 void cv_data_reference_symbol_print(struct cv_data_reference_symbol *item, uint32_t depth, FILE *stream);
-void cv_data_reference_symbol_read(struct cv_data_reference_symbol *item, uint16_t symbol_type, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, FILE *file_stream);
+void cv_data_reference_symbol_read(struct cv_data_reference_symbol *item, uint16_t symbol_type, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, struct memory_stream *file_stream);
 
 /* ---------- CV annotation reference symbol */
 
@@ -640,7 +642,7 @@ CV_ANNOTATION_REFERENCE_SYMBOL_STRUCT
 
 void cv_annotation_reference_symbol_dispose(struct cv_annotation_reference_symbol *item);
 void cv_annotation_reference_symbol_print(struct cv_annotation_reference_symbol *item, uint32_t depth, FILE *stream);
-void cv_annotation_reference_symbol_read(struct cv_annotation_reference_symbol *item, uint16_t symbol_type, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, FILE *file_stream);
+void cv_annotation_reference_symbol_read(struct cv_annotation_reference_symbol *item, uint16_t symbol_type, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, struct memory_stream *file_stream);
 
 /* ---------- CV trampoline type */
 
@@ -667,7 +669,7 @@ STRUCT_END(cv_trampoline_symbol)
 CV_TRAMPOLINE_SYMBOL_STRUCT
 
 void cv_trampoline_symbol_print(struct cv_trampoline_symbol *item, uint32_t depth, FILE *stream);
-void cv_trampoline_symbol_read(struct cv_trampoline_symbol *item, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, FILE *file_stream);
+void cv_trampoline_symbol_read(struct cv_trampoline_symbol *item, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, struct memory_stream *file_stream);
 
 /* ---------- CV export symbol */
 
@@ -682,7 +684,7 @@ CV_EXPORT_SYMBOL_STRUCT
 
 void cv_export_symbol_dispose(struct cv_export_symbol *item);
 void cv_export_symbol_print(struct cv_export_symbol *item, uint32_t depth, FILE *stream);
-void cv_export_symbol_read(struct cv_export_symbol *item, uint16_t symbol_type, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, FILE *file_stream);
+void cv_export_symbol_read(struct cv_export_symbol *item, uint16_t symbol_type, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, struct memory_stream *file_stream);
 
 /* ---------- CV local symbol */
 
@@ -697,7 +699,7 @@ CV_LOCAL_SYMBOL_STRUCT
 
 void cv_local_symbol_dispose(struct cv_local_symbol *item);
 void cv_local_symbol_print(struct cv_local_symbol *item, uint32_t depth, FILE *stream);
-void cv_local_symbol_read(struct cv_local_symbol *item, uint16_t symbol_type, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, FILE *file_stream);
+void cv_local_symbol_read(struct cv_local_symbol *item, uint16_t symbol_type, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, struct memory_stream *file_stream);
 
 /* ---------- CV build info symbol */
 
@@ -709,7 +711,7 @@ STRUCT_END(cv_build_info_symbol)
 CV_BUILD_INFO_SYMBOL_STRUCT
 
 void cv_build_info_symbol_print(struct cv_build_info_symbol *item, uint32_t depth, FILE *stream);
-void cv_build_info_symbol_read(struct cv_build_info_symbol *item, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, FILE *file_stream);
+void cv_build_info_symbol_read(struct cv_build_info_symbol *item, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, struct memory_stream *file_stream);
 
 /* ---------- CV annotation type */
 
@@ -746,7 +748,7 @@ STRUCT_END(cv_annotation_code_and_line_offsets)
 CV_ANNOTATION_CODE_AND_LINE_OFFSETS_STRUCT
 
 void cv_annotation_code_and_line_offsets_print(struct cv_annotation_code_and_line_offsets *item, uint32_t depth, FILE *stream);
-void cv_annotation_code_and_line_offsets_read(struct cv_annotation_code_and_line_offsets *item, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, FILE *file_stream);
+void cv_annotation_code_and_line_offsets_read(struct cv_annotation_code_and_line_offsets *item, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, struct memory_stream *file_stream);
 
 /* ---------- CV annotation code length and offset */
 
@@ -785,7 +787,7 @@ STRUCT_END(cv_annotation)
 CV_ANNOTATION_STRUCT
 
 void cv_annotation_print(struct cv_annotation *item, uint32_t depth, FILE *stream);
-void cv_annotation_read(struct cv_annotation *item, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, FILE *file_stream);
+void cv_annotation_read(struct cv_annotation *item, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, struct memory_stream *file_stream);
 
 /* ---------- CV annotations */
 
@@ -799,7 +801,7 @@ CV_ANNOTATIONS_STRUCT
 
 void cv_annotations_dispose(struct cv_annotations *item);
 void cv_annotations_print(struct cv_annotations *item, uint32_t depth, FILE *stream);
-void cv_annotations_read(struct cv_annotations *item, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, uint32_t size, FILE *file_stream);
+void cv_annotations_read(struct cv_annotations *item, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, uint32_t size, struct memory_stream *file_stream);
 
 /* ---------- CV inline site symbol */
 
@@ -816,7 +818,7 @@ CV_INLINE_SITE_SYMBOL_STRUCT
 
 void cv_inline_site_symbol_dispose(struct cv_inline_site_symbol *item);
 void cv_inline_site_symbol_print(struct cv_inline_site_symbol *item, uint32_t depth, FILE *stream);
-void cv_inline_site_symbol_read(struct cv_inline_site_symbol *item, uint16_t symbol_type, uint32_t symbol_size, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, FILE *file_stream);
+void cv_inline_site_symbol_read(struct cv_inline_site_symbol *item, uint16_t symbol_type, uint32_t symbol_size, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, struct memory_stream *file_stream);
 
 /* ---------- CV label symbol */
 
@@ -831,7 +833,7 @@ CV_LABEL_SYMBOL_STRUCT
 
 void cv_label_symbol_dispose(struct cv_label_symbol *item);
 void cv_label_symbol_print(struct cv_label_symbol *item, uint32_t depth, FILE *stream);
-void cv_label_symbol_read(struct cv_label_symbol *item, uint16_t symbol_type, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, FILE *file_stream);
+void cv_label_symbol_read(struct cv_label_symbol *item, uint16_t symbol_type, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, struct memory_stream *file_stream);
 
 /* ---------- CV block symbol */
 
@@ -848,7 +850,7 @@ CV_BLOCK_SYMBOL_STRUCT
 
 void cv_block_symbol_dispose(struct cv_block_symbol *item);
 void cv_block_symbol_print(struct cv_block_symbol *item, uint32_t depth, FILE *stream);
-void cv_block_symbol_read(struct cv_block_symbol *item, uint16_t symbol_type, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, FILE *file_stream);
+void cv_block_symbol_read(struct cv_block_symbol *item, uint16_t symbol_type, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, struct memory_stream *file_stream);
 
 /* ---------- CV register relative symbol */
 
@@ -864,7 +866,7 @@ CV_REGISTER_RELATIVE_SYMBOL_STRUCT
 
 void cv_register_relative_symbol_dispose(struct cv_register_relative_symbol *item);
 void cv_register_relative_symbol_print(struct cv_register_relative_symbol *item, uint32_t depth, FILE *stream);
-void cv_register_relative_symbol_read(struct cv_register_relative_symbol *item, uint16_t symbol_type, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, FILE *file_stream);
+void cv_register_relative_symbol_read(struct cv_register_relative_symbol *item, uint16_t symbol_type, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, struct memory_stream *file_stream);
 
 /* ---------- CV thunk symbol */
 
@@ -883,7 +885,7 @@ CV_THUNK_SYMBOL_STRUCT
 
 void cv_thunk_symbol_dispose(struct cv_thunk_symbol *item);
 void cv_thunk_symbol_print(struct cv_thunk_symbol *item, uint32_t depth, FILE *stream);
-void cv_thunk_symbol_read(struct cv_thunk_symbol *item, uint16_t symbol_type, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, FILE *file_stream);
+void cv_thunk_symbol_read(struct cv_thunk_symbol *item, uint16_t symbol_type, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, struct memory_stream *file_stream);
 
 /* ---------- CV separated code symbol */
 
@@ -900,7 +902,7 @@ STRUCT_END(cv_separated_code_symbol)
 CV_SEPARATED_CODE_SYMBOL_STRUCT
 
 void cv_separated_code_symbol_print(struct cv_separated_code_symbol *item, uint32_t depth, FILE *stream);
-void cv_separated_code_symbol_read(struct cv_separated_code_symbol *item, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, FILE *file_stream);
+void cv_separated_code_symbol_read(struct cv_separated_code_symbol *item, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, struct memory_stream *file_stream);
 
 /* ---------- CV cookie type */
 
@@ -929,7 +931,7 @@ STRUCT_END(cv_frame_cookie_symbol)
 CV_FRAME_COOKIE_SYMBOL_STRUCT
 
 void cv_frame_cookie_symbol_print(struct cv_frame_cookie_symbol *item, uint32_t depth, FILE *stream);
-void cv_frame_cookie_symbol_read(struct cv_frame_cookie_symbol *item, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, FILE *file_stream);
+void cv_frame_cookie_symbol_read(struct cv_frame_cookie_symbol *item, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, struct memory_stream *file_stream);
 
 /* ---------- CV frame proc flags */
 
@@ -979,7 +981,7 @@ STRUCT_END(cv_frame_proc_symbol)
 CV_FRAME_PROC_SYMBOL_STRUCT
 
 void cv_frame_proc_symbol_print(struct cv_frame_proc_symbol *item, uint32_t depth, FILE *stream);
-void cv_frame_proc_symbol_read(struct cv_frame_proc_symbol *item, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, FILE *file_stream);
+void cv_frame_proc_symbol_read(struct cv_frame_proc_symbol *item, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, struct memory_stream *file_stream);
 
 /* ---------- CV call site info symbol */
 
@@ -993,7 +995,7 @@ STRUCT_END(cv_call_site_info_symbol)
 CV_CALL_SITE_INFO_SYMBOL_STRUCT
 
 void cv_call_site_info_symbol_print(struct cv_call_site_info_symbol *item, uint32_t depth, FILE *stream);
-void cv_call_site_info_symbol_read(struct cv_call_site_info_symbol *item, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, FILE *file_stream);
+void cv_call_site_info_symbol_read(struct cv_call_site_info_symbol *item, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, struct memory_stream *file_stream);
 
 /* ---------- CV heap alloc site symbol */
 
@@ -1007,7 +1009,7 @@ STRUCT_END(cv_heap_alloc_site_symbol)
 CV_HEAP_ALLOC_SITE_SYMBOL_STRUCT
 
 void cv_heap_alloc_site_symbol_print(struct cv_heap_alloc_site_symbol *item, uint32_t depth, FILE *stream);
-void cv_heap_alloc_site_symbol_read(struct cv_heap_alloc_site_symbol *item, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, FILE *file_stream);
+void cv_heap_alloc_site_symbol_read(struct cv_heap_alloc_site_symbol *item, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, struct memory_stream *file_stream);
 
 /* ---------- CV env block flags */
 
@@ -1035,7 +1037,7 @@ CV_ENV_BLOCK_SYMBOL_STRUCT
 
 void cv_env_block_symbol_dispose(struct cv_env_block_symbol *item);
 void cv_env_block_symbol_print(struct cv_env_block_symbol *item, uint32_t depth, FILE *stream);
-void cv_env_block_symbol_read(struct cv_env_block_symbol *item, uint16_t symbol_type, uint32_t symbol_size, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, FILE *file_stream);
+void cv_env_block_symbol_read(struct cv_env_block_symbol *item, uint16_t symbol_type, uint32_t symbol_size, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, struct memory_stream *file_stream);
 
 /* ---------- CV local variable flags */
 
@@ -1072,7 +1074,7 @@ STRUCT_END(cv_file_static_symbol)
 CV_FILE_STATIC_SYMBOL_STRUCT
 
 void cv_file_static_symbol_print(struct cv_file_static_symbol *item, uint32_t depth, FILE *stream);
-void cv_file_static_symbol_read(struct cv_file_static_symbol *item, uint16_t symbol_type, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, FILE *file_stream);
+void cv_file_static_symbol_read(struct cv_file_static_symbol *item, uint16_t symbol_type, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, struct memory_stream *file_stream);
 
 /* ---------- CV section symbol */
 
@@ -1091,7 +1093,7 @@ CV_SECTION_SYMBOL_STRUCT
 
 void cv_section_symbol_dispose(struct cv_section_symbol *item);
 void cv_section_symbol_print(struct cv_section_symbol *item, uint32_t depth, FILE *stream);
-void cv_section_symbol_read(struct cv_section_symbol *item, uint16_t symbol_type, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, FILE *file_stream);
+void cv_section_symbol_read(struct cv_section_symbol *item, uint16_t symbol_type, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, struct memory_stream *file_stream);
 
 /* ---------- CV coff group symbol */
 
@@ -1107,7 +1109,7 @@ CV_COFF_GROUP_SYMBOL_STRUCT
 
 void cv_coff_group_symbol_dispose(struct cv_coff_group_symbol *item);
 void cv_coff_group_symbol_print(struct cv_coff_group_symbol *item, uint32_t depth, FILE *stream);
-void cv_coff_group_symbol_read(struct cv_coff_group_symbol *item, uint16_t symbol_type, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, FILE *file_stream);
+void cv_coff_group_symbol_read(struct cv_coff_group_symbol *item, uint16_t symbol_type, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, struct memory_stream *file_stream);
 
 /* ---------- CV annotation symbol */
 
@@ -1122,7 +1124,7 @@ CV_ANNOTATION_SYMBOL_STRUCT
 
 void cv_annotation_symbol_dispose(struct cv_annotation_symbol *item);
 void cv_annotation_symbol_print(struct cv_annotation_symbol *item, uint32_t depth, FILE *stream);
-void cv_annotation_symbol_read(struct cv_annotation_symbol *item, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, FILE *file_stream);
+void cv_annotation_symbol_read(struct cv_annotation_symbol *item, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, struct memory_stream *file_stream);
 
 /* ---------- CV address range */
 
@@ -1135,7 +1137,7 @@ STRUCT_END(cv_address_range)
 CV_ADDRESS_RANGE_STRUCT
 
 void cv_address_range_print(struct cv_address_range *item, uint32_t depth, FILE *stream);
-void cv_address_range_read(struct cv_address_range *item, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, FILE *file_stream);
+void cv_address_range_read(struct cv_address_range *item, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, struct memory_stream *file_stream);
 
 /* ---------- CV address gap */
 
@@ -1163,7 +1165,7 @@ CV_DEF_RANGE_SYMBOL_STRUCT
 
 void cv_def_range_symbol_dispose(struct cv_def_range_symbol *item);
 void cv_def_range_symbol_print(struct cv_def_range_symbol *item, uint32_t depth, FILE *stream);
-void cv_def_range_symbol_read(struct cv_def_range_symbol *item, uint32_t symbol_size, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, FILE *file_stream);
+void cv_def_range_symbol_read(struct cv_def_range_symbol *item, uint32_t symbol_size, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, struct memory_stream *file_stream);
 
 /* ---------- CV def range subfield symbol */
 
@@ -1180,7 +1182,7 @@ CV_DEF_RANGE_SUBFIELD_SYMBOL_STRUCT
 
 void cv_def_range_subfield_symbol_dispose(struct cv_def_range_subfield_symbol *item);
 void cv_def_range_subfield_symbol_print(struct cv_def_range_subfield_symbol *item, uint32_t depth, FILE *stream);
-void cv_def_range_subfield_symbol_read(struct cv_def_range_subfield_symbol *item, uint32_t symbol_size, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, FILE *file_stream);
+void cv_def_range_subfield_symbol_read(struct cv_def_range_subfield_symbol *item, uint32_t symbol_size, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, struct memory_stream *file_stream);
 
 /* ---------- CV range attributes */
 
@@ -1210,7 +1212,7 @@ CV_DEF_RANGE_REGISTER_SYMBOL_STRUCT
 
 void cv_def_range_register_symbol_dispose(struct cv_def_range_register_symbol *item);
 void cv_def_range_register_symbol_print(struct cv_def_range_register_symbol *item, uint32_t depth, FILE *stream);
-void cv_def_range_register_symbol_read(struct cv_def_range_register_symbol *item, uint32_t symbol_size, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, FILE *file_stream);
+void cv_def_range_register_symbol_read(struct cv_def_range_register_symbol *item, uint32_t symbol_size, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, struct memory_stream *file_stream);
 
 /* ---------- CV def range frame pointer rel symbol */
 
@@ -1226,7 +1228,7 @@ CV_DEF_RANGE_FRAME_POINTER_REL_SYMBOL_STRUCT
 
 void cv_def_range_frame_pointer_rel_symbol_dispose(struct cv_def_range_frame_pointer_rel_symbol *item);
 void cv_def_range_frame_pointer_rel_symbol_print(struct cv_def_range_frame_pointer_rel_symbol *item, uint32_t depth, FILE *stream);
-void cv_def_range_frame_pointer_rel_symbol_read(struct cv_def_range_frame_pointer_rel_symbol *item, uint16_t symbol_type, uint32_t symbol_size, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, FILE *file_stream);
+void cv_def_range_frame_pointer_rel_symbol_read(struct cv_def_range_frame_pointer_rel_symbol *item, uint16_t symbol_type, uint32_t symbol_size, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, struct memory_stream *file_stream);
 
 /* ---------- CV def range subfield register packed data */
 
@@ -1259,7 +1261,7 @@ CV_DEF_RANGE_SUBFIELD_REGISTER_SYMBOL_STRUCT
 
 void cv_def_range_subfield_register_symbol_dispose(struct cv_def_range_subfield_register_symbol *item);
 void cv_def_range_subfield_register_symbol_print(struct cv_def_range_subfield_register_symbol *item, uint32_t depth, FILE *stream);
-void cv_def_range_subfield_register_symbol_read(struct cv_def_range_subfield_register_symbol *item, uint32_t symbol_size, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, FILE *file_stream);
+void cv_def_range_subfield_register_symbol_read(struct cv_def_range_subfield_register_symbol *item, uint32_t symbol_size, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, struct memory_stream *file_stream);
 
 /* ---------- CV def range register rel packed data */
 
@@ -1291,7 +1293,7 @@ CV_DEF_RANGE_REGISTER_REL_SYMBOL_STRUCT
 
 void cv_def_range_register_rel_symbol_dispose(struct cv_def_range_register_rel_symbol *item);
 void cv_def_range_register_rel_symbol_print(struct cv_def_range_register_rel_symbol *item, uint32_t depth, FILE *stream);
-void cv_def_range_register_rel_symbol_read(struct cv_def_range_register_rel_symbol *item, uint32_t symbol_size, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, FILE *file_stream);
+void cv_def_range_register_rel_symbol_read(struct cv_def_range_register_rel_symbol *item, uint32_t symbol_size, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, struct memory_stream *file_stream);
 
 /* ---------- CV hlsl register type */
 
@@ -1377,7 +1379,7 @@ CV_DEF_RANGE_HLSL_SYMBOL_STRUCT
 
 void cv_def_range_hlsl_symbol_dispose(struct cv_def_range_hlsl_symbol *item);
 void cv_def_range_hlsl_symbol_print(struct cv_def_range_hlsl_symbol *item, uint32_t depth, FILE *stream);
-void cv_def_range_hlsl_symbol_read(struct cv_def_range_hlsl_symbol *item, uint32_t symbol_size, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, FILE *file_stream);
+void cv_def_range_hlsl_symbol_read(struct cv_def_range_hlsl_symbol *item, uint32_t symbol_size, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, struct memory_stream *file_stream);
 
 /* ---------- CV local dpc group shared symbol */
 
@@ -1394,7 +1396,7 @@ CV_LOCAL_DPC_GROUP_SHARED_SYMBOL_STRUCT
 
 void cv_local_dpc_group_shared_symbol_dispose(struct cv_local_dpc_group_shared_symbol *item);
 void cv_local_dpc_group_shared_symbol_print(struct cv_local_dpc_group_shared_symbol *item, uint32_t depth, FILE *stream);
-void cv_local_dpc_group_shared_symbol_read(struct cv_local_dpc_group_shared_symbol *item, uint16_t symbol_type, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, FILE *file_stream);
+void cv_local_dpc_group_shared_symbol_read(struct cv_local_dpc_group_shared_symbol *item, uint16_t symbol_type, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, struct memory_stream *file_stream);
 
 /* ---------- CV dpc symbol tag map entry */
 
@@ -1421,7 +1423,7 @@ CV_DPC_SYMBOL_TAG_MAP_SYMBOL_STRUCT
 
 void cv_dpc_symbol_tag_map_symbol_dispose(struct cv_dpc_symbol_tag_map_symbol *item);
 void cv_dpc_symbol_tag_map_symbol_print(struct cv_dpc_symbol_tag_map_symbol *item, uint32_t depth, FILE *stream);
-void cv_dpc_symbol_tag_map_symbol_read(struct cv_dpc_symbol_tag_map_symbol *item, uint32_t symbol_size, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, FILE *file_stream);
+void cv_dpc_symbol_tag_map_symbol_read(struct cv_dpc_symbol_tag_map_symbol *item, uint32_t symbol_size, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, struct memory_stream *file_stream);
 
 /* ---------- CV function list symbol */
 
@@ -1435,7 +1437,7 @@ CV_FUNCTION_LIST_SYMBOL_STRUCT
 
 void cv_function_list_symbol_dispose(struct cv_function_list_symbol *item);
 void cv_function_list_symbol_print(struct cv_function_list_symbol *item, uint32_t depth, FILE *stream);
-void cv_function_list_symbol_read(struct cv_function_list_symbol *item, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, FILE *file_stream);
+void cv_function_list_symbol_read(struct cv_function_list_symbol *item, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, struct memory_stream *file_stream);
 
 /* ---------- CV pogo data symbol */
 
@@ -1450,7 +1452,7 @@ STRUCT_END(cv_pogo_data_symbol)
 CV_POGO_DATA_SYMBOL_STRUCT
 
 void cv_pogo_data_symbol_print(struct cv_pogo_data_symbol *item, uint32_t depth, FILE *stream);
-void cv_pogo_data_symbol_read(struct cv_pogo_data_symbol *item, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, FILE *file_stream);
+void cv_pogo_data_symbol_read(struct cv_pogo_data_symbol *item, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, struct memory_stream *file_stream);
 
 /* ---------- CV arm switch table symbol */
 
@@ -1470,7 +1472,7 @@ CV_ARM_SWITCH_TABLE_SYMBOL_STRUCT
 static_assert(sizeof(struct cv_arm_switch_table_symbol) == 24, "invalid cv_arm_switch_table_symbol size");
 
 void cv_arm_switch_table_symbol_print(struct cv_arm_switch_table_symbol *item, uint32_t depth, FILE *stream);
-void cv_arm_switch_table_symbol_read(struct cv_arm_switch_table_symbol *item, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, FILE *file_stream);
+void cv_arm_switch_table_symbol_read(struct cv_arm_switch_table_symbol *item, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, struct memory_stream *file_stream);
 
 /* ---------- CV symbol */
 
@@ -1544,4 +1546,4 @@ CV_SYMBOLS_STRUCT
 
 void cv_symbols_dispose(struct cv_symbols *item);
 void cv_symbols_print(struct cv_symbols *item, uint32_t depth, FILE *stream);
-void cv_symbols_read(struct cv_symbols *item, struct msf *msf, struct msf_stream *msf_stream, uint32_t size, uint32_t *out_offset, FILE *file_stream);
+void cv_symbols_read(struct cv_symbols *item, struct msf *msf, struct msf_stream *msf_stream, uint32_t size, uint32_t *out_offset, struct memory_stream *file_stream);

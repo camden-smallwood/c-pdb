@@ -33,7 +33,7 @@ void cv_pe_section_offset_print(struct cv_pe_section_offset *item, uint32_t dept
     CV_PE_SECTION_OFFSET_STRUCT
 }
 
-void cv_pe_section_offset_read(struct cv_pe_section_offset *item, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, FILE *file_stream)
+void cv_pe_section_offset_read(struct cv_pe_section_offset *item, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, struct memory_stream *file_stream)
 {
     assert(item);
     assert(msf);
@@ -66,7 +66,7 @@ void cv_obj_name_symbol_read(
     struct msf *msf,
     struct msf_stream *msf_stream,
     uint32_t *out_offset,
-    FILE *file_stream)
+    struct memory_stream *file_stream)
 {
     assert(item);
     assert(msf);
@@ -99,7 +99,7 @@ void cv_register_variable_symbol_read(
     struct msf *msf,
     struct msf_stream *msf_stream,
     uint32_t *out_offset,
-    FILE *file_stream)
+    struct memory_stream *file_stream)
 {
     assert(item);
     assert(msf);
@@ -133,7 +133,7 @@ void cv_constant_symbol_read(
     struct msf *msf,
     struct msf_stream *msf_stream,
     uint32_t *out_offset,
-    FILE *file_stream)
+    struct memory_stream *file_stream)
 {
     assert(item);
     assert(msf);
@@ -167,7 +167,7 @@ void cv_user_defined_type_symbol_read(
     struct msf *msf,
     struct msf_stream *msf_stream,
     uint32_t *out_offset,
-    FILE *file_stream)
+    struct memory_stream *file_stream)
 {
     assert(item);
     assert(msf);
@@ -200,7 +200,7 @@ void cv_multi_register_entry_read(
     struct msf *msf,
     struct msf_stream *msf_stream,
     uint32_t *out_offset,
-    FILE *file_stream)
+    struct memory_stream *file_stream)
 {
     assert(item);
     assert(msf);
@@ -236,7 +236,7 @@ void cv_multi_register_variable_symbol_read(
     struct msf *msf,
     struct msf_stream *msf_stream,
     uint32_t *out_offset,
-    FILE *file_stream)
+    struct memory_stream *file_stream)
 {
     assert(item);
     assert(msf);
@@ -288,7 +288,7 @@ void cv_data_symbol_read(
     struct msf *msf,
     struct msf_stream *msf_stream,
     uint32_t *out_offset,
-    FILE *file_stream)
+    struct memory_stream *file_stream)
 {
     assert(item);
     assert(msf);
@@ -322,7 +322,7 @@ void cv_public_symbol_read(
     struct msf *msf,
     struct msf_stream *msf_stream,
     uint32_t *out_offset,
-    FILE *file_stream)
+    struct memory_stream *file_stream)
 {
     assert(item);
     assert(msf);
@@ -356,7 +356,7 @@ void cv_procedure_symbol_read(
     struct msf *msf,
     struct msf_stream *msf_stream,
     uint32_t *out_offset,
-    FILE *file_stream)
+    struct memory_stream *file_stream)
 {
     assert(item);
     assert(msf);
@@ -397,7 +397,7 @@ void cv_thread_storage_symbol_read(
     struct msf *msf,
     struct msf_stream *msf_stream,
     uint32_t *out_offset,
-    FILE *file_stream)
+    struct memory_stream *file_stream)
 {
     assert(item);
     assert(msf);
@@ -431,7 +431,7 @@ void cv_compiler_version_read(
     struct msf *msf,
     struct msf_stream *msf_stream,
     uint32_t *out_offset,
-    FILE *file_stream)
+    struct memory_stream *file_stream)
 {
     assert(item);
     assert(msf);
@@ -481,7 +481,7 @@ void cv_compile_flags_symbol_read(
     struct msf *msf,
     struct msf_stream *msf_stream,
     uint32_t *out_offset,
-    FILE *file_stream)
+    struct memory_stream *file_stream)
 {
     assert(item);
     assert(msf);
@@ -564,7 +564,7 @@ void cv_using_namespace_symbol_read(
     struct msf *msf,
     struct msf_stream *msf_stream,
     uint32_t *out_offset,
-    FILE *file_stream)
+    struct memory_stream *file_stream)
 {
     assert(item);
     assert(msf);
@@ -596,7 +596,7 @@ void cv_procedure_reference_symbol_read(
     struct msf *msf,
     struct msf_stream *msf_stream,
     uint32_t *out_offset,
-    FILE *file_stream)
+    struct memory_stream *file_stream)
 {
     assert(item);
     assert(msf);
@@ -631,7 +631,7 @@ void cv_data_reference_symbol_read(
     struct msf *msf,
     struct msf_stream *msf_stream,
     uint32_t *out_offset,
-    FILE *file_stream)
+    struct memory_stream *file_stream)
 {
     assert(item);
     assert(msf);
@@ -666,7 +666,7 @@ void cv_annotation_reference_symbol_read(
     struct msf *msf,
     struct msf_stream *msf_stream,
     uint32_t *out_offset,
-    FILE *file_stream)
+    struct memory_stream *file_stream)
 {
     assert(item);
     assert(msf);
@@ -700,7 +700,7 @@ void cv_trampoline_symbol_read(
     struct msf *msf,
     struct msf_stream *msf_stream,
     uint32_t *out_offset,
-    FILE *file_stream)
+    struct memory_stream *file_stream)
 {
     assert(item);
     assert(msf);
@@ -735,7 +735,7 @@ void cv_export_symbol_read(
     struct msf *msf,
     struct msf_stream *msf_stream,
     uint32_t *out_offset,
-    FILE *file_stream)
+    struct memory_stream *file_stream)
 {
     assert(item);
     assert(msf);
@@ -769,7 +769,7 @@ void cv_local_symbol_read(
     struct msf *msf,
     struct msf_stream *msf_stream,
     uint32_t *out_offset,
-    FILE *file_stream)
+    struct memory_stream *file_stream)
 {
     assert(item);
     assert(msf);
@@ -795,7 +795,7 @@ void cv_build_info_symbol_read(
     struct msf *msf,
     struct msf_stream *msf_stream,
     uint32_t *out_offset,
-    FILE *file_stream)
+    struct memory_stream *file_stream)
 {
     assert(item);
     assert(msf);
@@ -842,7 +842,7 @@ void cv_annotation_read(
     struct msf *msf,
     struct msf_stream *msf_stream,
     uint32_t *out_offset,
-    FILE *file_stream)
+    struct memory_stream *file_stream)
 {
     assert(item);
     assert(msf);
@@ -952,7 +952,7 @@ void cv_annotations_read(
     struct msf_stream *msf_stream,
     uint32_t *out_offset,
     uint32_t size,
-    FILE *file_stream)
+    struct memory_stream *file_stream)
 {
     assert(item);
     assert(msf);
@@ -999,7 +999,7 @@ void cv_inline_site_symbol_read(
     struct msf *msf,
     struct msf_stream *msf_stream,
     uint32_t *out_offset,
-    FILE *file_stream)
+    struct memory_stream *file_stream)
 {
     assert(item);
     assert(msf);
@@ -1040,7 +1040,7 @@ void cv_label_symbol_read(
     struct msf *msf,
     struct msf_stream *msf_stream,
     uint32_t *out_offset,
-    FILE *file_stream)
+    struct memory_stream *file_stream)
 {
     assert(item);
     assert(msf);
@@ -1074,7 +1074,7 @@ void cv_block_symbol_read(
     struct msf *msf,
     struct msf_stream *msf_stream,
     uint32_t *out_offset,
-    FILE *file_stream)
+    struct memory_stream *file_stream)
 {
     assert(item);
     assert(msf);
@@ -1110,7 +1110,7 @@ void cv_register_relative_symbol_read(
     struct msf *msf,
     struct msf_stream *msf_stream,
     uint32_t *out_offset,
-    FILE *file_stream)
+    struct memory_stream *file_stream)
 {
     assert(item);
     assert(msf);
@@ -1145,7 +1145,7 @@ void cv_thunk_symbol_read(
     struct msf *msf,
     struct msf_stream *msf_stream,
     uint32_t *out_offset,
-    FILE *file_stream)
+    struct memory_stream *file_stream)
 {
     assert(item);
     assert(msf);
@@ -1175,7 +1175,7 @@ void cv_separated_code_symbol_read(
     struct msf *msf,
     struct msf_stream *msf_stream,
     uint32_t *out_offset,
-    FILE *file_stream)
+    struct memory_stream *file_stream)
 {
     assert(item);
     assert(msf);
@@ -1212,7 +1212,7 @@ void cv_frame_cookie_symbol_read(
     struct msf *msf,
     struct msf_stream *msf_stream,
     uint32_t *out_offset,
-    FILE *file_stream)
+    struct memory_stream *file_stream)
 {
     assert(item);
     assert(msf);
@@ -1247,7 +1247,7 @@ void cv_frame_proc_symbol_read(
     struct msf *msf,
     struct msf_stream *msf_stream,
     uint32_t *out_offset,
-    FILE *file_stream)
+    struct memory_stream *file_stream)
 {
     assert(item);
     assert(msf);
@@ -1276,7 +1276,7 @@ void cv_call_site_info_symbol_read(
     struct msf *msf,
     struct msf_stream *msf_stream,
     uint32_t *out_offset,
-    FILE *file_stream)
+    struct memory_stream *file_stream)
 {
     assert(item);
     assert(msf);
@@ -1302,7 +1302,7 @@ void cv_heap_alloc_site_symbol_read(
     struct msf *msf,
     struct msf_stream *msf_stream,
     uint32_t *out_offset,
-    FILE *file_stream)
+    struct memory_stream *file_stream)
 {
     assert(item);
     assert(msf);
@@ -1347,7 +1347,7 @@ void cv_env_block_symbol_read(
     struct msf *msf,
     struct msf_stream *msf_stream,
     uint32_t *out_offset,
-    FILE *file_stream)
+    struct memory_stream *file_stream)
 {
     assert(item);
     assert(msf);
@@ -1396,7 +1396,7 @@ void cv_file_static_symbol_read(
     struct msf *msf,
     struct msf_stream *msf_stream,
     uint32_t *out_offset,
-    FILE *file_stream)
+    struct memory_stream *file_stream)
 {
     assert(item);
     assert(msf);
@@ -1431,7 +1431,7 @@ void cv_section_symbol_read(
     struct msf *msf,
     struct msf_stream *msf_stream,
     uint32_t *out_offset,
-    FILE *file_stream)
+    struct memory_stream *file_stream)
 {
     assert(item);
     assert(msf);
@@ -1469,7 +1469,7 @@ void cv_coff_group_symbol_read(
     struct msf *msf,
     struct msf_stream *msf_stream,
     uint32_t *out_offset,
-    FILE *file_stream)
+    struct memory_stream *file_stream)
 {
     assert(item);
     assert(msf);
@@ -1506,7 +1506,7 @@ void cv_annotation_symbol_read(
     struct msf *msf,
     struct msf_stream *msf_stream,
     uint32_t *out_offset,
-    FILE *file_stream)
+    struct memory_stream *file_stream)
 {
     assert(item);
     assert(msf);
@@ -1542,7 +1542,7 @@ void cv_address_range_read(
     struct msf *msf,
     struct msf_stream *msf_stream,
     uint32_t *out_offset,
-    FILE *file_stream)
+    struct memory_stream *file_stream)
 {
     assert(item);
     assert(msf);
@@ -1583,7 +1583,7 @@ void cv_def_range_symbol_read(
     struct msf *msf,
     struct msf_stream *msf_stream,
     uint32_t *out_offset,
-    FILE *file_stream)
+    struct memory_stream *file_stream)
 {
     assert(item);
     assert(msf);
@@ -1625,7 +1625,7 @@ void cv_def_range_subfield_symbol_read(
     struct msf *msf,
     struct msf_stream *msf_stream,
     uint32_t *out_offset,
-    FILE *file_stream)
+    struct memory_stream *file_stream)
 {
     assert(item);
     assert(msf);
@@ -1676,7 +1676,7 @@ void cv_def_range_register_symbol_read(
     struct msf *msf,
     struct msf_stream *msf_stream,
     uint32_t *out_offset,
-    FILE *file_stream)
+    struct memory_stream *file_stream)
 {
     assert(item);
     assert(msf);
@@ -1720,7 +1720,7 @@ void cv_def_range_frame_pointer_rel_symbol_read(
     struct msf *msf,
     struct msf_stream *msf_stream,
     uint32_t *out_offset,
-    FILE *file_stream)
+    struct memory_stream *file_stream)
 {
     assert(item);
     assert(msf);
@@ -1774,7 +1774,7 @@ void cv_def_range_subfield_register_symbol_read(
     struct msf *msf,
     struct msf_stream *msf_stream,
     uint32_t *out_offset,
-    FILE *file_stream)
+    struct memory_stream *file_stream)
 {
     assert(item);
     assert(msf);
@@ -1826,7 +1826,7 @@ void cv_def_range_register_rel_symbol_read(
     struct msf *msf,
     struct msf_stream *msf_stream,
     uint32_t *out_offset,
-    FILE *file_stream)
+    struct memory_stream *file_stream)
 {
     assert(item);
     assert(msf);
@@ -1886,7 +1886,7 @@ void cv_def_range_hlsl_symbol_read(
     struct msf *msf,
     struct msf_stream *msf_stream,
     uint32_t *out_offset,
-    FILE *file_stream)
+    struct memory_stream *file_stream)
 {
     assert(item);
     assert(msf);
@@ -1947,7 +1947,7 @@ void cv_local_dpc_group_shared_symbol_read(
     struct msf *msf,
     struct msf_stream *msf_stream,
     uint32_t *out_offset,
-    FILE *file_stream)
+    struct memory_stream *file_stream)
 {
     assert(item);
     assert(msf);
@@ -1992,7 +1992,7 @@ void cv_dpc_symbol_tag_map_symbol_read(
     struct msf *msf,
     struct msf_stream *msf_stream,
     uint32_t *out_offset,
-    FILE *file_stream)
+    struct memory_stream *file_stream)
 {
     assert(item);
     assert(msf);
@@ -2034,7 +2034,7 @@ void cv_function_list_symbol_read(
     struct msf *msf,
     struct msf_stream *msf_stream,
     uint32_t *out_offset,
-    FILE *file_stream)
+    struct memory_stream *file_stream)
 {
     assert(item);
     assert(msf);
@@ -2064,7 +2064,7 @@ void cv_pogo_data_symbol_read(
     struct msf *msf,
     struct msf_stream *msf_stream,
     uint32_t *out_offset,
-    FILE *file_stream)
+    struct memory_stream *file_stream)
 {
     assert(item);
     assert(msf);
@@ -2091,7 +2091,7 @@ void cv_arm_switch_table_symbol_read(
     struct msf *msf,
     struct msf_stream *msf_stream,
     uint32_t *out_offset,
-    FILE *file_stream)
+    struct memory_stream *file_stream)
 {
     assert(item);
     assert(msf);
@@ -2370,7 +2370,7 @@ void cv_symbols_read(
     struct msf_stream *msf_stream,
     uint32_t symbols_size,
     uint32_t *out_offset,
-    FILE *file_stream)
+    struct memory_stream *file_stream)
 {
     assert(item);
     assert(msf);

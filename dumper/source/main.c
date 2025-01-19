@@ -5,16 +5,20 @@
 #include <string.h>
 
 #ifdef _WIN32
-#include <direct.h>
-#define strcasecmp stricmp
+#   include <direct.h>
+#   define strcasecmp stricmp
 #else
-#include <sys/stat.h>
+#   include <unistd.h>
+#   include <fcntl.h>
+#   include <sys/stat.h>
+#   include <sys/mman.h>
 #endif
 
 #include "pdb.h"
 #include "cpp.h"
 #include "utils.h"
 #include "path.h"
+#include "memory_stream.h"
 
 /* ---------- private prototypes */
 
@@ -107,6 +111,10 @@ static void main_initialize(int argc, const char **argv)
 {
     memset(&main_globals, 0, sizeof(main_globals));
 
+    //
+    // Parse the input arguments
+    //
+
     if (argc < 3 || argc > 4)
     {
         fprintf(stderr, "Usage: dumper <pdb-file> <output-dir> [base-address]\n");
@@ -119,17 +127,52 @@ static void main_initialize(int argc, const char **argv)
     if (argc >= 4)
         sscanf(argv[3], "%" SCNx64, &main_globals.base_address);
 
-    FILE *pdb_file = fopen(main_globals.pdb_path, "rb");
+    //
+    // Map the PDB file to memory
+    //
 
-    if (!pdb_file)
+    int fd = open(main_globals.pdb_path, O_RDONLY);
+    if (fd == -1)
     {
         fprintf(stderr, "ERROR: Failed to open \"%s\"\n", main_globals.pdb_path);
         exit(EXIT_FAILURE);
     }
 
-    pdb_data_read(&main_globals.pdb_data, pdb_file);
+    struct stat file_stats;
+    if (fstat(fd, &file_stats) == -1)
+    {
+        close(fd);
+        fprintf(stderr, "ERROR: Failed to get size of \"%s\"\n", main_globals.pdb_path);
+        exit(EXIT_FAILURE);
+    }
+    
+    void *pdb_file_memory = mmap(NULL, file_stats.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
+    if (pdb_file_memory == MAP_FAILED)
+    {
+        close(fd);
+        fprintf(stderr, "ERROR: Failed to map file to memory: \"%s\"\n", main_globals.pdb_path);
+        exit(EXIT_FAILURE);
+    }
 
-    fclose(pdb_file);
+    close(fd);
+
+    //
+    // Read the PDB data from the mapped memory
+    //
+
+    struct memory_stream file_stream = {
+        .address = pdb_file_memory,
+        .size = file_stats.st_size,
+        .position = 0,
+    };
+
+    pdb_data_read(&main_globals.pdb_data, &file_stream);
+
+    //
+    // Cleanup
+    //
+    
+    munmap(pdb_file_memory, file_stats.st_size);
 }
 
 static void main_dispose(void)

@@ -142,7 +142,7 @@ void ipi_symbol_print(struct ipi_symbol *item, uint32_t depth, FILE *stream)
     IPI_SYMBOL_STRUCT
 }
 
-void ipi_header_read(struct tpi_header *header, struct msf *msf, FILE *stream)
+void ipi_header_read(struct tpi_header *header, struct msf *msf, struct memory_stream *stream)
 {
     msf_stream_read_data(msf, &msf->streams[MSF_STREAM_IPI], 0, sizeof(*header), header, stream);
 }
@@ -152,7 +152,7 @@ void ipi_symbols_read(
     struct msf *msf,
     struct msf_stream *msf_stream,
     struct tpi_header *ipi_header,
-    FILE *file_stream)
+    struct memory_stream *file_stream)
 {
     assert(symbols);
     assert(msf);

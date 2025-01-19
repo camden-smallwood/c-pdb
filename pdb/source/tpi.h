@@ -4,6 +4,9 @@
 #include <stdio.h>
 #include "msf.h"
 
+#include "memory_stream.h"
+#include "macros_decl.h"
+
 /* ---------- TPI slice */
 
 #define TPI_SLICE_STRUCT \
@@ -38,7 +41,7 @@ STRUCT_END(tpi_header)
 TPI_HEADER_STRUCT
 static_assert(sizeof(struct tpi_header) == 56, "invalid tpi_header size");
 
-void tpi_header_read(struct msf *msf, struct tpi_header *out_header, FILE *stream);
+void tpi_header_read(struct msf *msf, struct tpi_header *out_header, struct memory_stream *stream);
 void tpi_header_print(struct tpi_header *header, uint32_t depth, FILE *stream);
 
 /* ---------- TPI leaf */
@@ -417,7 +420,7 @@ STRUCT_END(tpi_member)
 
 TPI_MEMBER_STRUCT
 
-void tpi_member_read(struct tpi_member *item, uint32_t leaf, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, FILE *file_stream);
+void tpi_member_read(struct tpi_member *item, uint32_t leaf, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, struct memory_stream *file_stream);
 void tpi_member_dispose(struct tpi_member *item);
 void tpi_member_print(struct tpi_member *item, uint32_t depth, FILE *stream);
 
@@ -681,7 +684,7 @@ STRUCT_END(tpi_enumerate_variant)
 
 TPI_ENUMERATE_VARIANT_STRUCT
 
-void tpi_enumerate_variant_read(struct tpi_enumerate_variant *variant, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, FILE *file_stream);
+void tpi_enumerate_variant_read(struct tpi_enumerate_variant *variant, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, struct memory_stream *file_stream);
 void tpi_enumerate_variant_print(struct tpi_enumerate_variant *variant, uint32_t depth, FILE *stream);
 char *tpi_enumerate_variant_to_string(struct tpi_enumerate_variant *variant);
 
@@ -817,7 +820,7 @@ STRUCT_END(tpi_member_function)
 TPI_MEMBER_FUNCTION_STRUCT
 static_assert(sizeof(struct tpi_member_function) == 24, "invalid tpi_member_function size");
 
-void tpi_member_function_read(struct tpi_member_function *item, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, FILE *file_stream);
+void tpi_member_function_read(struct tpi_member_function *item, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, struct memory_stream *file_stream);
 void tpi_member_function_print(struct tpi_member_function *item, uint32_t depth, FILE *stream);
 
 /* ---------- TPI overloaded method header */
@@ -971,7 +974,7 @@ STRUCT_END(tpi_nested_type)
 
 TPI_NESTED_TYPE_STRUCT
 
-void tpi_nested_type_read(struct tpi_nested_type *item, uint32_t leaf, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, FILE *file_stream);
+void tpi_nested_type_read(struct tpi_nested_type *item, uint32_t leaf, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, struct memory_stream *file_stream);
 void tpi_nested_type_dispose(struct tpi_nested_type *item);
 void tpi_nested_type_print(struct tpi_nested_type *item, uint32_t depth, FILE *stream);
 
@@ -1059,7 +1062,7 @@ STRUCT_END(tpi_class)
 
 TPI_CLASS_STRUCT
 
-void tpi_class_read(struct tpi_class *item, uint32_t leaf, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, FILE *file_stream);
+void tpi_class_read(struct tpi_class *item, uint32_t leaf, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, struct memory_stream *file_stream);
 void tpi_class_dispose(struct tpi_class *item);
 void tpi_class_print(struct tpi_class *item, uint32_t depth, FILE *stream);
 
@@ -1223,7 +1226,7 @@ STRUCT_END(tpi_symbol)
 
 TPI_SYMBOL_STRUCT
 
-void tpi_symbol_read(struct tpi_symbol *symbol, struct msf *msf, struct msf_stream *msf_stream, struct tpi_header *tpi_header, uint32_t *out_offset, FILE *file_stream);
+void tpi_symbol_read(struct tpi_symbol *symbol, struct msf *msf, struct msf_stream *msf_stream, struct tpi_header *tpi_header, uint32_t *out_offset, struct memory_stream *file_stream);
 void tpi_symbol_dispose(struct tpi_symbol *symbol);
 void tpi_symbol_print(struct tpi_symbol *symbol, uint32_t depth, FILE *stream);
 
@@ -1237,7 +1240,7 @@ STRUCT_END(tpi_symbols)
 
 TPI_SYMBOLS_STRUCT
 
-void tpi_symbols_read(struct tpi_symbols *symbols, struct msf *msf, struct msf_stream *msf_stream, struct tpi_header *tpi_header, FILE *file_stream);
+void tpi_symbols_read(struct tpi_symbols *symbols, struct msf *msf, struct msf_stream *msf_stream, struct tpi_header *tpi_header, struct memory_stream *file_stream);
 void tpi_symbols_dispose(struct tpi_symbols *symbols);
 void tpi_symbols_print(struct tpi_symbols *symbols, uint32_t depth, FILE *stream);
 

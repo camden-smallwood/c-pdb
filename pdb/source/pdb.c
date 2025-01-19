@@ -5,7 +5,7 @@
 
 #include "macros_print.h"
 
-void pdb_data_read(struct pdb_data *pdb_data, FILE *stream)
+void pdb_data_read(struct pdb_data *pdb_data, struct memory_stream *stream)
 {
     assert(pdb_data);
     assert(stream);

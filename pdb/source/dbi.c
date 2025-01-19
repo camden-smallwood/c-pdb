@@ -11,7 +11,7 @@ void dbi_machine_type_print(enum dbi_machine_type item, FILE *stream)
     DBI_MACHINE_TYPE_ENUM
 }
 
-void dbi_header_read(struct dbi_header *header, struct msf *msf, FILE *stream)
+void dbi_header_read(struct dbi_header *header, struct msf *msf, struct memory_stream *stream)
 {
     assert(header);
     assert(msf);
@@ -40,11 +40,12 @@ void dbi_section_contributions_read(
     struct dbi_section_contributions *contributions,
     struct msf *msf,
     struct dbi_header *dbi_header,
-    FILE *stream)
+    struct memory_stream *stream)
 {
     assert(msf);
     assert(dbi_header);
     assert(contributions);
+    assert(stream);
 
     uint32_t start_offset = sizeof(struct dbi_header) + dbi_header->module_list_size;
 
@@ -153,7 +154,7 @@ void dbi_modules_read(
     struct msf *msf,
     struct dbi_header *dbi_header,
     struct pdb_string_table *string_table,
-    FILE *stream)
+    struct memory_stream *stream)
 {
     assert(modules);
     assert(msf);
@@ -292,7 +293,7 @@ void dbi_extra_streams_read(
     struct dbi_extra_streams *extra_streams,
     struct msf *msf,
     struct dbi_header *dbi_header,
-    FILE *stream)
+    struct memory_stream *stream)
 {
     assert(extra_streams);
     assert(msf);
@@ -336,7 +337,7 @@ void dbi_section_headers_read(
     struct msf_stream *stream,
     struct dbi_section_header **out_headers,
     uint32_t *out_count,
-    FILE *file_stream)
+    struct memory_stream *file_stream)
 {
     assert(stream);
 
@@ -366,7 +367,7 @@ void dbi_omap_records_read(
     struct msf_stream *stream,
     struct dbi_omap_record **out_records,
     uint32_t *out_count,
-    FILE *file_stream)
+    struct memory_stream *file_stream)
 {
     assert(stream);
 
@@ -387,7 +388,7 @@ void dbi_address_map_read(
     struct dbi_address_map *map,
     struct msf *msf,
     struct dbi_extra_streams *extra_streams,
-    FILE *file_stream)
+    struct memory_stream *file_stream)
 {
     assert(map);
     assert(msf);
@@ -489,7 +490,7 @@ void dbi_lines_block_read(
     struct msf_stream *msf_stream,
     struct dbi_lines_header *lines_header,
     uint32_t *out_offset,
-    FILE *file_stream)
+    struct memory_stream *file_stream)
 {
     assert(item);
     assert(msf);
@@ -535,7 +536,7 @@ void dbi_lines_header_read(
     struct msf *msf,
     struct msf_stream *msf_stream,
     uint32_t *out_offset,
-    FILE *file_stream)
+    struct memory_stream *file_stream)
 {
     assert(item);
     assert(msf);
@@ -572,7 +573,7 @@ void dbi_lines_read(
     struct msf_stream *msf_stream,
     uint32_t *out_offset,
     uint32_t size,
-    FILE *file_stream)
+    struct memory_stream *file_stream)
 {
     assert(item);
     assert(msf);
@@ -630,7 +631,7 @@ void dbi_file_checksum_read(
     struct msf_stream *msf_stream,
     struct pdb_string_table *string_table,
     uint32_t *out_offset,
-    FILE *file_stream)
+    struct memory_stream *file_stream)
 {
     assert(item);
     assert(msf);
@@ -682,7 +683,7 @@ void dbi_file_checksums_read(
     struct pdb_string_table *string_table,
     uint32_t *out_offset,
     uint32_t size,
-    FILE *file_stream)
+    struct memory_stream *file_stream)
 {
     assert(item);
     assert(msf);
@@ -727,7 +728,7 @@ void dbi_inlinee_line_read(
     struct msf *msf,
     struct msf_stream *msf_stream,
     uint32_t *out_offset,
-    FILE *file_stream)
+    struct memory_stream *file_stream)
 {
     assert(item);
     assert(msf);
@@ -777,7 +778,7 @@ void dbi_inlinee_lines_read(
     struct msf_stream *msf_stream,
     uint32_t *out_offset,
     uint32_t size,
-    FILE *file_stream)
+    struct memory_stream *file_stream)
 {
     assert(item);
     assert(msf);
@@ -877,7 +878,7 @@ void dbi_subsection_read(
     struct msf_stream *msf_stream,
     struct pdb_string_table *string_table,
     uint32_t *out_offset,
-    FILE *file_stream)
+    struct memory_stream *file_stream)
 {
     assert(item);
     assert(msf);

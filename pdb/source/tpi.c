@@ -13,7 +13,7 @@ void tpi_slice_print(struct tpi_slice *item, uint32_t depth, FILE *stream)
     TPI_SLICE_STRUCT
 }
 
-void tpi_header_read(struct msf *msf, struct tpi_header *out_header, FILE *stream)
+void tpi_header_read(struct msf *msf, struct tpi_header *out_header, struct memory_stream *stream)
 {
     msf_stream_read_data(msf, &msf->streams[MSF_STREAM_TPI], 0, sizeof(*out_header), out_header, stream);
 
@@ -94,7 +94,7 @@ void tpi_member_read(
     struct msf *msf,
     struct msf_stream *msf_stream,
     uint32_t *out_offset,
-    FILE *file_stream)
+    struct memory_stream *file_stream)
 {
     assert(item);
     assert(msf);
@@ -242,7 +242,7 @@ void tpi_enumerate_variant_read(
     struct msf *msf,
     struct msf_stream *msf_stream,
     uint32_t *out_offset,
-    FILE *file_stream)
+    struct memory_stream *file_stream)
 {
     assert(variant);
     assert(msf);
@@ -493,7 +493,7 @@ void tpi_member_function_read(
     struct msf *msf,
     struct msf_stream *msf_stream,
     uint32_t *out_offset,
-    FILE *file_stream)
+    struct memory_stream *file_stream)
 {
     assert(item);
     assert(msf);
@@ -611,7 +611,7 @@ void tpi_nested_type_read(
     struct msf *msf,
     struct msf_stream *msf_stream,
     uint32_t *out_offset,
-    FILE *file_stream)
+    struct memory_stream *file_stream)
 {
     assert(item);
     assert(msf);
@@ -685,7 +685,7 @@ void tpi_class_read(
     struct msf *msf,
     struct msf_stream *msf_stream,
     uint32_t *out_offset,
-    FILE *file_stream)
+    struct memory_stream *file_stream)
 {
     assert(item);
     assert(msf);
@@ -743,7 +743,7 @@ void tpi_symbol_read(
     struct msf_stream *msf_stream,
     struct tpi_header *tpi_header,
     uint32_t *out_offset,
-    FILE *file_stream)
+    struct memory_stream *file_stream)
 {
     assert(symbol);
     assert(msf);
@@ -1177,7 +1177,7 @@ void tpi_symbols_read(
     struct msf *msf,
     struct msf_stream *msf_stream,
     struct tpi_header *tpi_header,
-    FILE *file_stream)
+    struct memory_stream *file_stream)
 {
     assert(symbols);
     assert(msf);

@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <stdio.h>
 
+#include "memory_stream.h"
 #include "macros_decl.h"
 
 /* ---------- MSF header V2 */
@@ -24,7 +25,7 @@ MSF_HEADER_V2_STRUCT
 static_assert(sizeof(struct msf_header_v2) == 60, "invalid msf_header_v2 size");
 
 void msf_header_v2_print(struct msf_header_v2 *item, uint32_t depth, FILE *stream);
-int msf_header_v2_read(struct msf_header_v2 *v2, FILE *stream);
+int msf_header_v2_read(struct msf_header_v2 *v2, struct memory_stream *stream);
 
 /* ---------- MSF header V7 */
 
@@ -46,7 +47,7 @@ MSF_HEADER_V7_STRUCT
 static_assert(sizeof(struct msf_header_v7) == 56, "invalid msf_header_v7 size");
 
 void msf_header_v7_print(struct msf_header_v7 *item, uint32_t depth, FILE *stream);
-int msf_header_v7_read(struct msf_header_v7 *v7, FILE *stream);
+int msf_header_v7_read(struct msf_header_v7 *v7, struct memory_stream *stream);
 
 /* ---------- MSF header type */
 
@@ -75,7 +76,7 @@ STRUCT_END(msf_header)
 MSF_HEADER_STRUCT
 
 void msf_header_print(struct msf_header *header, uint32_t depth, FILE *stream);
-int msf_header_read(struct msf_header *header, FILE *stream);
+int msf_header_read(struct msf_header *header, struct memory_stream *stream);
 
 /* ---------- MSF stream index */
 
@@ -118,7 +119,7 @@ MSF_STRUCT
 
 void msf_dispose(struct msf *msf);
 void msf_print(struct msf *msf, uint32_t depth, FILE *stream);
-void msf_read(struct msf *msf, FILE *stream);
+void msf_read(struct msf *msf, struct memory_stream *stream);
 
 uint32_t msf_get_page_count(struct msf *msf);
 void msf_verify_page_index(struct msf *msf, uint32_t page_index);
@@ -139,12 +140,12 @@ void msf_stream_dispose(struct msf_stream *stream);
         *(out_offset) += sizeof(destination);                                                                         \
     } while (0)
 
-void msf_stream_read_data(struct msf *msf, struct msf_stream *stream, uint32_t offset, uint32_t size, void *destination, FILE *file_stream);
-char *msf_stream_read_cstring(struct msf *msf, struct msf_stream *stream, uint32_t offset, uint32_t *out_length, FILE *file_stream);
-char *msf_stream_read_u8_pascal_string(struct msf *msf, struct msf_stream *msf_stream, uint32_t offset, uint32_t *out_length, FILE *file_stream);
-uint32_t msf_stream_read_compressed_unsigned(struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, FILE *file_stream);
+void msf_stream_read_data(struct msf *msf, struct msf_stream *stream, uint32_t offset, uint32_t size, void *destination, struct memory_stream *file_stream);
+char *msf_stream_read_cstring(struct msf *msf, struct msf_stream *stream, uint32_t offset, uint32_t *out_length, struct memory_stream *file_stream);
+char *msf_stream_read_u8_pascal_string(struct msf *msf, struct msf_stream *msf_stream, uint32_t offset, uint32_t *out_length, struct memory_stream *file_stream);
+uint32_t msf_stream_read_compressed_unsigned(struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, struct memory_stream *file_stream);
 
-uint64_t msf_read_tpi_unsigned(struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, FILE *file_stream);
-char *msf_read_tpi_lf_string(struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, uint16_t leaf, FILE *file_stream);
+uint64_t msf_read_tpi_unsigned(struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, struct memory_stream *file_stream);
+char *msf_read_tpi_lf_string(struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, uint16_t leaf, struct memory_stream *file_stream);
 
-char *msf_read_cv_symbol_string(struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, uint16_t symbol_type, FILE *file_stream);
+char *msf_read_cv_symbol_string(struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, uint16_t symbol_type, struct memory_stream *file_stream);

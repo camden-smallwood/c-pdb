@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include "msf.h"
 
+#include "memory_stream.h"
 #include "macros_decl.h"
 
 /* ---------- PDB header */
@@ -18,7 +19,7 @@ STRUCT_END(pdb_header)
 PDB_HEADER_STRUCT
 static_assert(sizeof(struct pdb_header) == 12, "invalid pdb_header size");
 
-void pdb_header_read(struct pdb_header *header, struct msf *msf, FILE *stream);
+void pdb_header_read(struct pdb_header *header, struct msf *msf, struct memory_stream *stream);
 void pdb_header_print(struct pdb_header *header, uint32_t depth, FILE *stream);
 
 /* ---------- PDB named streams */
@@ -53,7 +54,7 @@ STRUCT_END(pdb_info)
 
 PDB_INFO_STRUCT
 
-void pdb_info_read(struct pdb_info *info, struct msf *msf, FILE *stream);
+void pdb_info_read(struct pdb_info *info, struct msf *msf, struct memory_stream *stream);
 void pdb_info_dispose(struct pdb_info *info);
 void pdb_info_print(struct pdb_info *info, uint32_t depth, FILE *stream);
 
@@ -94,6 +95,6 @@ STRUCT_END(pdb_string_table)
 
 PDB_STRING_TABLE_STRUCT
 
-void pdb_string_table_read(struct pdb_string_table *table, struct msf *msf, struct pdb_info *pdb_info, FILE *stream);
+void pdb_string_table_read(struct pdb_string_table *table, struct msf *msf, struct pdb_info *pdb_info, struct memory_stream *stream);
 void pdb_string_table_dispose(struct pdb_string_table *table);
 void pdb_string_table_print(struct pdb_string_table *table, uint32_t depth, FILE *stream);

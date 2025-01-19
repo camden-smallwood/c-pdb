@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <stdio.h>
 
+#include "memory_stream.h"
 #include "msf.h"
 #include "pdbi.h"
 #include "tpi.h"
@@ -31,6 +32,6 @@ STRUCT_END()
 
 PDB_DATA_STRUCT
 
-void pdb_data_read(struct pdb_data *pdb_data, FILE *stream);
+void pdb_data_read(struct pdb_data *pdb_data, struct memory_stream *stream);
 void pdb_data_dispose(struct pdb_data *pdb_data);
 void pdb_data_print(struct pdb_data *pdb_data, uint32_t depth, FILE *stream);

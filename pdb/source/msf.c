@@ -17,24 +17,21 @@ void msf_header_v2_print(struct msf_header_v2 *item, uint32_t depth, FILE *strea
     MSF_HEADER_V2_STRUCT
 }
 
-int msf_header_v2_read(struct msf_header_v2 *v2, FILE *stream)
+int msf_header_v2_read(struct msf_header_v2 *v2, struct memory_stream *stream)
 {
     assert(v2);
     assert(stream);
 
-    fseek(stream, 0, SEEK_END);
-    long size = ftell(stream);
-    
-    if ((unsigned long)size < sizeof(struct msf_header_v2))
+    if (stream->size < sizeof(struct msf_header_v2))
         return 0;
 
-    fseek(stream, 0, SEEK_SET);
-    fread(v2->signature, sizeof(v2->signature), 1, stream);
+    memory_stream_seek(stream, 0, SEEK_SET);
+    memory_stream_read(v2->signature, sizeof(v2->signature), 1, stream);
 
     if (memcmp(v2->signature, msf_header_v2_signature, sizeof(msf_header_v2_signature)) != 0)
         return 0;
     
-    fread(&v2->page_size, sizeof(*v2) - sizeof(v2->signature), 1, stream);
+    memory_stream_read(&v2->page_size, sizeof(*v2) - sizeof(v2->signature), 1, stream);
 
     return 1;
 }
@@ -47,24 +44,21 @@ void msf_header_v7_print(struct msf_header_v7 *item, uint32_t depth, FILE *strea
     MSF_HEADER_V7_STRUCT
 }
 
-int msf_header_v7_read(struct msf_header_v7 *v7, FILE *stream)
+int msf_header_v7_read(struct msf_header_v7 *v7, struct memory_stream *stream)
 {   
     assert(v7);
     assert(stream);
 
-    fseek(stream, 0, SEEK_END);
-    long size = ftell(stream);
-    
-    if ((unsigned long)size < sizeof(struct msf_header_v7))
+    if (stream->size < sizeof(struct msf_header_v7))
         return 0;
 
-    fseek(stream, 0, SEEK_SET);
-    fread(v7->signature, sizeof(v7->signature), 1, stream);
+    memory_stream_seek(stream, 0, SEEK_SET);
+    memory_stream_read(v7->signature, sizeof(v7->signature), 1, stream);
 
     if (memcmp(v7->signature, msf_header_v7_signature, sizeof(msf_header_v7_signature)) != 0)
         return 0;
     
-    fread(&v7->page_size, sizeof(*v7) - sizeof(v7->signature), 1, stream);
+    memory_stream_read(&v7->page_size, sizeof(*v7) - sizeof(v7->signature), 1, stream);
 
     return 1;
 }
@@ -84,7 +78,7 @@ void msf_header_print(struct msf_header *item, uint32_t depth, FILE *stream)
     MSF_HEADER_STRUCT
 }
 
-int msf_header_read(struct msf_header *header, FILE *stream)
+int msf_header_read(struct msf_header *header, struct memory_stream *stream)
 {
     header->type = MSF_HEADER_UNKNOWN;
     
@@ -138,7 +132,7 @@ void msf_print(struct msf *item, uint32_t depth, FILE *stream)
     MSF_STRUCT
 }
 
-void msf_read(struct msf *msf, FILE *stream)
+void msf_read(struct msf *msf, struct memory_stream *stream)
 {
     assert(msf);
     assert(stream);
@@ -160,7 +154,7 @@ void msf_read(struct msf *msf, FILE *stream)
             uint16_t *page_indices_v2 = malloc(sizeof(uint16_t) * msf->root_stream.page_count);
             assert(page_indices_v2);
 
-            fread(page_indices_v2, sizeof(uint16_t), msf->root_stream.page_count, stream);
+            memory_stream_read(page_indices_v2, sizeof(uint16_t), msf->root_stream.page_count, stream);
 
             for (uint32_t i = 0; i < msf->root_stream.page_count; i++)
                 msf->root_stream.page_indices[i] = (uint32_t)page_indices_v2[i];
@@ -172,8 +166,8 @@ void msf_read(struct msf *msf, FILE *stream)
     case MSF_HEADER_V7:
         {
             uint32_t page_list_offset = msf_get_page_offset(msf, msf->header.v7.root_stream_page_list_page_index);
-            fseek(stream, page_list_offset, SEEK_SET);
-            fread(msf->root_stream.page_indices, sizeof(uint32_t), msf->root_stream.page_count, stream);
+            memory_stream_seek(stream, page_list_offset, SEEK_SET);
+            memory_stream_read(msf->root_stream.page_indices, sizeof(uint32_t), msf->root_stream.page_count, stream);
             break;
         }
     
@@ -353,7 +347,7 @@ void msf_stream_read_data(
     uint32_t offset,
     uint32_t size,
     void *destination,
-    FILE *file_stream)
+    struct memory_stream *file_stream)
 {
     assert(msf);
     assert(stream);
@@ -379,8 +373,8 @@ void msf_stream_read_data(
             inset_offset = 0;
         }
         
-        fseek(file_stream, read_offset, SEEK_SET);
-        fread((char *)destination + write_offset, read_size, 1, file_stream);
+        memory_stream_seek(file_stream, read_offset, SEEK_SET);
+        memory_stream_read((char *)destination + write_offset, read_size, 1, file_stream);
 
         write_offset += read_size;
         data_remaining -= read_size;
@@ -392,7 +386,7 @@ char *msf_stream_read_cstring(
     struct msf_stream *stream,
     uint32_t read_offset,
     uint32_t *out_length,
-    FILE *file_stream)
+    struct memory_stream *file_stream)
 {
     uint32_t length = 0;
     char *string = NULL;
@@ -429,7 +423,7 @@ char *msf_stream_read_u8_pascal_string(
     struct msf_stream *msf_stream,
     uint32_t offset,
     uint32_t *out_length,
-    FILE *file_stream)
+    struct memory_stream *file_stream)
 {
     uint8_t length;
     msf_stream_read_data(msf, msf_stream, offset, sizeof(length), &length, file_stream);
@@ -450,7 +444,7 @@ uint32_t msf_stream_read_compressed_unsigned(
     struct msf *msf,
     struct msf_stream *msf_stream,
     uint32_t *out_offset,
-    FILE *file_stream)
+    struct memory_stream *file_stream)
 {
     assert(msf);
     assert(msf_stream);
@@ -484,7 +478,7 @@ uint64_t msf_read_tpi_unsigned(
     struct msf *msf,
     struct msf_stream *msf_stream,
     uint32_t *out_offset,
-    FILE *file_stream)
+    struct memory_stream *file_stream)
 {
     assert(msf);
     assert(msf_stream);
@@ -549,7 +543,7 @@ char *msf_read_tpi_lf_string(
     struct msf_stream *msf_stream,
     uint32_t *out_offset,
     uint16_t leaf,
-    FILE *file_stream)
+    struct memory_stream *file_stream)
 {
     assert(msf);
     assert(msf_stream);
@@ -578,7 +572,7 @@ char *msf_read_cv_symbol_string(
     struct msf_stream *msf_stream,
     uint32_t *out_offset,
     uint16_t symbol_type,
-    FILE *file_stream)
+    struct memory_stream *file_stream)
 {
     assert(msf);
     assert(msf_stream);

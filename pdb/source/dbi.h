@@ -2,10 +2,13 @@
 #include <assert.h>
 #include <stdint.h>
 #include <stdio.h>
+
 #include "msf.h"
 #include "tpi.h"
 #include "cv.h"
 #include "pdbi.h"
+
+#include "memory_stream.h"
 #include "macros_decl.h"
 
 /* ---------- machine types */
@@ -74,7 +77,7 @@ STRUCT_END(dbi_header)
 DBI_HEADER_STRUCT
 static_assert(sizeof(struct dbi_header) == 64, "invalid dbi_header size");
 
-void dbi_header_read(struct dbi_header *header, struct msf *msf, FILE *stream);
+void dbi_header_read(struct dbi_header *header, struct msf *msf, struct memory_stream *stream);
 void dbi_header_print(struct dbi_header *header, uint32_t depth, FILE *stream);
 
 /* ---------- DBI section contribution */
@@ -108,7 +111,7 @@ STRUCT_END(dbi_section_contributions)
 
 DBI_SECTION_CONTRIBUTIONS_STRUCT
 
-void dbi_section_contributions_read(struct dbi_section_contributions *contributions, struct msf *msf, struct dbi_header *dbi_header, FILE *stream);
+void dbi_section_contributions_read(struct dbi_section_contributions *contributions, struct msf *msf, struct dbi_header *dbi_header, struct memory_stream *stream);
 void dbi_section_contributions_dispose(struct dbi_section_contributions *contributions);
 void dbi_section_contributions_print(struct dbi_section_contributions *contributions, uint32_t depth, FILE *stream);
 
@@ -178,7 +181,7 @@ STRUCT_END(dbi_modules)
 
 DBI_MODULES_STRUCT
 
-void dbi_modules_read(struct dbi_modules *modules, struct msf *msf, struct dbi_header *dbi_header, struct pdb_string_table *string_table, FILE *stream);
+void dbi_modules_read(struct dbi_modules *modules, struct msf *msf, struct dbi_header *dbi_header, struct pdb_string_table *string_table, struct memory_stream *stream);
 void dbi_modules_dispose(struct dbi_modules *modules);
 void dbi_modules_print(struct dbi_modules *modules, uint32_t depth, FILE *stream);
 
@@ -213,7 +216,7 @@ STRUCT_END(dbi_extra_streams)
 
 DBI_EXTRA_STREAMS_STRUCT
 
-void dbi_extra_streams_read(struct dbi_extra_streams *extra_streams, struct msf *msf, struct dbi_header *dbi_header, FILE *stream);
+void dbi_extra_streams_read(struct dbi_extra_streams *extra_streams, struct msf *msf, struct dbi_header *dbi_header, struct memory_stream *stream);
 void dbi_extra_streams_dispose(struct dbi_extra_streams *extra_streams);
 void dbi_extra_streams_print(struct dbi_extra_streams *extra_streams, uint32_t depth, FILE *stream);
 
@@ -237,7 +240,7 @@ DBI_SECTION_HEADER_STRUCT
 static_assert(sizeof(struct dbi_section_header) == 40, "invalid dbi_section_header size");
 
 void dbi_section_header_print(struct dbi_section_header *header, uint32_t depth, FILE *stream);
-void dbi_section_headers_read(struct msf *msf, struct msf_stream *stream, struct dbi_section_header **out_headers, uint32_t *out_count, FILE *file_stream);
+void dbi_section_headers_read(struct msf *msf, struct msf_stream *stream, struct dbi_section_header **out_headers, uint32_t *out_count, struct memory_stream *file_stream);
 
 /* ---------- DBI OMAP record */
 
@@ -251,7 +254,7 @@ DBI_OMAP_RECORD_STRUCT
 static_assert(sizeof(struct dbi_omap_record) == 8, "invalid dbi_omap_record size");
 
 void dbi_omap_record_print(struct dbi_omap_record *record, uint32_t depth, FILE *stream);
-void dbi_omap_records_read(struct msf *msf, struct msf_stream *stream, struct dbi_omap_record **out_records, uint32_t *out_count, FILE *file_stream);
+void dbi_omap_records_read(struct msf *msf, struct msf_stream *stream, struct dbi_omap_record **out_records, uint32_t *out_count, struct memory_stream *file_stream);
 
 /* ---------- DBI address map */
 
@@ -269,7 +272,7 @@ STRUCT_END(dbi_address_map)
 
 DBI_ADDRESS_MAP_STRUCT
 
-void dbi_address_map_read(struct dbi_address_map *map, struct msf *msf, struct dbi_extra_streams *extra_streams, FILE *file_stream);
+void dbi_address_map_read(struct dbi_address_map *map, struct msf *msf, struct dbi_extra_streams *extra_streams, struct memory_stream *file_stream);
 void dbi_address_map_dispose(struct dbi_address_map *map);
 void dbi_address_map_print(struct dbi_address_map *map, uint32_t depth, FILE *stream);
 
@@ -330,7 +333,7 @@ struct dbi_lines_header;
 
 void dbi_lines_block_dispose(struct dbi_lines_block *item);
 void dbi_lines_block_print(struct dbi_lines_block *item, uint32_t depth, FILE *stream);
-void dbi_lines_block_read(struct dbi_lines_block *item, struct msf *msf, struct msf_stream *msf_stream, struct dbi_lines_header *lines_header, uint32_t *out_offset, FILE *file_stream);
+void dbi_lines_block_read(struct dbi_lines_block *item, struct msf *msf, struct msf_stream *msf_stream, struct dbi_lines_header *lines_header, uint32_t *out_offset, struct memory_stream *file_stream);
 
 /* ---------- DBI lines header */
 
@@ -349,7 +352,7 @@ STRUCT_END(dbi_lines_header)
 DBI_LINES_HEADER_STRUCT
 
 void dbi_lines_header_print(struct dbi_lines_header *item, uint32_t depth, FILE *stream);
-void dbi_lines_header_read(struct dbi_lines_header *item, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, FILE *file_stream);
+void dbi_lines_header_read(struct dbi_lines_header *item, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, struct memory_stream *file_stream);
 
 /* ---------- DBI lines */
 
@@ -364,7 +367,7 @@ DBI_LINES_STRUCT
 
 void dbi_lines_dispose(struct dbi_lines *item);
 void dbi_lines_print(struct dbi_lines *item, uint32_t depth, FILE *stream);
-void dbi_lines_read(struct dbi_lines *item, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, uint32_t size, FILE *file_stream);
+void dbi_lines_read(struct dbi_lines *item, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, uint32_t size, struct memory_stream *file_stream);
 
 /* ---------- DBI file checksum type */
 
@@ -408,7 +411,7 @@ DBI_FILE_CHECKSUM_STRUCT
 
 void dbi_file_checksum_dispose(struct dbi_file_checksum *item);
 void dbi_file_checksum_print(struct dbi_file_checksum *item, uint32_t depth, FILE *stream);
-void dbi_file_checksum_read(struct dbi_file_checksum *item, struct msf *msf, struct msf_stream *msf_stream, struct pdb_string_table *string_table, uint32_t *out_offset, FILE *file_stream);
+void dbi_file_checksum_read(struct dbi_file_checksum *item, struct msf *msf, struct msf_stream *msf_stream, struct pdb_string_table *string_table, uint32_t *out_offset, struct memory_stream *file_stream);
 
 /* ---------- DBI file checksums */
 
@@ -422,7 +425,7 @@ DBI_FILE_CHECKSUMS_STRUCT
 
 void dbi_file_checksums_dispose(struct dbi_file_checksums *item);
 void dbi_file_checksums_print(struct dbi_file_checksums *item, uint32_t depth, FILE *stream);
-void dbi_file_checksums_read(struct dbi_file_checksums *item, struct msf *msf, struct msf_stream *msf_stream, struct pdb_string_table *string_table, uint32_t *out_offset, uint32_t size, FILE *file_stream);
+void dbi_file_checksums_read(struct dbi_file_checksums *item, struct msf *msf, struct msf_stream *msf_stream, struct pdb_string_table *string_table, uint32_t *out_offset, uint32_t size, struct memory_stream *file_stream);
 
 /* ---------- DBI inlinee line */
 
@@ -439,7 +442,7 @@ DBI_INLINEE_LINE_STRUCT
 
 void dbi_inlinee_line_dispose(struct dbi_inlinee_line *item);
 void dbi_inlinee_line_print(struct dbi_inlinee_line *item, uint32_t depth, FILE *stream);
-void dbi_inlinee_line_read(struct dbi_inlinee_line *item, uint32_t signature, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, FILE *file_stream);
+void dbi_inlinee_line_read(struct dbi_inlinee_line *item, uint32_t signature, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, struct memory_stream *file_stream);
 
 /* ---------- DBI inlinee lines */
 
@@ -460,7 +463,7 @@ DBI_INLINEE_LINES_STRUCT
 
 void dbi_inlinee_lines_dispose(struct dbi_inlinee_lines *item);
 void dbi_inlinee_lines_print(struct dbi_inlinee_lines *item, uint32_t depth, FILE *stream);
-void dbi_inlinee_lines_read(struct dbi_inlinee_lines *item, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, uint32_t size, FILE *file_stream);
+void dbi_inlinee_lines_read(struct dbi_inlinee_lines *item, struct msf *msf, struct msf_stream *msf_stream, uint32_t *out_offset, uint32_t size, struct memory_stream *file_stream);
 
 /* ---------- DBI subsection type */
 
@@ -502,4 +505,4 @@ DBI_SUBSECTION_STRUCT
 
 void dbi_subsection_dispose(struct dbi_subsection *item);
 void dbi_subsection_print(struct dbi_subsection *item, uint32_t depth, FILE *stream);
-void dbi_subsection_read(struct dbi_subsection *item, struct msf *msf, struct msf_stream *msf_stream, struct pdb_string_table *string_table, uint32_t *out_offset, FILE *file_stream);
+void dbi_subsection_read(struct dbi_subsection *item, struct msf *msf, struct msf_stream *msf_stream, struct pdb_string_table *string_table, uint32_t *out_offset, struct memory_stream *file_stream);

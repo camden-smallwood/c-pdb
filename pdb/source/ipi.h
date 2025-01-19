@@ -5,6 +5,7 @@
 #include "msf.h"
 #include "tpi.h"
 
+#include "memory_stream.h"
 #include "macros_decl.h"
 
 /* ---------- UDT source lines */
@@ -134,9 +135,9 @@ STRUCT_END(ipi_symbols)
 
 IPI_SYMBOLS_STRUCT
 
-void ipi_header_read(struct tpi_header *header, struct msf *msf, FILE *stream);
+void ipi_header_read(struct tpi_header *header, struct msf *msf, struct memory_stream *stream);
 
-void ipi_symbols_read(struct ipi_symbols *symbols, struct msf *msf, struct msf_stream *msf_stream, struct tpi_header *ipi_header, FILE *file_stream);
+void ipi_symbols_read(struct ipi_symbols *symbols, struct msf *msf, struct msf_stream *msf_stream, struct tpi_header *ipi_header, struct memory_stream *file_stream);
 void ipi_symbols_dispose(struct ipi_symbols *symbols);
 void ipi_symbols_print(struct ipi_symbols *symbols, uint32_t depth, FILE *stream);
 
