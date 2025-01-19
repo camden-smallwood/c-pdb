@@ -54,6 +54,14 @@ struct sanitized_path
     char *path;
 };
 
+struct canonicalized_path
+{
+    char *root_path;
+    char *path;
+    int is_dir;
+    char *canonicalized;
+};
+
 struct string_id_string
 {
     uint32_t id_index;
@@ -82,6 +90,9 @@ struct
 
     uint32_t sanitized_path_count;
     struct sanitized_path *sanitized_paths;
+
+    uint32_t canonicalized_path_count;
+    struct canonicalized_path *canonicalized_paths;
 
     uint32_t string_id_string_count;
     struct string_id_string *string_id_strings;
@@ -138,6 +149,10 @@ static void main_dispose(void)
     for (uint32_t i = 0; i < main_globals.string_id_string_count; i++)
         free(main_globals.string_id_strings[i].string);
     free(main_globals.string_id_strings);
+
+    for (uint32_t i = 0; i < main_globals.canonicalized_path_count; i++)
+        free(main_globals.canonicalized_paths[i].canonicalized);
+    free(main_globals.canonicalized_paths);
 
     for (uint32_t i = 0; i < main_globals.sanitized_path_count; i++)
         free(main_globals.sanitized_paths[i].path);
@@ -275,6 +290,18 @@ static char *canonicalize_path(char *root_path, char *path, int is_dir)
 {
     assert(path);
 
+    for (uint32_t i = 0; i < main_globals.canonicalized_path_count; i++)
+    {
+        struct canonicalized_path *entry = &main_globals.canonicalized_paths[i];
+
+        if (root_path == entry->root_path && path == entry->path && is_dir == entry->is_dir)
+        {
+            char *result = strdup(entry->canonicalized);
+            assert(result);
+            return result;
+        }
+    }
+
     char *result = NULL;
 
     //
@@ -305,20 +332,20 @@ static char *canonicalize_path(char *root_path, char *path, int is_dir)
     {
         char *sanitized_root_path = sanitize_path(root_path);
 
-        root_path = sanitized_root_path;
-        size_t root_path_length = strlen(root_path);
+        char *current_root_path = sanitized_root_path;
+        size_t root_path_length = strlen(current_root_path);
 
         if (root_path_length)
         {
-            while (root_path_length && root_path[0] == '/')
+            while (root_path_length && current_root_path[0] == '/')
             {
-                root_path++;
+                current_root_path++;
                 root_path_length--;
             }
 
-            string_append(&result, root_path);
+            string_append(&result, current_root_path);
 
-            if (root_path[root_path_length - 1] != '/' && root_path[root_path_length - 1] != '\\')
+            if (current_root_path[root_path_length - 1] != '/' && current_root_path[root_path_length - 1] != '\\')
                 string_append(&result, "/");
         }
 
@@ -351,6 +378,15 @@ static char *canonicalize_path(char *root_path, char *path, int is_dir)
     result = path_to_string(&final_path, is_dir);
 
     path_dispose(&final_path);
+
+    struct canonicalized_path new_entry = {
+        .root_path = root_path,
+        .path = path,
+        .is_dir = is_dir,
+        .canonicalized = strdup(result),
+    };
+    assert(new_entry.canonicalized);
+    DYNARRAY_PUSH(main_globals.canonicalized_paths, main_globals.canonicalized_path_count, new_entry);
 
     return result;
 }

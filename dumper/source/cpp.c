@@ -1221,28 +1221,6 @@ void cpp_module_add_type_definition(
     if (!symbol)
         return;
 
-    // Don't add a class or enum if we already have
-    for (uint32_t i = 0; i < module->member_count; i++)
-    {
-        struct cpp_module_member *member = &module->members[i];
-
-        switch (member->type)
-        {
-        case CPP_MODULE_MEMBER_TYPE_CLASS:
-            if (member->class_.type_index == type_index)
-                return;
-            break;
-
-        case CPP_MODULE_MEMBER_TYPE_ENUM:
-            if (member->enum_.type_index == type_index)
-                return;
-            break;
-
-        default:
-            break;
-        }
-    }
-
     switch (symbol->leaf)
     {
     case LF_CLASS:
@@ -1252,6 +1230,15 @@ void cpp_module_add_type_definition(
     case LF_STRUCTURE19:
     case LF_INTERFACE:
     {
+        // Don't add a class if we already have
+        for (uint32_t i = 0; i < module->member_count; i++)
+        {
+            struct cpp_module_member *member = &module->members[i];
+
+            if (member->type == CPP_MODULE_MEMBER_TYPE_CLASS && member->class_.type_index == type_index)
+                return;
+        }
+        
         struct cpp_module_member member;
         memset(&member, 0, sizeof(member));
 
@@ -1306,6 +1293,15 @@ void cpp_module_add_type_definition(
     case LF_UNION:
     case LF_UNION_ST:
     {
+        // Don't add a class if we already have
+        for (uint32_t i = 0; i < module->member_count; i++)
+        {
+            struct cpp_module_member *member = &module->members[i];
+
+            if (member->type == CPP_MODULE_MEMBER_TYPE_CLASS && member->class_.type_index == type_index)
+                return;
+        }
+        
         struct cpp_module_member member;
         memset(&member, 0, sizeof(member));
 
@@ -1335,6 +1331,15 @@ void cpp_module_add_type_definition(
     case LF_ENUM:
     case LF_ENUM_ST:
     {
+        // Don't add an enum if we already have
+        for (uint32_t i = 0; i < module->member_count; i++)
+        {
+            struct cpp_module_member *member = &module->members[i];
+
+            if (member->type == CPP_MODULE_MEMBER_TYPE_ENUM && member->enum_.type_index == type_index)
+                return;
+        }
+
         struct cpp_module_member member;
         memset(&member, 0, sizeof(member));
 
@@ -1362,11 +1367,8 @@ void cpp_module_add_type_definition(
     }
 
     default:
-        break;
-        // fprintf(stderr, "%s:%i: ERROR: Unhandled tpi_leaf value in %s: ", __FILE__, __LINE__, __FUNCTION__);
-        // tpi_leaf_print(symbol->leaf, stderr);
-        // fprintf(stderr, "\n");
-        // exit(EXIT_FAILURE);
+        // Return so that we don't display time taken for skipped symbols
+        return;
     }
 }
 
