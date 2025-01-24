@@ -292,7 +292,7 @@ void pdb_data_read(struct pdb_data *pdb_data, struct memory_stream *stream)
     pthread_t dbi_address_map_thread = NULL;
     pthread_create(&dbi_address_map_thread, NULL, dbi_address_map_thread_proc, &dbi_address_map_thread_input);
 
-    // Create the DBI modules thread
+    // Create the CV symbols thread
     struct cv_symbols_thread_input cv_symbols_thread_input = {
         .file_stream = {
             .address = stream->address,

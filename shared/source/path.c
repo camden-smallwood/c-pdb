@@ -24,7 +24,6 @@ void path_from_string(struct path *path, char *string)
         return;
 
     size_t total_length = strlen(string);
-
     char *current = string;
 
     while (current)
@@ -59,6 +58,14 @@ void path_from_string(struct path *path, char *string)
         }
 
         current = next;
+    }
+
+    if (path->component_count == 0 && total_length != 0)
+    {
+        char *component = strdup(string);
+        assert(component);
+
+        DYNARRAY_PUSH(path->components, path->component_count, component);
     }
 }
 
