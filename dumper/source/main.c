@@ -748,50 +748,9 @@ static char *cv_pe_section_offset_to_module_path(struct cv_pe_section_offset *co
     return NULL;
 }
 
-static uint64_t cv_pe_section_offset_to_pe_address(struct cv_pe_section_offset *offset)
+static inline uint64_t cv_pe_section_offset_to_pe_address(struct cv_pe_section_offset *offset)
 {
-    assert(offset);
-
-    if (offset->section_index == 0)
-    {
-        assert(offset->memory_offset == 0);
-        return 0;
-    }
-
-    uint32_t section_header_count = main_globals.pdb_data.address_map.original_section_header_count;
-    struct dbi_section_header *section_headers = main_globals.pdb_data.address_map.original_section_headers;
-
-    uint32_t omap_record_count = main_globals.pdb_data.address_map.omap_from_src_record_count;
-    struct dbi_omap_record *omap_records = main_globals.pdb_data.address_map.omap_from_src_records;
-
-    if (section_header_count == 0)
-    {
-        section_header_count = main_globals.pdb_data.address_map.section_header_count;
-        section_headers = main_globals.pdb_data.address_map.section_headers;
-
-        omap_record_count = 0;
-        omap_records = NULL;
-    }
-
-    assert(offset->section_index <= section_header_count);
-
-    uint32_t result = section_headers[offset->section_index - 1].virtual_address + offset->memory_offset;
-
-    for (uint32_t i = 0; i < omap_record_count; i++)
-    {
-        struct dbi_omap_record *record = &omap_records[i];
-        
-        if (result != record->source_address)
-            continue;
-        
-        if (record->target_address == 0)
-            continue;
-        
-        result = (result - record->source_address) + record->target_address;
-        break;
-    }
-
-    return main_globals.base_address + (uint64_t)result;
+    return main_globals.base_address + dbi_address_map_pe_offset_to_pe_address(&main_globals.pdb_data.address_map, offset);
 }
 
 static char *ipi_string_id_to_string(uint32_t index)
@@ -1124,6 +1083,32 @@ static void process_symbol_records(void)
             // free(value_string);
             // free(type_name);
 
+            // //
+            // // HACK: Don't add the variable if it was already added...
+            // //
+
+            // int exists = 0;
+
+            // for (uint32_t i = 0; i < cpp_module->member_count; i++)
+            // {
+            //     struct cpp_module_member *member = &cpp_module->members[i];
+
+            //     if (member->type != CPP_MODULE_MEMBER_TYPE_CONSTANT)
+            //         continue;
+                
+            //     if (strcmp(result, member->constant) == 0)
+            //     {
+            //         exists = 1;
+            //         break;
+            //     }
+            // }
+
+            // if (exists)
+            // {
+            //     free(result);
+            //     break;
+            // }
+            
             // struct cpp_module_member member = {
             //     .type = CPP_MODULE_MEMBER_TYPE_CONSTANT,
             //     .constant = result,
@@ -1166,10 +1151,50 @@ static void process_symbol_records(void)
             assert(result);
 
             sprintf(result, "%s;", type_name);
+        
+            struct dbi_module *dbi_module = dbi_modules_get_module_from_pe_offset(
+                &main_globals.pdb_data.modules,
+                &main_globals.pdb_data.section_contributions,
+                &symbol->data.code_offset);
+            
+            uint64_t address = cv_pe_section_offset_to_pe_address(&symbol->data.code_offset);
+            uint32_t line = dbi_module_get_line_from_pe_offset(dbi_module, &symbol->data.code_offset);
+
+            //
+            // HACK: Don't add the variable if it was already added...
+            //
+
+            int exists = 0;
+
+            for (uint32_t i = 0; i < cpp_module->member_count; i++)
+            {
+                struct cpp_module_member *member = &cpp_module->members[i];
+
+                if (member->type != CPP_MODULE_MEMBER_TYPE_DATA)
+                    continue;
+                
+                if (strcmp(result, member->data.string) == 0 &&
+                    address == member->data.address &&
+                    line == member->data.line)
+                {
+                    exists = 1;
+                    break;
+                }
+            }
+
+            if (exists)
+            {
+                free(result);
+                break;
+            }
             
             struct cpp_module_member member = {
                 .type = CPP_MODULE_MEMBER_TYPE_DATA,
-                .data = result,
+                .data = {
+                    .string = result,
+                    .address = address,
+                    .line = line,
+                }
             };
 
             DYNARRAY_PUSH(cpp_module->members, cpp_module->member_count, member);
@@ -1196,7 +1221,7 @@ static void process_symbol_records(void)
                 0,
                 NULL,
                 0);
-            assert(type_name);            
+            assert(type_name);    
 
             size_t type_name_length = strlen(type_name);
             size_t result_length = /*thread_local */13 + type_name_length + /*;\0*/2;
@@ -1208,9 +1233,49 @@ static void process_symbol_records(void)
 
             free(type_name);
 
+            struct dbi_module *dbi_module = dbi_modules_get_module_from_pe_offset(
+                &main_globals.pdb_data.modules,
+                &main_globals.pdb_data.section_contributions,
+                &symbol->thread_storage.code_offset);
+            
+            uint64_t address = cv_pe_section_offset_to_pe_address(&symbol->thread_storage.code_offset);
+            uint32_t line = dbi_module_get_line_from_pe_offset(dbi_module, &symbol->thread_storage.code_offset);
+
+            //
+            // HACK: Don't add the variable if it was already added...
+            //
+
+            int exists = 0;
+
+            for (uint32_t i = 0; i < cpp_module->member_count; i++)
+            {
+                struct cpp_module_member *member = &cpp_module->members[i];
+
+                if (member->type != CPP_MODULE_MEMBER_TYPE_THREAD_LOCAL)
+                    continue;
+                
+                if (strcmp(result, member->thread_local_.string) == 0 &&
+                    address == member->thread_local_.address &&
+                    line == member->thread_local_.line)
+                {
+                    exists = 1;
+                    break;
+                }
+            }
+
+            if (exists)
+            {
+                free(result);
+                break;
+            }
+            
             struct cpp_module_member member = {
-                .type = CPP_MODULE_MEMBER_TYPE_CONSTANT,
-                .constant = result,
+                .type = CPP_MODULE_MEMBER_TYPE_THREAD_LOCAL,
+                .thread_local_ = {
+                    .string = result,
+                    .address = address,
+                    .line = line,
+                }
             };
 
             DYNARRAY_PUSH(cpp_module->members, cpp_module->member_count, member);
@@ -1239,6 +1304,32 @@ static void process_symbol_records(void)
                 0);
             assert(type_name);
 
+            //
+            // HACK: Don't add the typedef if it was already added...
+            //
+
+            int exists = 0;
+
+            for (uint32_t i = 0; i < cpp_module->member_count; i++)
+            {
+                struct cpp_module_member *member = &cpp_module->members[i];
+
+                if (member->type != CPP_MODULE_MEMBER_TYPE_TYPEDEF)
+                    continue;
+                
+                if (strcmp(type_name, member->typedef_.type_name) == 0)
+                {
+                    exists = 1;
+                    break;
+                }
+            }
+
+            if (exists)
+            {
+                free(type_name);
+                break;
+            }
+            
             struct cpp_module_member member = {
                 .type = CPP_MODULE_MEMBER_TYPE_TYPEDEF,
                 .typedef_ = {
@@ -1568,11 +1659,15 @@ static void process_modules(void)
                     0);
                 assert(signature);
 
+                //
+                // TODO: don't add the procedure if it was already added...
+                //
+
                 struct cpp_module_member member = {
                     .type = CPP_MODULE_MEMBER_TYPE_PROCEDURE,
                     .procedure = {
                         .address = cv_pe_section_offset_to_pe_address(&cv_symbol->procedure.code_offset),
-                        .line = 0, // TODO
+                        .line = dbi_module_get_line_from_pe_offset(dbi_module, &cv_symbol->procedure.code_offset),
                         .type_index = cv_symbol->procedure.type_index,
                         .signature = signature,
                         .body = NULL, // TODO
@@ -1598,6 +1693,32 @@ static void process_modules(void)
                 char *using_namespace = strdup(cv_symbol->using_namespace.name);
                 assert(using_namespace);
 
+                //
+                // HACK: Don't add the using namespace if it was already added...
+                //
+
+                int exists = 0;
+
+                for (uint32_t i = 0; i < cpp_module->member_count; i++)
+                {
+                    struct cpp_module_member *member = &cpp_module->members[i];
+
+                    if (member->type != CPP_MODULE_MEMBER_TYPE_USING_NAMESPACE)
+                        continue;
+                    
+                    if (strcmp(using_namespace, member->using_namespace) == 0)
+                    {
+                        exists = 1;
+                        break;
+                    }
+                }
+
+                if (exists)
+                {
+                    free(using_namespace);
+                    break;
+                }
+                
                 struct cpp_module_member member = {
                     .type = CPP_MODULE_MEMBER_TYPE_USING_NAMESPACE,
                     .using_namespace = using_namespace,
@@ -1620,6 +1741,32 @@ static void process_modules(void)
                     NULL,
                     0);
                 assert(type_name);
+                
+                //
+                // HACK: Don't add the typedef if it was already added...
+                //
+
+                int exists = 0;
+
+                for (uint32_t i = 0; i < cpp_module->member_count; i++)
+                {
+                    struct cpp_module_member *member = &cpp_module->members[i];
+
+                    if (member->type != CPP_MODULE_MEMBER_TYPE_TYPEDEF)
+                        continue;
+                    
+                    if (strcmp(type_name, member->typedef_.type_name) == 0)
+                    {
+                        exists = 1;
+                        break;
+                    }
+                }
+
+                if (exists)
+                {
+                    free(type_name);
+                    break;
+                }
                 
                 struct cpp_module_member member = {
                     .type = CPP_MODULE_MEMBER_TYPE_TYPEDEF,
@@ -1666,6 +1813,32 @@ static void process_modules(void)
                 free(value_string);
                 free(type_name);
 
+                //
+                // HACK: Don't add the variable if it was already added...
+                //
+
+                int exists = 0;
+
+                for (uint32_t i = 0; i < cpp_module->member_count; i++)
+                {
+                    struct cpp_module_member *member = &cpp_module->members[i];
+
+                    if (member->type != CPP_MODULE_MEMBER_TYPE_CONSTANT)
+                        continue;
+                    
+                    if (strcmp(result, member->constant) == 0)
+                    {
+                        exists = 1;
+                        break;
+                    }
+                }
+
+                if (exists)
+                {
+                    free(result);
+                    break;
+                }
+                
                 struct cpp_module_member member = {
                     .type = CPP_MODULE_MEMBER_TYPE_CONSTANT,
                     .constant = result,
@@ -1703,6 +1876,9 @@ static void process_modules(void)
 
                 free(type_name);
 
+                uint64_t address = cv_pe_section_offset_to_pe_address(&cv_symbol->data.code_offset);
+                uint32_t line = dbi_module_get_line_from_pe_offset(dbi_module, &cv_symbol->data.code_offset);
+
                 //
                 // HACK: Don't add the variable if it was already added...
                 //
@@ -1716,7 +1892,9 @@ static void process_modules(void)
                     if (member->type != CPP_MODULE_MEMBER_TYPE_DATA)
                         continue;
                     
-                    if (strcmp(result, member->data) == 0)
+                    if (strcmp(result, member->data.string) == 0 &&
+                        address == member->data.address &&
+                        line == member->data.line)
                     {
                         exists = 1;
                         break;
@@ -1731,7 +1909,11 @@ static void process_modules(void)
                 
                 struct cpp_module_member member = {
                     .type = CPP_MODULE_MEMBER_TYPE_DATA,
-                    .data = result,
+                    .data = {
+                        .string = result,
+                        .address = address,
+                        .line = line,
+                    },
                 };
 
                 DYNARRAY_PUSH(cpp_module->members, cpp_module->member_count, member);
@@ -1762,6 +1944,9 @@ static void process_modules(void)
 
                 free(type_name);
 
+                uint64_t address = cv_pe_section_offset_to_pe_address(&cv_symbol->thread_storage.code_offset);
+                uint32_t line = dbi_module_get_line_from_pe_offset(dbi_module, &cv_symbol->thread_storage.code_offset);
+
                 //
                 // HACK: Don't add the thread_local variable if it was already added...
                 //
@@ -1772,10 +1957,12 @@ static void process_modules(void)
                 {
                     struct cpp_module_member *member = &cpp_module->members[i];
 
-                    if (member->type != CPP_MODULE_MEMBER_TYPE_THREAD_STORAGE)
+                    if (member->type != CPP_MODULE_MEMBER_TYPE_THREAD_LOCAL)
                         continue;
                     
-                    if (strcmp(result, member->data) == 0)
+                    if (strcmp(result, member->thread_local_.string) == 0 &&
+                        address == member->thread_local_.address &&
+                        line == member->thread_local_.line)
                     {
                         exists = 1;
                         break;
@@ -1789,8 +1976,12 @@ static void process_modules(void)
                 }
 
                 struct cpp_module_member member = {
-                    .type = CPP_MODULE_MEMBER_TYPE_THREAD_STORAGE,
-                    .constant = result,
+                    .type = CPP_MODULE_MEMBER_TYPE_THREAD_LOCAL,
+                    .thread_local_ = {
+                        .string = result,
+                        .address = address,
+                        .line = line,
+                    }
                 };
 
                 DYNARRAY_PUSH(cpp_module->members, cpp_module->member_count, member);

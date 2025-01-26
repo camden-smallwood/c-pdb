@@ -149,6 +149,48 @@ void dbi_module_print(struct dbi_module *item, uint32_t depth, FILE *stream)
     DBI_MODULE_STRUCT
 }
 
+uint32_t dbi_module_get_line_from_pe_offset(struct dbi_module *dbi_module, struct cv_pe_section_offset *offset)
+{
+    assert(offset);
+
+    if (!dbi_module)
+        return 0;
+
+    struct dbi_lines *lines = NULL;
+
+    for (uint32_t subsection_index = 0; subsection_index < dbi_module->c13_lines_subsection_count; subsection_index++)
+    {
+        struct dbi_subsection *subsection = &dbi_module->c13_lines_subsections[subsection_index];
+
+        if (subsection->type != DEBUG_S_LINES)
+            continue;
+        
+        if (offset->section_index == subsection->lines.header.offset.section_index)
+        {
+            lines = &subsection->lines;
+            break;
+        }
+    }
+
+    if (!lines)
+        return 0;
+    
+    for (uint32_t block_index = 0; block_index < lines->block_count; block_index++)
+    {
+        struct dbi_lines_block *block = &lines->blocks[block_index];
+        
+        for (uint32_t line_index = 0; line_index < block->line_count; line_index++)
+        {
+            struct dbi_line *dbi_line = &block->lines[line_index];
+
+            if (offset->memory_offset == lines->header.offset.memory_offset + dbi_line->offset)
+                return dbi_line->line_start;
+        }
+    }
+
+    return 0;
+}
+
 void dbi_modules_read(
     struct dbi_modules *modules,
     struct msf *msf,
@@ -280,6 +322,31 @@ void dbi_modules_print(struct dbi_modules *item, uint32_t depth, FILE *stream)
     assert(stream);
 
     DBI_MODULES_STRUCT
+}
+
+struct dbi_module *dbi_modules_get_module_from_pe_offset(
+    struct dbi_modules *modules,
+    struct dbi_section_contributions *section_contributions,
+    struct cv_pe_section_offset *code_offset)
+{
+    assert(modules);
+    assert(section_contributions);
+    assert(code_offset);
+
+    for (uint32_t contribution_index = 0; contribution_index < section_contributions->count; contribution_index++)
+    {
+        struct dbi_section_contribution *contribution = &section_contributions->entries[contribution_index];
+
+        if ((code_offset->section_index == contribution->section_index) &&
+            (code_offset->memory_offset >= contribution->offset) &&
+            (code_offset->memory_offset < contribution->offset + contribution->size))
+        {
+            assert(contribution->module_index < modules->count);
+            return &modules->modules[contribution->module_index];
+        }
+    }
+
+    return NULL;
 }
 
 void dbi_extra_stream_index_print(enum dbi_extra_stream_index item, FILE *stream)
@@ -442,6 +509,53 @@ void dbi_address_map_print(struct dbi_address_map *item, uint32_t depth, FILE *s
     assert(stream);
 
     DBI_ADDRESS_MAP_STRUCT
+}
+
+uint64_t dbi_address_map_pe_offset_to_pe_address(struct dbi_address_map *address_map, struct cv_pe_section_offset *offset)
+{
+    assert(address_map);
+    assert(offset);
+
+    if (offset->section_index == 0)
+    {
+        assert(offset->memory_offset == 0);
+        return 0;
+    }
+
+    uint32_t section_header_count = address_map->original_section_header_count;
+    struct dbi_section_header *section_headers = address_map->original_section_headers;
+
+    uint32_t omap_record_count = address_map->omap_from_src_record_count;
+    struct dbi_omap_record *omap_records = address_map->omap_from_src_records;
+
+    if (section_header_count == 0)
+    {
+        section_header_count = address_map->section_header_count;
+        section_headers = address_map->section_headers;
+
+        omap_record_count = 0;
+        omap_records = NULL;
+    }
+
+    assert(offset->section_index <= section_header_count);
+
+    uint32_t result = section_headers[offset->section_index - 1].virtual_address + offset->memory_offset;
+
+    for (uint32_t i = 0; i < omap_record_count; i++)
+    {
+        struct dbi_omap_record *record = &omap_records[i];
+        
+        if (result != record->source_address)
+            continue;
+        
+        if (record->target_address == 0)
+            continue;
+        
+        result = (result - record->source_address) + record->target_address;
+        break;
+    }
+
+    return (uint64_t)result;
 }
 
 void dbi_line_print(struct dbi_line *item, uint32_t depth, FILE *stream)

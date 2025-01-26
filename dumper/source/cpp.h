@@ -250,6 +250,30 @@ struct cpp_header
 
 void cpp_header_dispose(struct cpp_header *header);
 
+/* ---------- data declarations */
+
+struct cpp_data
+{
+    char *string;
+    uint64_t address;
+    uint32_t line;
+};
+
+void cpp_data_dispose(struct cpp_data *data);
+void cpp_data_print(struct cpp_data *data, FILE *stream);
+
+/* ---------- thread_local declarations */
+
+struct cpp_thread_local
+{
+    char *string;
+    uint64_t address;
+    uint32_t line;
+};
+
+void cpp_thread_local_dispose(struct cpp_thread_local *data);
+void cpp_thread_local_print(struct cpp_thread_local *data, FILE *stream);
+
 /* ---------- module members */
 
 enum cpp_module_member_type
@@ -260,7 +284,7 @@ enum cpp_module_member_type
     CPP_MODULE_MEMBER_TYPE_USING_NAMESPACE,
     CPP_MODULE_MEMBER_TYPE_CONSTANT,
     CPP_MODULE_MEMBER_TYPE_DATA,
-    CPP_MODULE_MEMBER_TYPE_THREAD_STORAGE,
+    CPP_MODULE_MEMBER_TYPE_THREAD_LOCAL,
     CPP_MODULE_MEMBER_TYPE_PROCEDURE,
 };
 
@@ -274,8 +298,8 @@ struct cpp_module_member
         struct cpp_typedef typedef_;
         char *using_namespace;
         char *constant;
-        char *data;
-        char *thread_storage;
+        struct cpp_data data;
+        struct cpp_thread_local thread_local_;
         struct cpp_procedure procedure;
     };
 };

@@ -1072,6 +1072,40 @@ void cpp_header_dispose(struct cpp_header *header)
     free(header->path);
 }
 
+/* ---------- data declarations */
+
+void cpp_data_dispose(struct cpp_data *data)
+{
+    assert(data);
+
+    free(data->string);
+}
+
+void cpp_data_print(struct cpp_data *data, FILE *stream)
+{
+    assert(data);
+    assert(stream);
+    
+    fprintf(stream, "%s // 0x%llX", data->string, data->address);
+}
+
+/* ---------- thread_local declarations */
+
+void cpp_thread_local_dispose(struct cpp_thread_local *data)
+{
+    assert(data);
+
+    free(data->string);
+}
+
+void cpp_thread_local_print(struct cpp_thread_local *data, FILE *stream)
+{
+    assert(data);
+    assert(stream);
+    
+    fprintf(stream, "%s // 0x%llX", data->string, data->address);
+}
+
 /* ---------- module members */
 
 void cpp_module_member_dispose(struct cpp_module_member *member)
@@ -1101,11 +1135,11 @@ void cpp_module_member_dispose(struct cpp_module_member *member)
         break;
 
     case CPP_MODULE_MEMBER_TYPE_DATA:
-        free(member->data);
+        cpp_data_dispose(&member->data);
         break;
 
-    case CPP_MODULE_MEMBER_TYPE_THREAD_STORAGE:
-        free(member->thread_storage);
+    case CPP_MODULE_MEMBER_TYPE_THREAD_LOCAL:
+        cpp_thread_local_dispose(&member->thread_local_);
         break;
 
     case CPP_MODULE_MEMBER_TYPE_PROCEDURE:
@@ -1146,11 +1180,11 @@ void cpp_module_member_print(struct cpp_module_member *item, FILE *stream)
         break;
 
     case CPP_MODULE_MEMBER_TYPE_DATA:
-        fprintf(stream, "%s", item->data);
+        cpp_data_print(&item->data, stream);
         break;
 
-    case CPP_MODULE_MEMBER_TYPE_THREAD_STORAGE:
-        fprintf(stream, "%s", item->thread_storage);
+    case CPP_MODULE_MEMBER_TYPE_THREAD_LOCAL:
+        cpp_thread_local_print(&item->thread_local_, stream);
         break;
 
     case CPP_MODULE_MEMBER_TYPE_PROCEDURE:

@@ -170,6 +170,7 @@ DBI_MODULE_STRUCT
 
 void dbi_module_dispose(struct dbi_module *module);
 void dbi_module_print(struct dbi_module *module, uint32_t depth, FILE *stream);
+uint32_t dbi_module_get_line_from_pe_offset(struct dbi_module *dbi_module, struct cv_pe_section_offset *offset);
 
 /* ---------- DBI modules */
 
@@ -184,6 +185,7 @@ DBI_MODULES_STRUCT
 void dbi_modules_read(struct dbi_modules *modules, struct msf *msf, struct dbi_header *dbi_header, struct pdb_string_table *string_table, struct memory_stream *stream);
 void dbi_modules_dispose(struct dbi_modules *modules);
 void dbi_modules_print(struct dbi_modules *modules, uint32_t depth, FILE *stream);
+struct dbi_module *dbi_modules_get_module_from_pe_offset(struct dbi_modules *modules, struct dbi_section_contributions *section_contributions, struct cv_pe_section_offset *code_offset);
 
 /* ---------- DBI extra stream indices */
 
@@ -275,13 +277,16 @@ DBI_ADDRESS_MAP_STRUCT
 void dbi_address_map_read(struct dbi_address_map *map, struct msf *msf, struct dbi_extra_streams *extra_streams, struct memory_stream *file_stream);
 void dbi_address_map_dispose(struct dbi_address_map *map);
 void dbi_address_map_print(struct dbi_address_map *map, uint32_t depth, FILE *stream);
+uint64_t dbi_address_map_pe_offset_to_pe_address(struct dbi_address_map *address_map, struct cv_pe_section_offset *offset);
 
 /* ---------- DBI line */
 
 #define DBI_LINE_STRUCT \
 STRUCT_DECL(dbi_line) \
     FIELD_PRIMITIVE(uint32_t, offset, "%u") \
-    FIELD_PRIMITIVE(uint32_t, flags, "%u") \
+    FIELD_PRIMITIVE_BITS(uint32_t, line_start, 24, "%u") /* line where statement/expression starts */ \
+    FIELD_PRIMITIVE_BITS(uint32_t, delta_line_end, 7, "%u") /* delta to line where statement ends (optional) */ \
+    FIELD_PRIMITIVE_BITS(uint32_t, is_statement, 1, "%u") /* true if a statement linenumber, else an expression line num */ \
 STRUCT_END(dbi_line)
 
 DBI_LINE_STRUCT
