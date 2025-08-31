@@ -74,7 +74,7 @@ void cpp_block_print(struct cpp_block *item, uint32_t depth, FILE *stream)
     fprintf(stream, "{");
 
     if (item->address)
-        fprintf(stream, " // %llu", item->address);
+        fprintf(stream, " // 0x%llX", item->address);
     
     fprintf(stream, "\n");
 
@@ -183,13 +183,13 @@ void cpp_procedure_print(struct cpp_procedure *item, uint32_t depth, FILE *strea
 
     if (item->body)
     {
-        fprintf(stream, " // 0x%llu\n", item->address);
+        fprintf(stream, " // 0x%llX\n", item->address);
         fprintf_depth(stream, depth, "");
         cpp_block_print(item->body, depth, stream);
     }
     else
     {
-        fprintf(stream, "; // 0x%llx", item->address);
+        fprintf(stream, "; // 0x%llX", item->address);
     }
 }
 
@@ -379,7 +379,7 @@ void cpp_field_print(struct cpp_field *field, uint32_t depth, FILE *stream)
     // TODO: determine if we need this
     (void)depth;
 
-    fprintf(stream, "%s;", field->type_name);
+    fprintf(stream, "%s; //0x%llX", field->type_name, field->offset);
 }
 
 /* ---------- methods */
@@ -1822,7 +1822,7 @@ char *cpp_type_name(
             char *argument_name = cpp_type_name(
                 pdb,
                 argument_list_symbol->argument_list.type_indices[i],
-                (i == 0) ? "this" : ((i - 1) < argument_count) ? arguments[i - 1] : NULL,
+                i < argument_count ? arguments[i] : NULL,
                 0, NULL,
                 1);
             

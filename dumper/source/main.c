@@ -87,6 +87,8 @@ struct
 
     uint64_t base_address;
 
+    int unroll_functions;
+
     struct pdb_data pdb_data;
 
     uint32_t cpp_module_count;
@@ -115,9 +117,9 @@ static void main_initialize(int argc, const char **argv)
     // Parse the input arguments
     //
 
-    if (argc < 3 || argc > 4)
+    if (argc < 3 || argc > 5)
     {
-        fprintf(stderr, "Usage: dumper <pdb-file> <output-dir> [base-address]\n");
+        fprintf(stderr, "Usage: dumper <pdb-file> <output-dir> [base-address] [--unroll-functions|-u]\n");
         exit(EXIT_FAILURE);
     }
 
@@ -126,6 +128,9 @@ static void main_initialize(int argc, const char **argv)
 
     if (argc >= 4)
         sscanf(argv[3], "%" SCNx64, &main_globals.base_address);
+
+    if (argc >= 5 && (strcmp(argv[4], "--unroll-functions") == 0 || strcmp(argv[4], "-u") == 0))
+        main_globals.unroll_functions = 1;
 
     //
     // Map the PDB file to memory
@@ -1361,16 +1366,20 @@ static void process_symbol_records(void)
     }
 }
 
-static uint32_t process_scoped_symbols(struct dbi_module *dbi_module, uint32_t start_index, uint16_t scope_end_symbol_type);
+static uint32_t process_scoped_symbols(
+    struct dbi_module *dbi_module,
+    uint32_t start_index,
+    uint16_t scope_end_symbol_type,
+    struct cpp_block *out_block);
 
-static uint32_t process_procedure_symbols(struct dbi_module *dbi_module, uint32_t start_index)
+static uint32_t process_procedure_symbols(struct dbi_module *dbi_module, uint32_t start_index, struct cpp_block *out_block)
 {
-    return process_scoped_symbols(dbi_module, start_index, S_END);
+    return process_scoped_symbols(dbi_module, start_index, S_END, out_block);
 }
 
-static uint32_t process_inline_site_symbols(struct dbi_module *dbi_module, uint32_t start_index)
+static uint32_t process_inline_site_symbols(struct dbi_module *dbi_module, uint32_t start_index, struct cpp_block *out_block)
 {
-    return process_scoped_symbols(dbi_module, start_index, S_INLINESITE_END);
+    return process_scoped_symbols(dbi_module, start_index, S_INLINESITE_END, out_block);
 }
 
 static uint32_t process_thunk_symbols(struct dbi_module *dbi_module, uint32_t start_index)
@@ -1425,12 +1434,16 @@ static uint32_t process_separated_code_symbols(struct dbi_module *dbi_module, ui
     return dbi_module->symbols.count - start_index;
 }
 
-static uint32_t process_block_symbols(struct dbi_module *dbi_module, uint32_t start_index)
+static uint32_t process_block_symbols(struct dbi_module *dbi_module, uint32_t start_index, struct cpp_block *out_block)
 {
-    return process_scoped_symbols(dbi_module, start_index, S_END);
+    return process_scoped_symbols(dbi_module, start_index, S_END, out_block);
 }
 
-static uint32_t process_scoped_symbols(struct dbi_module *dbi_module, uint32_t start_index, uint16_t scope_end_symbol_type)
+static uint32_t process_scoped_symbols(
+    struct dbi_module *dbi_module,
+    uint32_t start_index,
+    uint16_t scope_end_symbol_type,
+    struct cpp_block *out_block)
 {
     assert(dbi_module);
 
@@ -1445,12 +1458,28 @@ static uint32_t process_scoped_symbols(struct dbi_module *dbi_module, uint32_t s
         {
         case S_BLOCK32:
         case S_BLOCK32_ST:
-            symbol_index += process_block_symbols(dbi_module, symbol_index + 1);
+        {
+            struct cpp_statement statement = {
+                .type = CPP_STATEMENT_TYPE_BLOCK,
+                .block = {
+                    .address = 0,
+                    .statement_count = 0,
+                    .statements = NULL,
+                }
+            };
+            
+            symbol_index += process_block_symbols(dbi_module, symbol_index + 1, &statement.block);
+
+            if (out_block)
+                DYNARRAY_PUSH(out_block->statements, out_block->statement_count, statement);
+            else
+                cpp_statement_dispose(&statement);
             break;
-        
+        }
+
         case S_INLINESITE:
         case S_INLINESITE2:
-            symbol_index += process_inline_site_symbols(dbi_module, symbol_index + 1);
+            symbol_index += process_inline_site_symbols(dbi_module, symbol_index + 1, out_block);
             break;
 
         case S_SEPCODE:
@@ -1459,11 +1488,33 @@ static uint32_t process_scoped_symbols(struct dbi_module *dbi_module, uint32_t s
         
         case S_REGISTER:
         case S_REGISTER_ST:
-            // TODO
+            if (out_block)
+            {
+                struct cpp_statement statement = {
+                    .type = CPP_STATEMENT_TYPE_VARIABLE,
+                    .variable = {
+                        .signature = cpp_type_name(&main_globals.pdb_data, cv_symbol->register_variable.type_index, cv_symbol->register_variable.name, 0, NULL, 0),
+                        .value = NULL,
+                        .comment = NULL, // TODO
+                    },
+                };
+                DYNARRAY_PUSH(out_block->statements, out_block->statement_count, statement);
+            }
             break;
-        
+
         case S_REGREL32:
-            // TODO
+            if (out_block)
+            {
+                struct cpp_statement statement = {
+                    .type = CPP_STATEMENT_TYPE_VARIABLE,
+                    .variable = {
+                        .signature = cpp_type_name(&main_globals.pdb_data, cv_symbol->register_relative.type_index, cv_symbol->register_relative.name, 0, NULL, 0),
+                        .value = NULL,
+                        .comment = NULL, // TODO
+                    },
+                };
+                DYNARRAY_PUSH(out_block->statements, out_block->statement_count, statement);
+            }
             break;
         
         case S_DEFRANGE:
@@ -1648,7 +1699,15 @@ static void process_modules(void)
             case S_LPROC32_DPC:
             case S_LPROC32_DPC_ID:
             {
-                symbol_index += process_procedure_symbols(dbi_module, symbol_index + 1);
+                struct cpp_block *body = NULL;
+                
+                if (main_globals.unroll_functions)
+                {
+                    body = calloc(1, sizeof(*body));
+                    assert(body);
+                }
+
+                symbol_index += process_procedure_symbols(dbi_module, symbol_index + 1, body);
 
                 char *signature = cpp_type_name(
                     &main_globals.pdb_data,
@@ -1670,7 +1729,7 @@ static void process_modules(void)
                         .line = dbi_module_get_line_from_pe_offset(dbi_module, &cv_symbol->procedure.code_offset),
                         .type_index = cv_symbol->procedure.type_index,
                         .signature = signature,
-                        .body = NULL, // TODO
+                        .body = body,
                     }
                 };
 
