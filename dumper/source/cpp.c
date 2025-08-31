@@ -677,7 +677,7 @@ void cpp_class_add_members(struct cpp_class *item, struct pdb_data *pdb, uint32_
             memset(&member, 0, sizeof(member));
 
             member.type = CPP_CLASS_MEMBER_TYPE_METHOD;
-            
+            member.method.type_index = symbol->method.header.method_type_index;
             member.method.name = strdup(symbol->method.name);
             assert(member.method.name);
 
@@ -741,7 +741,7 @@ void cpp_class_add_members(struct cpp_class *item, struct pdb_data *pdb, uint32_
                 memset(&member, 0, sizeof(member));
 
                 member.type = CPP_CLASS_MEMBER_TYPE_METHOD;
-                
+                member.method.type_index = symbol->overloaded_method.header.method_list_type_index;
                 member.method.name = strdup(symbol->overloaded_method.name);
                 assert(member.method.name);
 

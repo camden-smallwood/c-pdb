@@ -84,7 +84,7 @@ int string_ends_with(char *string, char *ends_with)
     return strncmp(string + (string_length - ends_with_length), ends_with, ends_with_length) == 0;
 }
 
-void string_split(char *string, char c, size_t *out_count, char ***out_strings)
+void string_split_by_char(char *string, char c, size_t *out_count, char ***out_strings)
 {
     assert(string);
     assert(out_count);
@@ -118,6 +118,92 @@ void string_split(char *string, char c, size_t *out_count, char ***out_strings)
 
         current = next;
     }
+}
+
+void string_split_by_string(char *string, const char *find, size_t *out_count, char ***out_strings)
+{
+    assert(string);
+    assert(find);
+    assert(out_count);
+    assert(out_strings);
+
+    *out_count = 0;
+    *out_strings = NULL;
+
+    size_t string_length = strlen(string);
+    size_t find_length = strlen(find);
+
+    char *current = string;
+
+    for (;;)
+    {
+        char *found = strstr(current, find);
+
+        if (!found)
+        {
+            size_t substring_length = (string + string_length) - current;
+            char *substring = calloc(1, substring_length + 1);
+            assert(substring);
+            memcpy(substring, current, substring_length);
+            DYNARRAY_PUSH(*out_strings, *out_count, substring);
+            break;
+        }
+        
+        size_t substring_length = found - current;
+        char *substring = calloc(1, substring_length + 1);
+        assert(substring);
+        memcpy(substring, current, substring_length);
+        DYNARRAY_PUSH(*out_strings, *out_count, substring);
+
+        current += substring_length + find_length;
+    }
+}
+
+char *string_replace(const char *string, const char *find, const char *replace)
+{
+    if (!string)
+        return NULL;
+    
+    if (!find)
+        return strdup(string);
+    
+    size_t string_length = strlen(string);
+    size_t find_length = strlen(find);
+    size_t replace_length = strlen(replace);
+    
+    size_t result_length = 0;
+    char *result = NULL;
+
+    const char *current = string;
+    
+    for (;;)
+    {
+        char *found = strstr(current, find);
+
+        if (!found)
+        {
+            size_t copy_length = (string + string_length) - current;
+            result = realloc(result, result_length + copy_length + 1);
+            assert(result);
+            memcpy(result + result_length, current, copy_length);
+            result[result_length + copy_length] = '\0';
+            result_length += copy_length + replace_length;
+            break;
+        }
+        
+        size_t copy_length = found - current;
+
+        result = realloc(result, result_length + copy_length + replace_length + 1);
+        assert(result);
+        memcpy(result + result_length, current, copy_length);
+        memcpy(result + result_length + copy_length, replace, replace_length);
+        result[result_length + copy_length + replace_length] = '\0';
+        result_length += copy_length + replace_length;
+
+        current += copy_length + find_length;
+    }
+
+    return result;
 }
 
 void string_lower(char *string)

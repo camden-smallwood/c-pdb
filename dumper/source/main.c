@@ -1714,7 +1714,10 @@ static void process_modules(void)
 
                 symbol_index += process_procedure_symbols(dbi_module, symbol_index + 1, body);
 
+                //
                 // Collect parameter names from register-based variables
+                //
+
                 uint32_t register_variable_name_count = 0;
                 char **register_variable_names = NULL;
 
@@ -1771,6 +1774,163 @@ static void process_modules(void)
                     parameter_names,
                     0);
                 assert(signature);
+
+                //
+                // If the procedure is a member function, find its declaration and update the signature
+                //
+
+                struct tpi_symbol *procedure_type_symbol = &main_globals.pdb_data.tpi_symbols.symbols[cv_symbol->procedure.type_index];
+
+                if (procedure_type_symbol->leaf == LF_MFUNCTION && strstr(cv_symbol->procedure.name, "::"))
+                {
+                    size_t part_count = 0;
+                    char **parts = NULL;
+                    string_split_by_string(cv_symbol->procedure.name, "::", &part_count, &parts);
+                    assert(part_count >= 2);
+
+                    char *procedure_name = parts[part_count - 1];
+
+                    char *procedure_class_name = strdup("");
+                    assert(procedure_class_name);
+
+                    for (size_t i = 0; i < part_count - 1; i++)
+                    {
+                        if (i > 0)
+                            string_append(&procedure_class_name, "::");
+                        string_append(&procedure_class_name, parts[i]);
+                        free(parts[i]);
+                    }
+
+                    free(parts);
+
+                    struct tpi_symbol *class_type_symbol = NULL;
+
+                    for (uint32_t i = 0; i < main_globals.pdb_data.tpi_symbols.count; i++)
+                    {
+                        struct tpi_symbol *tpi_symbol = &main_globals.pdb_data.tpi_symbols.symbols[i];
+
+                        switch (tpi_symbol->leaf)
+                        {
+                        case LF_CLASS:
+                        case LF_CLASS_ST:
+                        case LF_STRUCTURE:
+                        case LF_STRUCTURE_ST:
+                        case LF_STRUCTURE19:
+                        case LF_INTERFACE:
+                            if (strcmp(tpi_symbol->class_.name, procedure_class_name) == 0 && tpi_symbol->class_.size != 0)
+                            {
+                                class_type_symbol = tpi_symbol;
+
+                                for (uint32_t j = 0; j < main_globals.cpp_module_count; j++)
+                                {
+                                    struct cpp_module *current_module = &main_globals.cpp_modules[j];
+
+                                    for (uint32_t k = 0; k < current_module->member_count; k++)
+                                    {
+                                        struct cpp_module_member *current_member = &current_module->members[k];
+
+                                        if (current_member->type != CPP_MODULE_MEMBER_TYPE_CLASS)
+                                            continue;
+                                        
+                                        if (strcmp(current_member->class_.name, procedure_class_name) != 0)
+                                            continue;
+                                        
+                                        for (uint32_t l = 0; l < current_member->class_.member_count; l++)
+                                        {
+                                            struct cpp_class_member *class_member = &current_member->class_.members[l];
+
+                                            if (class_member->type != CPP_CLASS_MEMBER_TYPE_METHOD)
+                                                continue;
+                                            
+                                            int valid = 0;
+
+                                            if (cv_symbol->procedure.type_index == class_member->method.type_index)
+                                            {
+                                                valid = 1;
+                                            }
+                                            else if (strcmp(cv_symbol->procedure.name, class_member->method.name) == 0)
+                                            {
+                                                struct tpi_symbol *method_symbol = tpi_symbol_get(&main_globals.pdb_data.tpi_header, &main_globals.pdb_data.tpi_symbols, class_member->method.type_index);
+
+                                                if (method_symbol)
+                                                {
+                                                    assert(method_symbol->leaf == LF_MFUNCTION);
+
+                                                    struct tpi_symbol *argument_list_symbol = tpi_symbol_get(&main_globals.pdb_data.tpi_header, &main_globals.pdb_data.tpi_symbols, method_symbol->member_function.argument_list_type_index);
+                                                    
+                                                    if (argument_list_symbol)
+                                                    {
+                                                        assert(argument_list_symbol->leaf == LF_ARGLIST);
+                                                        
+                                                        if (class_member->method.argument_count == argument_list_symbol->argument_list.count)
+                                                        {
+                                                            valid = 1;
+
+                                                            for (uint32_t x = 0; x < argument_list_symbol->argument_list.count; x++)
+                                                            {
+                                                                char *type_name = cpp_type_name(&main_globals.pdb_data, argument_list_symbol->argument_list.type_indices[x], NULL, 0, NULL, 1);
+                                                                assert(type_name);
+                                                                if (strcmp(type_name, class_member->method.arguments[x]) != 0)
+                                                                {
+                                                                    valid = 0;
+                                                                    free(type_name);
+                                                                    break;
+                                                                }
+                                                                free(type_name);
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+
+                                            if (valid)
+                                            {
+                                                struct tpi_symbol *method_symbol = tpi_symbol_get(&main_globals.pdb_data.tpi_header, &main_globals.pdb_data.tpi_symbols, class_member->method.type_index);
+
+                                                if (method_symbol)
+                                                {
+                                                    assert(method_symbol->leaf == LF_MFUNCTION);
+                                                    
+                                                    struct tpi_symbol *argument_list_symbol = tpi_symbol_get(&main_globals.pdb_data.tpi_header, &main_globals.pdb_data.tpi_symbols, method_symbol->member_function.argument_list_type_index);
+                                                    
+                                                    if (argument_list_symbol)
+                                                    {
+                                                        assert(argument_list_symbol->leaf == LF_ARGLIST);
+                                                        assert(class_member->method.argument_count == argument_list_symbol->argument_list.count);
+
+                                                        for (uint32_t x = 0; x < argument_list_symbol->argument_list.count; x++)
+                                                        {
+                                                            free(class_member->method.arguments[x]);
+                                                            class_member->method.arguments[x] = cpp_type_name(&main_globals.pdb_data, argument_list_symbol->argument_list.type_indices[x], parameter_name_count > x ? parameter_names[x] : NULL, 0, NULL, 1);
+                                                            assert(class_member->method.arguments[x]);
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            break;
+                        
+                        default:
+                            break;
+                        }
+
+                        if (class_type_symbol)
+                            break;
+                    }
+
+                    //
+                    // TODO:
+                    // * find class in CPP modules
+                    // * find method in class
+                    // * give method parameter names
+                    //
+
+                    free(procedure_class_name);
+                    free(procedure_name);
+                }
 
                 for (uint32_t i = 0; i < register_variable_name_count; i++)
                     free(register_variable_names[i]);

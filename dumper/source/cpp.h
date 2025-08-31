@@ -153,9 +153,9 @@ void cpp_field_print(struct cpp_field *field, uint32_t depth, FILE *stream);
 
 struct cpp_method
 {
+    uint32_t type_index;
     char *name;
     char *return_type_name;
-    
     uint32_t argument_count;
     char **arguments;
 
