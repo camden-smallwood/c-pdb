@@ -30,6 +30,7 @@ void cpp_variable_dispose(struct cpp_variable *variable)
 {
     assert(variable);
 
+    free(variable->name);
     free(variable->signature);
     free(variable->value);
     free(variable->comment);

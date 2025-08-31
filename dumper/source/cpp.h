@@ -16,8 +16,17 @@ void cpp_label_print(struct cpp_label *item, uint32_t depth, FILE *stream);
 
 /* ---------- variables */
 
+enum cpp_variable_type
+{
+    CPP_VARIABLE_TYPE_LOCAL,
+    CPP_VARIABLE_TYPE_REGISTER,
+    CPP_VARIABLE_TYPE_REGISTER_RELATIVE,
+};
+
 struct cpp_variable
 {
+    enum cpp_variable_type type;
+    char *name;
     char *signature;
     char *value;
     char *comment;

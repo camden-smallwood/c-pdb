@@ -1490,9 +1490,14 @@ static uint32_t process_scoped_symbols(
         case S_REGISTER_ST:
             if (out_block)
             {
+                char *name = strdup(cv_symbol->register_variable.name);
+                assert(name);
+
                 struct cpp_statement statement = {
                     .type = CPP_STATEMENT_TYPE_VARIABLE,
                     .variable = {
+                        .type = CPP_VARIABLE_TYPE_REGISTER,
+                        .name = name,
                         .signature = cpp_type_name(&main_globals.pdb_data, cv_symbol->register_variable.type_index, cv_symbol->register_variable.name, 0, NULL, 0),
                         .value = NULL,
                         .comment = NULL, // TODO
@@ -1505,9 +1510,14 @@ static uint32_t process_scoped_symbols(
         case S_REGREL32:
             if (out_block)
             {
+                char *name = strdup(cv_symbol->register_relative.name);
+                assert(name);
+
                 struct cpp_statement statement = {
                     .type = CPP_STATEMENT_TYPE_VARIABLE,
                     .variable = {
+                        .type = CPP_VARIABLE_TYPE_REGISTER_RELATIVE,
+                        .name = name,
                         .signature = cpp_type_name(&main_globals.pdb_data, cv_symbol->register_relative.type_index, cv_symbol->register_relative.name, 0, NULL, 0),
                         .value = NULL,
                         .comment = NULL, // TODO
@@ -1699,24 +1709,72 @@ static void process_modules(void)
             case S_LPROC32_DPC:
             case S_LPROC32_DPC_ID:
             {
-                struct cpp_block *body = NULL;
-                
-                if (main_globals.unroll_functions)
-                {
-                    body = calloc(1, sizeof(*body));
-                    assert(body);
-                }
+                struct cpp_block *body = calloc(1, sizeof(*body));
+                assert(body);
 
                 symbol_index += process_procedure_symbols(dbi_module, symbol_index + 1, body);
+
+                uint32_t register_variable_name_count = 0;
+                char **register_variable_names = NULL;
+
+                uint32_t register_relative_name_count = 0;
+                char **register_relative_names = NULL;
+
+                for (uint32_t i = 0; i < body->statement_count; i++)
+                {
+                    struct cpp_statement *statement = &body->statements[i];
+
+                    if (statement->type != CPP_STATEMENT_TYPE_VARIABLE)
+                        continue;
+                    
+                    struct cpp_variable *variable = &statement->variable;
+
+                    switch (variable->type)
+                    {
+                    case CPP_VARIABLE_TYPE_REGISTER:
+                    {
+                        char *name = strdup(variable->name);
+                        assert(name);
+                        DYNARRAY_PUSH(register_variable_names, register_variable_name_count, name);
+                        break;
+                    }
+                    
+                    case CPP_VARIABLE_TYPE_REGISTER_RELATIVE:
+                    {
+                        char *name = strdup(variable->name);
+                        assert(name);
+                        DYNARRAY_PUSH(register_relative_names, register_relative_name_count, name);
+                        break;
+                    }
+                    
+                    default:
+                        break;
+                    }
+                }
 
                 char *signature = cpp_type_name(
                     &main_globals.pdb_data,
                     cv_symbol->procedure.type_index,
                     cv_symbol->procedure.name,
-                    0, // TODO
-                    NULL, // TODO
+                    register_variable_name_count ? register_variable_name_count : register_relative_name_count,
+                    register_variable_names ? register_variable_names : register_relative_names,
                     0);
                 assert(signature);
+
+                for (uint32_t i = 0; i < register_variable_name_count; i++)
+                    free(register_variable_names[i]);
+                free(register_variable_names);
+
+                for (uint32_t i = 0; i < register_relative_name_count; i++)
+                    free(register_relative_names[i]);
+                free(register_relative_names);
+
+                if (!main_globals.unroll_functions)
+                {
+                    cpp_block_dispose(body);
+                    free(body);
+                    body = NULL;
+                }
 
                 //
                 // TODO: don't add the procedure if it was already added...
