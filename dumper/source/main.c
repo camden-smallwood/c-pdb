@@ -1714,6 +1714,7 @@ static void process_modules(void)
 
                 symbol_index += process_procedure_symbols(dbi_module, symbol_index + 1, body);
 
+                // Collect parameter names from register-based variables
                 uint32_t register_variable_name_count = 0;
                 char **register_variable_names = NULL;
 
@@ -1752,12 +1753,22 @@ static void process_modules(void)
                     }
                 }
 
+                uint32_t parameter_name_count = register_variable_name_count ? register_variable_name_count : register_relative_name_count;
+                char **parameter_names = register_variable_names ? register_variable_names : register_relative_names;
+
+                // Skip `this` parameter
+                if (parameter_name_count && strcmp(parameter_names[0], "this") == 0)
+                {
+                    parameter_name_count--;
+                    parameter_names++;
+                }
+
                 char *signature = cpp_type_name(
                     &main_globals.pdb_data,
                     cv_symbol->procedure.type_index,
                     cv_symbol->procedure.name,
-                    register_variable_name_count ? register_variable_name_count : register_relative_name_count,
-                    register_variable_names ? register_variable_names : register_relative_names,
+                    parameter_name_count,
+                    parameter_names,
                     0);
                 assert(signature);
 
